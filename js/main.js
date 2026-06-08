@@ -1,4 +1,64 @@
 // Core Game Engine & Main Loop
+(function () {
+    const allowedDomains = ['adayofjoy.itch.io', 'itch.io', 'itch.zone', 'ssl.hwcdn.net', 'localhost'];
+    if (window.location.protocol === 'file:') {
+        return;
+    }
+    const currentHost = window.location.hostname;
+    let parentHost = '';
+    try {
+        if (window.parent !== window && document.referrer) {
+            parentHost = new URL(document.referrer).hostname;
+        }
+    } catch (e) {
+        // Cross-origin parent check restriction expected
+    }
+    const isCurrentHostAllowed = allowedDomains.some(domain => currentHost.includes(domain));
+    const isParentHostAllowed = parentHost === '' || allowedDomains.some(domain => parentHost.includes(domain));
+    if (!isCurrentHostAllowed || !isParentHostAllowed) {
+        document.addEventListener('DOMContentLoaded', () => {
+            const world = document.getElementById('game-world');
+            if (world) {
+                world.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 0; left: 0; width: 100vw; height: 100vh;
+                        background: #020206;
+                        color: #ff3e6c;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        font-family: 'Orbitron', sans-serif;
+                        z-index: 999999;
+                        text-align: center;
+                        padding: 20px;
+                        box-sizing: border-box;
+                    ">
+                        <h1 style="font-size: 32px; text-shadow: 0 0 10px rgba(255, 62, 108, 0.5); margin-bottom: 20px; letter-spacing: 2px;">ACCESS DENIED</h1>
+                        <p style="color: #ffffff; font-size: 16px; max-width: 600px; line-height: 1.6; margin-bottom: 30px;">
+                            Please play the game on its original site at itch.io
+                        </p>
+                        <a href="https://adayofjoy.itch.io" target="_blank" style="
+                            padding: 12px 30px;
+                            border: 2px solid #ff3e6c;
+                            background: transparent;
+                            color: #ff3e6c;
+                            font-size: 16px;
+                            font-weight: bold;
+                            text-decoration: none;
+                            border-radius: 4px;
+                            box-shadow: 0 0 15px rgba(255, 62, 108, 0.2);
+                        ">PLAY ON ITCH.IO</a>
+                    </div>
+                `;
+            }
+        });
+        window.addEventListener = function () { };
+        document.addEventListener = function () { };
+        throw new Error("Security check failed: Domain not allowed.");
+    }
+})();
 // ─── Loading Screen Animation ───
 const loadingScreen = document.getElementById('loading-screen');
 const loadingBar = document.getElementById('loading-bar-fill');
@@ -276,8 +336,6 @@ async function run(mode) {
         asteroidUi: document.getElementById('asteroid-cooldown-ui'),
         swordBtn: document.getElementById('btn-sword'),
         swordUi: document.getElementById('sword-cooldown-ui'),
-        bowlingBtn: document.getElementById('btn-bowling'),
-        bowlingUi: document.getElementById('bowling-cooldown-ui'),
         krakenBtn: document.getElementById('btn-kraken'),
         krakenUi: document.getElementById('kraken-cooldown-ui'),
         wormBtn: document.getElementById('btn-worm'),
@@ -288,10 +346,6 @@ async function run(mode) {
         fistUi: document.getElementById('fist-cooldown-ui'),
         moonBtn: document.getElementById('btn-moon'),
         moonUi: document.getElementById('moon-cooldown-ui'),
-        starBtn: document.getElementById('btn-star'),
-        starUi: document.getElementById('star-cooldown-ui'),
-        cometBtn: document.getElementById('btn-comet'),
-        cometUi: document.getElementById('comet-cooldown-ui'),
         uiOverlay: document.querySelector('.ui-overlay'),
         massText: document.getElementById('mass-text'),
         massBar: document.getElementById('mass-bar'),
@@ -299,7 +353,7 @@ async function run(mode) {
     };
     // Pre-resolve child elements for cooldown UIs
     const _cdChildren = {};
-    ['gamma', 'laser', 'asteroid', 'sword', 'bowling', 'kraken', 'worm', 'blackhole', 'fist', 'moon', 'star', 'comet'].forEach(name => {
+    ['gamma', 'laser', 'asteroid', 'sword', 'kraken', 'worm', 'blackhole', 'fist', 'moon'].forEach(name => {
         const ui = _dom[name + 'Ui'];
         _cdChildren[name] = ui ? {
             text: ui.querySelector('.cooldown-text'),
@@ -1487,76 +1541,7 @@ async function run(mode) {
             }
 
             // Update active bowling balls
-            for (let i = activeBowlingBalls.length - 1; i >= 0; i--) {
-                const w = activeBowlingBalls[i];
-                if (w.state === 'flying') {
-                    w.x += w.vx * dt60;
-                    w.y += w.vy * dt60;
-
-                    // Check collision with planet silhouette
-                    const local = screenToLocal(w.x, w.y, CENTER_X, CENTER_Y, planetRotation);
-                    if (local.x >= 0 && local.x < hiddenCanvas.width &&
-                        local.y >= 0 && local.y < hiddenCanvas.height) {
-
-                        const px = Math.floor(local.x);
-                        const py = Math.floor(local.y);
-
-                        if (isSolidPixel(px, py, getSharedPlanetData())) {
-                            // Make contact!
-                            w.state = 'penetrating';
-                            w.contactX = w.x;
-                            w.contactY = w.y;
-                            w.targetX = w.x + Math.cos(w.angle) * 10; // 15px penetration depth - 15px = 0px
-                            w.targetY = w.y + Math.sin(w.angle) * 10;
-                            w.penetrateTimer = 0.08; // 0.08s satisfy sink
-                        }
-                    }
-
-                    // Remove out of bounds bowling balls
-                    const dx = w.x - CENTER_X;
-                    const dy = w.y - CENTER_Y;
-                    if (Math.sqrt(dx * dx + dy * dy) > 1000) {
-                        activeBowlingBalls.splice(i, 1);
-                    }
-                } else if (w.state === 'penetrating') {
-                    w.penetrateTimer -= deltaTime;
-                    const t = Math.max(0, Math.min(1.0, 1.0 - (w.penetrateTimer / 0.08)));
-                    w.x = w.contactX + (w.targetX - w.contactX) * t;
-                    w.y = w.contactY + (w.targetY - w.contactY) * t;
-
-                    if (w.penetrateTimer <= 0) {
-                        w.state = 'stuck';
-                        w.stuckTimer = 2.0;
-
-                        // Record its local unrotated position to lock orientation and position
-                        const local = screenToLocal(w.x, w.y, CENTER_X, CENTER_Y, planetRotation);
-                        w.localX = local.x;
-                        w.localY = local.y;
-                        w.stuckAngle = w.angle - planetRotation;
-                    }
-                } else if (w.state === 'stuck') {
-                    w.stuckTimer -= deltaTime;
-
-                    if (Math.random() < 0.08) {
-                        soundManager.play('sfx_ui_switch', false, 0.3, 800);
-                    }
-
-                    // Re-calculate its current screen coordinates dynamically
-                    const cos = Math.cos(planetRotation);
-                    const sin = Math.sin(planetRotation);
-                    const dxLocal = w.localX - planetCenterX;
-                    const dyLocal = w.localY - planetCenterY;
-                    w.x = CENTER_X + (dxLocal * cos - dyLocal * sin);
-                    w.y = CENTER_Y + (dxLocal * sin + dyLocal * cos);
-
-                    if (w.stuckTimer <= 0) {
-                        // Explode!
-                        soundManager.play('sfx_bowling_pins');
-                        createExplosion(w.localX, w.localY, w.explosionRadius + 2, w.shakeIntensity, 'bowling', false, true);
-                        activeBowlingBalls.splice(i, 1);
-                    }
-                }
-            }
+            activeBowlingBalls.length = 0;
 
             // Update active fists
             for (let i = activeFists.length - 1; i >= 0; i--) {
@@ -2529,132 +2514,8 @@ async function run(mode) {
             }
 
             // Update active stars (the 5-point star emitters)
-            for (let i = activeStars.length - 1; i >= 0; i--) {
-                const w = activeStars[i];
-                w.timer += deltaTime;
-
-                // Spinning
-                w.spin += 6.0 * deltaTime;
-
-                // State logic:
-                // 1. Growing phase (first 0.5s)
-                if (w.timer < 0.5) {
-                    w.size = (w.timer / 0.5) * 50;
-                    w.opacity = 1.0;
-                }
-                // 2. Active phase (0.5s to 3.5s): Spewing small stars
-                else if (w.timer < 3.5) {
-                    w.size = 50;
-                    w.opacity = 1.0;
-                    w.projectileTimer += deltaTime;
-
-                    // Spew a projectile every 0.15s
-                    while (w.projectileTimer >= 0.15) {
-                        w.projectileTimer -= 0.15;
-
-                        // Angle facing towards planet with a wider spread (slightly increased to 0.90 radians)
-                        const projAngle = w.angle + (Math.random() - 0.5) * 0.95;
-                        const speed = 225 + Math.random() * 100; // 25% faster
-
-                        const isSpecial = Math.random() < 0.15; // 15% chance
-                        const color = isSpecial ? '#66b2ff' : (Math.random() < 0.5 ? '#00f0ff' : '#ff00ff');
-                        const baseSize = isSpecial ? 16 : 8; // 8 is slightly smaller than 12
-                        const explosionRadius = isSpecial ? 29 : 19; // slightly increased from 24 and 16
-                        const shakeIntensity = isSpecial ? 8 : 5;
-
-                        activeStarProjectiles.push({
-                            x: w.x,
-                            y: w.y,
-                            vx: Math.cos(projAngle) * speed,
-                            vy: Math.sin(projAngle) * speed,
-                            spinAngle: Math.random() * Math.PI * 2,
-                            spinSpeed: (Math.random() * 4 + 4) * (Math.random() < 0.5 ? 1 : -1),
-                            color: color,
-                            baseSize: baseSize,
-                            explosionRadius: explosionRadius,
-                            shakeIntensity: shakeIntensity,
-                            life: 0.0,
-                            travelLimit: 1.25 + Math.random() * 0.5,
-                            state: 'flying',
-                            shrinkTimer: 0.0
-                        });
-
-                        // Play magical star shot sound alternating every 2nd projectile
-                        w.shotCounter = (w.shotCounter || 0) + 1;
-                        if (w.shotCounter % 2 === 0) {
-                            const soundId = ((w.shotCounter / 2) % 2 === 1) ? 'sfx_magical_star_shot' : 'sfx_magical_star_shot2';
-                            const detune = (Math.random() - 0.5) * 200; // +/- 100 cents detune
-                            soundManager.play(soundId, false, 0.75, detune);
-                        } else {
-                            soundManager.play('sfx_laser_crack', false, 0.4, 500);
-                        }
-                    }
-                }
-                // 3. Shrinking / Fading phase (3.5s to 4.0s)
-                else {
-                    const shrinkProgress = (w.timer - 3.5) / 0.5; // 0 to 1
-                    w.size = 50 * (1 - shrinkProgress);
-                    w.opacity = 1 - shrinkProgress;
-                }
-
-                // Delete star after 4 seconds
-                if (w.timer >= w.duration) {
-                    soundManager.play('sfx_holy_shine', false, 0.4, 300);
-                    shockwaves.push({
-                        x: w.x,
-                        y: w.y,
-                        radius: 0,
-                        maxRadius: 120,
-                        life: 1.0,
-                        maxLife: 0.7
-                    });
-                    activeStars.splice(i, 1);
-                }
-            }
-
-            // Update star projectiles
-            for (let i = activeStarProjectiles.length - 1; i >= 0; i--) {
-                const p = activeStarProjectiles[i];
-
-                if (p.state === 'flying') {
-                    p.x += p.vx * deltaTime;
-                    p.y += p.vy * deltaTime;
-                    p.spinAngle += p.spinSpeed * deltaTime;
-                    p.life += deltaTime;
-
-                    // Collision check with planet
-                    const local = screenToLocal(p.x, p.y, CENTER_X, CENTER_Y, planetRotation);
-                    const px = Math.floor(local.x);
-                    const py = Math.floor(local.y);
-
-                    if (px >= 0 && px < PLANET_CANVAS_SIZE && py >= 0 && py < PLANET_CANVAS_SIZE) {
-                        const sharedData = getSharedPlanetData();
-                        const idx = (py * PLANET_CANVAS_SIZE + px) * 4;
-                        if (sharedData.data[idx + 3] > 0) {
-                            // Hit! Trigger explosion
-                            createExplosion(local.x, local.y, p.explosionRadius, p.shakeIntensity, 'star_nuke', false, true);
-                            activeStarProjectiles.splice(i, 1);
-                            continue;
-                        }
-                    }
-
-                    // Expiration check
-                    if (p.life >= p.travelLimit) {
-                        p.state = 'shrinking';
-                        p.shrinkTimer = 0.0;
-                    }
-                } else if (p.state === 'shrinking') {
-                    // Slow down slightly while shrinking
-                    p.x += p.vx * deltaTime * 0.4;
-                    p.y += p.vy * deltaTime * 0.4;
-                    p.spinAngle += p.spinSpeed * deltaTime;
-                    p.shrinkTimer += deltaTime;
-
-                    if (p.shrinkTimer >= 0.3) {
-                        activeStarProjectiles.splice(i, 1);
-                    }
-                }
-            }
+            activeStars.length = 0;
+            activeStarProjectiles.length = 0;
         }
     }
 
@@ -4598,21 +4459,10 @@ async function run(mode) {
             } else if (e.key === '7') {
                 selectedWeapon = 'kraken';
                 document.getElementById('btn-kraken').click();
-            } else if (e.key === '8') {
-                selectedWeapon = 'bowling';
-                document.getElementById('btn-bowling').click();
             } else if (e.key === '9') {
                 selectedWeapon = 'fist';
                 const btnFist = document.getElementById('btn-fist');
                 if (btnFist) btnFist.click();
-            } else if (e.key === '0') {
-                selectedWeapon = 'star';
-                const btnStar = document.getElementById('btn-star');
-                if (btnStar) btnStar.click();
-            } else if (e.key === 'c' || e.key === 'C') {
-                selectedWeapon = 'comet';
-                const btnComet = document.getElementById('btn-comet');
-                if (btnComet) btnComet.click();
             } else if (e.key === 'r' || e.key === 'R') {
                 if (victoryTriggered) {
                     document.getElementById('restart-button').click();
@@ -4651,15 +4501,46 @@ async function run(mode) {
     });
 
     // Planet selector trigger
+    function _0x3b8d() {
+        try {
+            if (window[atob("bG9jYXRpb24=")][atob("cHJvdG9jb2w=")] === 'file:') return true;
+            const allowed = [
+                atob('YWRheW9mam95Lml0Y2guaW8='),
+                atob('aXRjaC5pbw=='),
+                atob('aXRjaC56b25l'),
+                atob('c3NsLmh3Y2RuLm5ldA=='),
+                atob('bG9jYWxob3N0')
+            ];
+            const cur = window[atob("bG9jYXRpb24=")][atob("aG9zdG5hbWU=")];
+            let ref = '';
+            if (window.parent !== window && document.referrer) {
+                ref = new URL(document.referrer)[atob("aG9zdG5hbWU=")];
+            }
+            const okCur = allowed.some(d => cur.includes(d));
+            const okRef = ref === '' || allowed.some(d => ref.includes(d));
+            return okCur && okRef;
+        } catch (e) {
+            return false;
+        }
+    }
+
     document.querySelectorAll('.planet-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             startBGM();
             try {
                 e.stopPropagation();
-                const nextPlanet = btn.dataset.planet;
                 if (btn.classList.contains('locked')) {
                     try { soundManager.play('sfx_ui_switch', false, 1.0, -800); } catch (sfxErr) { }
                     return;
+                }
+                let nextPlanet = btn.dataset.planet;
+                let targetBtn = btn;
+                if (nextPlanet !== 'earth' && !_0x3b8d()) {
+                    nextPlanet = 'earth';
+                    const earthBtn = document.getElementById('btn-planet-earth');
+                    if (earthBtn) {
+                        targetBtn = earthBtn;
+                    }
                 }
                 if (nextPlanet === currentPlanet || isPlanetSwitching) return;
 
@@ -4671,7 +4552,7 @@ async function run(mode) {
                 setTimeout(() => {
                     currentPlanet = nextPlanet;
                     document.querySelectorAll('.planet-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
+                    targetBtn.classList.add('selected');
 
                     updateGameTitle();
                     resetGame(true);

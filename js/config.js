@@ -4,7 +4,7 @@ window.gameConfig = {
         "missile": {
             "speed": 5,
             "size": 6,
-            "explosionRadius": 16,
+            "explosionRadius": 4,
             "shakeIntensity": 6.3,
             "particleCount": 14,
             "particleSpeedScale": 0.75,
@@ -13,7 +13,7 @@ window.gameConfig = {
         "nuke": {
             "speed": 3,
             "size": 10,
-            "explosionRadius": 28,
+            "explosionRadius": 16,
             "shakeIntensity": 18,
             "particleCount": 27,
             "particleSpeedScale": 0.7,
@@ -22,7 +22,7 @@ window.gameConfig = {
         "asteroid": {
             "speed": 3,
             "size": 16,
-            "explosionRadius": 50,
+            "explosionRadius": 38,
             "shakeIntensity": 36,
             "particleCount": 48,
             "particleSpeedScale": 1,
@@ -31,7 +31,7 @@ window.gameConfig = {
         "laser": {
             "speed": 0,
             "size": 2,
-            "explosionRadius": 11,
+            "explosionRadius": -1,
             "shakeIntensity": 2,
             "particleCount": 5,
             "particleSpeedScale": 0.5,
@@ -40,7 +40,7 @@ window.gameConfig = {
         "gamma": {
             "speed": 0,
             "size": 0,
-            "explosionRadius": 12,
+            "explosionRadius": 0,
             "shakeIntensity": 20,
             "particleCount": 1,
             "particleSpeedScale": 0.8,
@@ -49,7 +49,7 @@ window.gameConfig = {
         "sword": {
             "speed": 12,
             "size": 25,
-            "explosionRadius": 18,
+            "explosionRadius": 6,
             "shakeIntensity": 24,
             "particleCount": 16,
             "particleSpeedScale": 0.8,
@@ -64,7 +64,7 @@ window.gameConfig = {
         "moon": {
             "speed": 1.3,
             "size": 40,
-            "explosionRadius": 114,
+            "explosionRadius": 102,
             "shakeIntensity": 50,
             "particleCount": 85,
             "particleSpeedScale": 1.25,

@@ -101,7 +101,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             tentacles: [],
             tentacleTimer: 0.0,
             shakeIntensity: 13,
-            explosionRadius: 37
+            explosionRadius: 25
         });
 
         krakenCooldown = MAX_COOLDOWNS.kraken;
@@ -109,34 +109,6 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'bowling') {
-        if (!unlockedPlanets.includes('sun')) {
-            addFloatingText(clickX, clickY, "LOCKED");
-            return;
-        }
-        if (bowlingCooldown > 0) {
-            return;
-        }
-
-        soundManager.play('sfx_launch_heavy');
-        activeBowlingBalls.push({
-            x: spawnX,
-            y: spawnY,
-            vx: Math.cos(angle + Math.PI) * 5.0,
-            vy: Math.sin(angle + Math.PI) * 5.0,
-            speed: 5.0,
-            angle: angle + Math.PI,
-            size: 26,
-            explosionRadius: 30,
-            shakeIntensity: 28,
-            state: 'flying',
-            penetrateTimer: 0,
-            stuckTimer: 2.0,
-            localX: 0,
-            localY: 0,
-            stuckAngle: 0
-        });
-
-        bowlingCooldown = MAX_COOLDOWNS.bowling;
         return;
     }
 
@@ -174,48 +146,10 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'star') {
-        if (!unlockedPlanets.includes('sun')) {
-            addFloatingText(clickX, clickY, "LOCKED");
-            return;
-        }
-        if (starCooldown > 0) {
-            return;
-        }
-
-        soundManager.play('sfx_magical_star_fade');
-
-        const targetAngle = angle + Math.PI;
-
-        activeStars.push({
-            x: spawnX,
-            y: spawnY,
-            angle: targetAngle,
-            spin: 0.0,
-            timer: 0.0,
-            duration: 4.0,
-            projectileTimer: 0.0,
-            size: 0.0,
-            opacity: 1.0
-        });
-
-        starCooldown = MAX_COOLDOWNS.star;
         return;
     }
 
     if (type === 'comet') {
-        if (!unlockedPlanets.includes('neptune')) {
-            addFloatingText(clickX, clickY, "LOCKED");
-            return;
-        }
-        if (cometCooldown > 0) {
-            return;
-        }
-
-        soundManager.play('sfx_launch_heavy', false, 0.65, 400);
-
-        executeSpawn('comet', clickX, clickY);
-
-        cometCooldown = MAX_COOLDOWNS.comet;
         return;
     }
 
@@ -340,7 +274,7 @@ function executeSpawn(type, clickX, clickY) {
 
     const speed = getConfigValue(`weapons.${type}.speed`, type === 'missile' ? 7 : (type === 'nuke' || type === 'asteroid' || type === 'comet') ? 4 : type === 'moon' ? 1.8 : 2);
     const size = getConfigValue(`weapons.${type}.size`, type === 'missile' ? 5 : type === 'nuke' ? 9 : type === 'moon' ? 25 : type === 'comet' ? 20 : 15);
-    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 13 : type === 'nuke' ? 21 : type === 'sword' ? 24 : type === 'moon' ? 102 : type === 'comet' ? 92 : 41);
+    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 1 : type === 'nuke' ? 9 : type === 'sword' ? 12 : type === 'moon' ? 90 : type === 'comet' ? 80 : 29);
     const shakeIntensity = getConfigValue(`weapons.${type}.shakeIntensity`, type === 'missile' ? 4.5 : type === 'nuke' ? 12 : type === 'moon' ? 32 : type === 'comet' ? 8 : 22);
 
     let vx = (dirX / dist) * speed;
