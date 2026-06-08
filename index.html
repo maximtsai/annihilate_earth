@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Annihilate Earth</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-world">
+        <div class="loading-screen" id="loading-screen">
+            <canvas id="loading-stars-canvas"></canvas>
+            <div class="loading-content">
+                <div class="loading-title">ANNIHILATE<br>EARTH</div>
+                <div class="loading-subtitle">INITIALIZING WEAPONS</div>
+                <div class="loading-bar-container">
+                    <div class="loading-bar-fill" id="loading-bar-fill"></div>
+                </div>
+                <div class="loading-status" id="loading-status">Loading assets...</div>
+            </div>
+        </div>
+        <canvas id="background-canvas"></canvas>
+        <div id="game-container">
+            <canvas id="game-canvas"></canvas>
+            <canvas id="hidden-canvas"></canvas>
+
+            <div class="ui-overlay">
+                <div class="options-toggle-wrapper">
+                    <button class="options-toggle" id="options-btn" title="Options">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="hud-top-group">
+                    <div class="hud-header-wrapper">
+                        <div class="hud-header">
+                            <div class="game-title">ANNIHILATE EARTH</div>
+                            <div class="mass-container">
+                                <div class="mass-display">
+                                    <div class="integrity-label"
+                                        style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                                        <span id="integrity-label-text"
+                                            style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">TARGET
+                                            INTEGRITY</span>
+                                        <span class="blinking-led" id="hud-status-led" style="flex-shrink:0;"></span>
+                                    </div>
+                                    <span class="integrity-pct" id="mass-text">100.0%</span>
+                                </div>
+                                <div class="mass-bar-bg">
+                                    <div class="mass-bar-fill" id="mass-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Planet selector outside/separate -->
+                    <div class="planet-selector">
+                        <button class="planet-btn selected" data-planet="earth" id="btn-planet-earth">
+                            <span class="planet-btn-icon">🌍</span> Earth
+                        </button>
+                        <button class="planet-btn" data-planet="mars" id="btn-planet-mars">
+                            <span class="planet-btn-icon">🔴</span> Mars
+                        </button>
+                        <button class="planet-btn" data-planet="neptune" id="btn-planet-neptune">
+                            <span class="planet-btn-icon">🔵</span> Neptune
+                        </button>
+                        <button class="planet-btn" data-planet="jupiter" id="btn-planet-jupiter">
+                            <span class="planet-btn-icon">🪐</span> Jupiter
+                        </button>
+                        <button class="planet-btn" data-planet="sun" id="btn-planet-sun">
+                            <span class="planet-btn-icon">☀️</span> Sun
+                        </button>
+                    </div>
+                </div>
+
+                <div id="weapon-unlock-notification"
+                    style="position: absolute; bottom: 118px; left: 50%; transform: translate(-50%, 15px); color: #00ffaa; font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 900; text-shadow: 0 0 10px rgba(0, 255, 170, 0.6), 0 0 20px rgba(0, 255, 170, 0.3); pointer-events: none; opacity: 0; text-transform: uppercase; white-space: nowrap; z-index: 1000; letter-spacing: 2px; transition: opacity 0.4s ease, transform 0.4s ease;">
+                </div>
+
+                <div class="weapon-bar-wrapper">
+                    <div class="weapon-bar-container">
+                        <button class="scroll-arrow scroll-left" id="scroll-left-btn">▲</button>
+                        <div class="weapon-scroll-wrapper" id="weapon-scroll-wrapper">
+                            <div class="weapon-panel-inner" id="weapon-panel-inner">
+                                <button class="weapon-button selected" data-weapon="missile" id="btn-missile">
+                                    <div class="weapon-icon">🚀</div>
+                                    <div class="weapon-name">Missile</div>
+                                </button>
+                                <button class="weapon-button" data-weapon="nuke" id="btn-nuke">
+                                    <div class="weapon-icon">💣</div>
+                                    <div class="weapon-name">Nuke</div>
+                                </button>
+                                <button class="weapon-button" data-weapon="laser" id="btn-laser">
+                                    <div class="weapon-icon">⚡</div>
+                                    <div class="weapon-name">Laser</div>
+                                    <div class="weapon-cooldown" id="laser-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="asteroid" id="btn-asteroid">
+                                    <div class="weapon-icon">☄️</div>
+                                    <div class="weapon-name">Asteroid</div>
+                                    <div class="weapon-cooldown" id="asteroid-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="gamma" id="btn-gamma">
+                                    <div class="weapon-icon">☢️</div>
+                                    <div class="weapon-name">Gamma<br>Burst</div>
+                                    <div class="weapon-cooldown" id="gamma-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="sword" id="btn-sword">
+                                    <div class="weapon-icon">🗡️</div>
+                                    <div class="weapon-name">Excalibur</div>
+                                    <div class="weapon-cooldown" id="sword-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="moon" id="btn-moon">
+                                    <div class="weapon-icon">🌕</div>
+                                    <div class="weapon-name">Moon</div>
+                                    <div class="weapon-cooldown" id="moon-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="blackhole" id="btn-blackhole">
+                                    <div class="weapon-icon">🕳️</div>
+                                    <div class="weapon-name">Black<br>Hole</div>
+                                    <div class="weapon-cooldown" id="blackhole-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="kraken" id="btn-kraken">
+                                    <div class="weapon-icon">🐙</div>
+                                    <div class="weapon-name">Cthulhu</div>
+                                    <div class="weapon-cooldown" id="kraken-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="worm" id="btn-worm">
+                                    <div class="weapon-icon">🪱</div>
+                                    <div class="weapon-name">Worm</div>
+                                    <div class="weapon-cooldown" id="worm-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="fist" id="btn-fist">
+                                    <div class="weapon-icon">✊</div>
+                                    <div class="weapon-name">Fist</div>
+                                    <div class="weapon-cooldown" id="fist-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="bowling" id="btn-bowling">
+                                    <div class="weapon-icon">🎳</div>
+                                    <div class="weapon-name">Bowling</div>
+                                    <div class="weapon-cooldown" id="bowling-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="star" id="btn-star">
+                                    <div class="weapon-icon">⭐</div>
+                                    <div class="weapon-name">Star</div>
+                                    <div class="weapon-cooldown" id="star-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="comet" id="btn-comet">
+                                    <div class="weapon-icon">❄️</div>
+                                    <div class="weapon-name">Comet</div>
+                                    <div class="weapon-cooldown" id="comet-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="scroll-arrow scroll-right" id="scroll-right-btn">▼</button>
+                    </div>
+                </div>
+
+                <div class="options-popup-overlay" id="options-popup-overlay">
+                    <div class="options-popup">
+                        <div class="options-popup-title" id="options-title">OPTIONS</div>
+                        <button class="options-popup-close" id="options-close-btn">✕</button>
+                        <div class="options-group">
+                            <div class="options-label" id="options-sound-label">SOUND EFFECTS</div>
+                            <div class="options-slider-row">
+                                <input type="range" id="sfx-volume-slider" min="0" max="100" value="100">
+                                <span class="options-slider-value" id="sfx-volume-value">100%</span>
+                            </div>
+                        </div>
+                        <div class="options-group">
+                            <div class="options-label" id="options-music-label">MUSIC</div>
+                            <div class="options-slider-row">
+                                <input type="range" id="music-volume-slider" min="0" max="100" value="100">
+                                <span class="options-slider-value" id="music-volume-value">100%</span>
+                            </div>
+                        </div>
+                        <div class="options-group">
+                            <div class="options-label" id="options-lang-label">LANGUAGE</div>
+                            <div class="custom-select-wrapper" id="custom-lang-wrapper">
+                                <button class="custom-select-btn" id="custom-lang-btn" type="button">
+                                    <span id="custom-lang-label-text">English</span>
+                                    <svg class="select-arrow" viewBox="0 0 12 12" fill="#00d9ff">
+                                        <path d="M6 8L1 3h10z" />
+                                    </svg>
+                                </button>
+                                <div class="custom-select-dropdown" id="custom-lang-dropdown">
+                                    <div class="custom-select-option selected" data-value="en">English</div>
+                                    <div class="custom-select-option" data-value="zh-CN">简体中文</div>
+                                    <div class="custom-select-option" data-value="zh-TW">繁體中文</div>
+                                    <div class="custom-select-option" data-value="es">Español</div>
+                                    <div class="custom-select-option" data-value="fr">Français</div>
+                                    <div class="custom-select-option" data-value="ru">Русский</div>
+                                    <div class="custom-select-option" data-value="ja">日本語</div>
+                                    <div class="custom-select-option" data-value="ar">العربية</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="options-group" style="margin-top: 10px; display: flex; justify-content: center;">
+                            <button id="options-reset-btn" class="options-reset-button">RESET PROGRESS</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="options-popup-overlay" id="confirm-popup-overlay" style="display: none; z-index: 300; background: rgba(2, 2, 8, 0.85);">
+                    <div class="options-popup" style="border-color: rgba(255, 30, 80, 0.85); box-shadow: 0 0 40px rgba(255, 30, 80, 0.25);">
+                        <div class="options-popup-title" style="color: #ff3e6c; font-size: 22px; text-shadow: 0 0 8px rgba(255, 30, 80, 0.4);">RESET PROGRESS?</div>
+                        <div class="confirm-message" style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 12px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
+                            THIS WILL ERASE ALL COMPLETED PLANETS AND RESTORE SIMULATION LOCKS. ARE YOU ABSOLUTELY SURE?
+                        </div>
+                        <div style="display: flex; gap: 15px; justify-content: center; width: 100%;">
+                            <button id="confirm-reset-yes" class="options-reset-button" style="margin: 0; width: 50%; height: 38px;">YES, RESET</button>
+                            <button id="confirm-reset-no" class="confirm-cancel-button" style="margin: 0; width: 50%; height: 38px;">CANCEL</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="victory-screen" id="victory-screen">
+                <div class="victory-title">EARTH ANNIHILATED</div>
+                <div class="victory-subtitle">Humanity has been completely erased. The cosmos is silent once more.</div>
+                <div class="victory-stats">
+                    <div class="stat-row">
+                        <span id="stat-shots-label">SHOTS FIRED</span>
+                        <span class="stat-value" id="stat-shots-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span id="stat-time-label">TIME SPENT</span>
+                        <span class="stat-value" id="stat-time-value">0s</span>
+                    </div>
+                </div>
+                <button class="restart-button" id="restart-button">RESTART SIM</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/platform-bridge.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/sound.js"></script>
+    <script src="js/translations.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/planet.js"></script>
+    <script src="js/weapons.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>

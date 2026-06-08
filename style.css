@@ -1,0 +1,1234 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Roboto:wght@400;700&display=swap');
+
+:root {
+    --planet-offset-y: 30px;
+}
+
+/* CSS Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body,
+html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #020206;
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+}
+
+/* 100% Full-bleed container to let host style and scale */
+#game-world {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #060610;
+    overflow: hidden;
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8);
+}
+
+#background-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+#game-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1600px;
+    height: 900px;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    overflow: hidden;
+    z-index: 1;
+}
+
+#game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+    cursor: crosshair;
+}
+
+#hidden-canvas {
+    display: none;
+}
+
+/* UI Overlay */
+.ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 5px 24px 30px 24px;
+}
+
+.ui-overlay>* {
+    pointer-events: auto;
+}
+
+/* Header HUD */
+.hud-header-wrapper {
+    position: relative;
+    width: 800px;
+    margin: 10px auto 0 auto;
+    padding: 1.5px;
+    background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px));
+    box-shadow: 0 5px 25px rgba(0, 217, 255, 0.25);
+}
+
+.hud-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: rgba(12, 12, 28, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 16px 24px 10px 24px;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px));
+    text-align: center;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Telemetry Header Line */
+.hud-telemetry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(0, 217, 255, 0.6);
+    letter-spacing: 2px;
+    padding-bottom: 2px;
+}
+
+.blinking-led {
+    width: 8px;
+    height: 8px;
+    background-color: #00ffaa;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00ffaa;
+    animation: techBlink 1.5s infinite alternate;
+    display: inline-block;
+}
+
+.blinking-led.danger {
+    background-color: #ff0055;
+    box-shadow: 0 0 8px #ff0055;
+    animation: techBlinkRapid 0.4s infinite alternate;
+}
+
+/* HUD Top Group wrapper to keep telemetry and selector together at the top */
+.hud-top-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    pointer-events: none;
+}
+
+.hud-top-group>* {
+    pointer-events: auto;
+}
+
+/* Planet Selector UI */
+.planet-selector {
+    position: absolute;
+    left: 24px;
+    top: calc(50% + var(--planet-offset-y));
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    /* No UI backing! */
+    border: none;
+    /* No border! */
+    box-shadow: none;
+    /* No box shadow! */
+    max-width: max-content;
+    z-index: 100;
+    pointer-events: auto !important;
+}
+
+.planet-btn {
+    background: transparent;
+    /* Transparent button backing! */
+    border: 1px solid rgba(0, 217, 255, 0.55);
+    /* Brighter outline */
+    border-radius: 0px !important;
+    /* SQUARE */
+    color: rgba(0, 217, 255, 0.8);
+    font-family: 'Orbitron', sans-serif;
+    /* Same as weapon card */
+    font-size: 14px;
+    /* Same as weapon card */
+    font-weight: 700;
+    /* Same as weapon card */
+    padding: 8px;
+    width: 96px;
+    /* 2px wider than before (94px) */
+    height: 84px;
+    /* Aspect-ratio */
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    /* Icon on top, name below */
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 0 8px rgba(0, 217, 255, 0.05);
+    pointer-events: auto !important;
+}
+
+.planet-btn-icon {
+    font-size: 30px;
+    /* Make the planet icon prominent and large */
+    line-height: 1;
+    transition: filter 250ms ease;
+}
+
+.planet-btn:hover {
+    background: rgba(0, 217, 255, 0.15);
+    /* Soft hover backlight */
+    border-color: #00ffaa;
+    /* Brighter hover outline matching options button */
+    color: #ffffff;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.45);
+    transform: translateY(-1px);
+}
+
+.planet-btn:hover .planet-btn-icon {
+    filter: drop-shadow(0 0 8px rgba(0, 255, 170, 0.3));
+}
+
+.planet-btn:active {
+    transform: translateY(1px);
+}
+
+.planet-btn.selected {
+    background: rgba(0, 217, 255, 0.15);
+    /* Soft transparent backing */
+    border-color: #00d9ff;
+    border-radius: 0px !important;
+    /* SQUARE */
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(0, 217, 255, 0.4), inset 0 0 6px rgba(0, 217, 255, 0.2);
+    text-shadow: 0 0 5px #ffffff;
+}
+
+.planet-btn.locked {
+    opacity: 0.82;
+    cursor: not-allowed;
+    border-color: rgba(255, 0, 85, 0.5);
+    color: rgba(255, 0, 85, 0.85);
+    position: relative;
+}
+
+.planet-btn.locked:hover {
+    background: rgba(255, 0, 85, 0.08);
+    border-color: rgba(255, 0, 85, 0.75);
+    color: #ff3366;
+    box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+    transform: none;
+}
+
+.planet-btn.locked:active {
+    transform: none;
+}
+
+/* Tooltip background & box (Right of the button, 198px wide, 23px font, rounded, two lines, brighter) */
+.planet-btn.locked::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 12px);
+    transform: translateY(-50%) scale(0.85);
+    background: rgba(18, 12, 32, 0.98);
+    border: 1.5px solid #ff3377;
+    border-radius: 10px;
+    color: #ffffff;
+    text-shadow: 0 0 5px #ff0055;
+    padding: 8px 14px;
+    width: 206px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 23px;
+    text-align: center;
+    line-height: 1.3;
+    white-space: pre-line;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1000;
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.65), inset 0 0 6px rgba(255, 0, 85, 0.35);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.planet-btn.locked:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}
+
+/* Tooltip Caret Pointer (Pointing left, positioned on the right of button, brighter) */
+.planet-btn.locked::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 4px);
+    transform: translateY(-50%) scale(0.85);
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent #ff3377 transparent transparent;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1000;
+    filter: drop-shadow(0 0 2px #ff0055);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.planet-btn.locked:hover::before {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}
+
+@keyframes techBlink {
+    0% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes techBlinkRapid {
+    0% {
+        opacity: 0.2;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.game-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.4);
+    letter-spacing: 3px;
+    line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    text-align: center;
+}
+
+.mass-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 5px;
+    position: relative;
+}
+
+.options-toggle-wrapper {
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    width: 64px;
+    height: 64px;
+    padding: 1.5px;
+    background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    box-shadow: 0 5px 25px rgba(0, 217, 255, 0.25);
+    z-index: 100;
+    transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-sizing: border-box;
+}
+
+.options-toggle-wrapper:hover {
+    background: linear-gradient(180deg, #00ffaa, rgba(0, 255, 170, 0.25));
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.45);
+    transform: translateY(-1px);
+}
+
+.options-toggle-wrapper:active {
+    transform: translateY(1px);
+}
+
+.options-toggle {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: rgba(12, 12, 28, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    clip-path: polygon(0 0, calc(100% - 13.5px) 0, 100% 13.5px, 100% 100%, 13.5px 100%, 0 calc(100% - 13.5px));
+    pointer-events: auto;
+    box-shadow: inset 0 0 8px rgba(0, 217, 255, 0.1);
+    transition: background 250ms ease;
+}
+
+.options-toggle:hover {
+    background: rgba(0, 217, 255, 0.15);
+}
+
+.options-toggle svg {
+    width: 40px;
+    height: 40px;
+    fill: #ffffff;
+    filter: drop-shadow(0 0 4px rgba(0, 238, 255, 0.6));
+    transition: filter 250ms ease;
+}
+
+.options-toggle-wrapper:hover svg {
+    filter: drop-shadow(0 0 8px rgba(0, 255, 170, 0.3));
+}
+
+/* Options Popup */
+.options-popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(2, 2, 8, 0.7);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.options-popup-overlay.show {
+    display: flex;
+    animation: fadeIn 200ms ease-out;
+}
+
+.options-popup {
+    width: 85%;
+    max-width: 420px;
+    background: rgba(12, 12, 32, 0.97);
+    border: 1.5px solid rgba(0, 217, 255, 0.6);
+    border-radius: 8px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    box-shadow: 0 0 40px rgba(0, 217, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.options-popup-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: #ffffff;
+    text-align: center;
+    letter-spacing: 3px;
+    text-shadow: 0 0 8px rgba(0, 217, 255, 0.4);
+}
+
+.options-popup-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    font-size: 26px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 200ms ease;
+}
+
+.options-popup-close:hover {
+    background: rgba(255, 0, 85, 0.2);
+    border-color: #ff0055;
+    color: #ff3366;
+}
+
+.options-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.options-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 24px;
+    color: rgba(0, 217, 255, 0.85);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.options-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.options-slider-row input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 10px;
+    background: rgba(0, 217, 255, 0.2);
+    border-radius: 3px;
+    outline: none;
+    border: 1px solid rgba(0, 217, 255, 0.3);
+}
+
+.options-slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 32px;
+    height: 32px;
+    background: #00d9ff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
+}
+
+.options-slider-row input[type="range"]::-moz-range-thumb {
+    width: 32px;
+    height: 32px;
+    background: #00d9ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
+}
+
+.options-slider-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 24px;
+    color: #ffffff;
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Custom dropdown */
+.custom-select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select-btn {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(0, 217, 255, 0.08);
+    border: 1px solid rgba(0, 217, 255, 0.4);
+    border-radius: 4px;
+    color: #ffffff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 24px;
+    outline: none;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.custom-select-btn:hover,
+.custom-select-btn.open {
+    border-color: #00d9ff;
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+}
+
+.custom-select-btn .select-arrow {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    transition: transform 200ms ease;
+}
+
+.custom-select-btn.open .select-arrow {
+    transform: rotate(180deg);
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    background: #0c0c1c;
+    border: 1px solid rgba(0, 217, 255, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+.custom-select-dropdown.open {
+    display: block;
+}
+
+.custom-select-option {
+    padding: 6px 18px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: background 150ms ease;
+}
+
+.custom-select-option:hover {
+    background: rgba(0, 217, 255, 0.15);
+}
+
+.custom-select-option.selected {
+    background: rgba(0, 217, 255, 0.22);
+    color: #00d9ff;
+}
+
+.mass-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.mass-display .integrity-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mass-display .integrity-pct {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.mass-bar-bg {
+    width: 100%;
+    height: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 0;
+    overflow: hidden;
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    position: relative;
+}
+
+.mass-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff0055, #ff6600, #ffcc00, #00ffaa, #00d9ff);
+    background-size: 500% 100%;
+    width: 100%;
+    transition: width 150ms ease-out;
+}
+
+/* Weapon Selection Panel */
+.weapon-bar-wrapper {
+    position: absolute;
+    right: 24px;
+    top: calc(50% + var(--planet-offset-y));
+    transform: translateY(-50%);
+    width: 140px;
+    height: 80%;
+    max-height: calc(100% - 220px);
+    padding: 1.5px;
+    background: linear-gradient(90deg, #00d9ff, rgba(0, 153, 255, 0.2));
+    clip-path: polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
+    box-shadow: -5px 0 25px rgba(0, 217, 255, 0.2);
+    margin: 0;
+    z-index: 100;
+}
+
+.weapon-bar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: rgba(12, 12, 28, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 12px 10px;
+    clip-path: polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
+    width: 100%;
+    height: 100%;
+}
+
+.weapon-scroll-wrapper {
+    flex: 1;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.weapon-scroll-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.weapon-panel-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 0;
+    width: 100%;
+    align-items: center;
+}
+
+.weapon-button {
+    position: relative;
+    flex: 0 0 114px;
+    width: 114px;
+    height: 114px;
+    background: rgba(0, 217, 255, 0.05);
+    border: 1px solid rgba(0, 217, 255, 0.25);
+    border-radius: 4px;
+    color: #a0c8d8;
+    cursor: pointer;
+    transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    outline: none;
+    overflow: hidden;
+}
+
+/* Technical border corner brackets */
+.weapon-button::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border: 1px solid transparent;
+    pointer-events: none;
+    transition: border-color 250ms ease;
+}
+
+/* Tiny tech indicator light on bottom */
+.weapon-button::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(0, 217, 255, 0.2);
+    transition: all 250ms ease;
+}
+
+.scroll-arrow {
+    flex: 0 0 38px;
+    background: rgba(4, 4, 18, 0.7);
+    border: 1.5px solid rgba(0, 217, 255, 0.6);
+    color: #00d9ff;
+    font-size: 20px;
+    width: 114px;
+    height: 38px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 200ms ease;
+    outline: none;
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.95);
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.15);
+}
+
+.scroll-arrow:hover {
+    background: rgba(0, 217, 255, 0.22);
+    border-color: #00ffaa;
+    box-shadow: 0 0 16px rgba(0, 217, 255, 0.6), inset 0 0 8px rgba(0, 217, 255, 0.2);
+    color: #ffffff;
+    text-shadow: 0 0 12px #ffffff;
+}
+
+.weapon-cooldown {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(2, 2, 8, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 26px;
+    color: #ffd200;
+    font-weight: 700;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+    overflow: hidden;
+}
+
+.cooldown-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: rgba(255, 210, 0, 0.3);
+    z-index: 1;
+}
+
+.cooldown-text {
+    position: relative;
+    z-index: 2;
+    color: #fff280;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.weapon-button.cooldown-active .weapon-cooldown {
+    opacity: 1;
+}
+
+.weapon-button:hover {
+    background: rgba(0, 217, 255, 0.12);
+    border-color: rgba(0, 217, 255, 0.65);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 0 22px rgba(0, 217, 255, 0.6), inset 0 0 8px rgba(0, 217, 255, 0.15);
+}
+
+.weapon-button:hover .weapon-icon {
+    filter: drop-shadow(0 0 10px rgba(0, 217, 255, 0.7));
+}
+
+.weapon-button:hover::before {
+    border-color: rgba(0, 217, 255, 0.15);
+}
+
+.weapon-button:hover::after {
+    background: #00d9ff;
+    box-shadow: 0 0 8px #00d9ff;
+}
+
+.weapon-button:active {
+    transform: translateY(-1px);
+}
+
+.weapon-button.selected {
+    background: rgba(0, 217, 255, 0.2);
+    border-color: #00d9ff;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.45);
+}
+
+.weapon-button.selected::before {
+    border-color: rgba(0, 217, 255, 0.4);
+}
+
+.weapon-button.selected::after {
+    background: #00ffaa;
+    box-shadow: 0 0 10px #00ffaa;
+    height: 4px;
+    animation: weaponBarPulse 1.6s ease-in-out infinite;
+}
+
+
+@keyframes weaponBarPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 8px #00ffaa;
+    }
+
+    50% {
+        opacity: 0.5;
+        box-shadow: 0 0 20px #00ffaa, 0 0 4px #ffffff;
+    }
+}
+
+.weapon-icon {
+    font-size: 32px;
+    filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.3));
+    transition: transform 250ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.weapon-button:hover .weapon-icon {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 10px rgba(0, 217, 255, 0.6));
+}
+
+.weapon-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #e0f5ff;
+    text-shadow: 0 0 5px rgba(0, 217, 255, 0.3);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.25;
+    max-width: 110px;
+    text-align: center;
+}
+
+.weapon-button.selected .weapon-name {
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
+}
+
+/* CJK language overrides: larger text, single line */
+.lang-cjk .weapon-name {
+    font-size: 16px;
+    white-space: nowrap;
+    max-width: none;
+    letter-spacing: 0;
+}
+
+.lang-cjk .planet-btn {
+    font-size: 18px;
+    letter-spacing: 0;
+}
+
+#btn-sword .weapon-name {
+    font-size: 14px;
+}
+
+.weapon-radius {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Victory Screen */
+.victory-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(2, 2, 8, 0.95);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    z-index: 100;
+    padding: 40px;
+}
+
+.victory-screen.show {
+    display: flex;
+    animation: fadeIn 600ms ease-out forwards;
+}
+
+.victory-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 56px;
+    font-weight: 900;
+    color: #ff3366;
+    text-shadow: 0 0 20px rgba(255, 51, 102, 0.6), 0 0 50px rgba(255, 102, 0, 0.4);
+    animation: pulse 2.5s ease-in-out infinite;
+    text-align: center;
+    letter-spacing: 3px;
+    line-height: 1.2;
+}
+
+.victory-subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 20px;
+    color: #8888aa;
+    text-align: center;
+    max-width: 80%;
+    line-height: 1.5;
+}
+
+.victory-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    background: rgba(0, 217, 255, 0.05);
+    border: 1px solid rgba(0, 217, 255, 0.2);
+    padding: 25px;
+    width: 320px;
+    font-family: 'Share Tech Mono', monospace;
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    color: #00d9ff;
+    font-size: 20px;
+}
+
+.stat-value {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.restart-button {
+    width: 320px;
+    height: 80px;
+    background: rgba(0, 217, 255, 0.1);
+    border: 1.5px solid #00d9ff;
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+    color: #ffffff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.25);
+    letter-spacing: 3px;
+    outline: none;
+}
+
+.restart-button:hover {
+    background: rgba(0, 217, 255, 0.25);
+    box-shadow: 0 0 35px rgba(0, 217, 255, 0.6);
+    transform: scale(1.03);
+}
+
+/* Weapon Ready Glow */
+@keyframes weaponReadyPulse {
+    0% {
+        box-shadow: 0 0 0px rgba(0, 255, 170, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 30px rgba(0, 255, 170, 0.8), inset 0 0 15px rgba(0, 255, 170, 0.4);
+    }
+
+    100% {
+        box-shadow: 0 0 0px rgba(0, 255, 170, 0);
+    }
+}
+
+.weapon-ready-glow {
+    animation: weaponReadyPulse 0.6s ease-out;
+}
+
+/* Animations */
+/* Loading Screen */
+.loading-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #020206;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.8s ease-out;
+    overflow: hidden;
+}
+
+.loading-screen.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-screen canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.loading-content {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+}
+
+.loading-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 46px;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 0 0 20px rgba(0, 217, 255, 0.6), 0 0 60px rgba(0, 217, 255, 0.2);
+    letter-spacing: 4px;
+    text-align: center;
+    animation: loadingPulse 2s ease-in-out infinite;
+}
+
+.loading-subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 20px;
+    color: rgba(0, 217, 255, 0.7);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+.loading-bar-container {
+    width: 280px;
+    height: 4px;
+    background: rgba(0, 217, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 217, 255, 0.3);
+}
+
+.loading-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00d9ff, #00ffaa);
+    border-radius: 2px;
+    transition: width 0.3s ease-out;
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.6);
+}
+
+.loading-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 17px;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 1px;
+}
+
+@keyframes loadingPulse {
+
+    0%,
+    100% {
+        text-shadow: 0 0 20px rgba(0, 217, 255, 0.6), 0 0 60px rgba(0, 217, 255, 0.2);
+    }
+
+    50% {
+        text-shadow: 0 0 30px rgba(0, 217, 255, 0.9), 0 0 80px rgba(0, 217, 255, 0.4);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.04);
+    }
+}
+
+/* Custom Reset Progress Button & Confirmation Popup */
+.options-reset-button {
+    width: 100%;
+    height: 38px;
+    background: rgba(255, 30, 80, 0.08);
+    border: 1.2px solid rgba(255, 30, 80, 0.6);
+    border-radius: 4px;
+    color: #ff3e6c;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 200ms ease;
+    letter-spacing: 2px;
+    outline: none;
+    margin-top: 5px;
+}
+
+.options-reset-button:hover {
+    background: rgba(255, 30, 80, 0.2);
+    border-color: #ff1e50;
+    box-shadow: 0 0 15px rgba(255, 30, 80, 0.45);
+    color: #ffffff;
+}
+
+.confirm-cancel-button {
+    width: 100%;
+    height: 38px;
+    background: rgba(0, 217, 255, 0.08);
+    border: 1.2px solid rgba(0, 217, 255, 0.6);
+    border-radius: 4px;
+    color: #00d9ff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 200ms ease;
+    letter-spacing: 2px;
+    outline: none;
+    margin-top: 5px;
+}
+
+.confirm-cancel-button:hover {
+    background: rgba(0, 217, 255, 0.2);
+    border-color: #00ffff;
+    box-shadow: 0 0 15px rgba(0, 217, 255, 0.45);
+    color: #ffffff;
+}
