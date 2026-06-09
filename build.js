@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { minify } = require('terser');
 
 const DIST_DIR = path.join(__dirname, 'dist');
 
@@ -15,7 +16,7 @@ const JS_FILES = [
     path.join(__dirname, 'js', 'main.js')
 ];
 
-function build() {
+async function build() {
     console.log("Starting build process...");
 
     // 1. Recreate clean dist directory
@@ -36,8 +37,19 @@ function build() {
         bundledJsContent += `\n/* --- BUNDLED: ${path.basename(filePath)} --- */\n`;
         bundledJsContent += fs.readFileSync(filePath, 'utf8') + '\n';
     });
-    fs.writeFileSync(path.join(DIST_DIR, 'game.js'), bundledJsContent, 'utf8');
-    console.log("Successfully created dist/game.js");
+    console.log("Minifying JavaScript...");
+    const minified = await minify(bundledJsContent, {
+        compress: true,
+        mangle: true
+    });
+    if (minified.error) {
+        console.error('Minification failed:', minified.error);
+        process.exit(1);
+    }
+    fs.writeFileSync(path.join(DIST_DIR, 'game.js'), minified.code, 'utf8');
+    const originalKB = (Buffer.byteLength(bundledJsContent, 'utf8') / 1024).toFixed(1);
+    const minifiedKB = (Buffer.byteLength(minified.code, 'utf8') / 1024).toFixed(1);
+    console.log(`Successfully created dist/game.js (${originalKB} KB -> ${minifiedKB} KB)`);
 
     // 3. Copy style.css
     console.log("Copying style.css...");
@@ -92,4 +104,4 @@ function copyDirRecursive(src, dest) {
     }
 }
 
-build();
+build().catch(err => { console.error(err); process.exit(1); });
