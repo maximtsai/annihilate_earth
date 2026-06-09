@@ -5,7 +5,7 @@ const DIST_DIR = path.join(__dirname, 'dist');
 
 // Order of JS files to bundle
 const JS_FILES = [
-    path.join(__dirname, 'js', 'platforms', 'local.js'),
+    path.join(__dirname, 'js', 'platforms', 'poki.js'),
     path.join(__dirname, 'js', 'config.js'),
     path.join(__dirname, 'js', 'sound.js'),
     path.join(__dirname, 'js', 'translations.js'),

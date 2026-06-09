@@ -1,39 +1,104 @@
-// Local/Mock implementation of the Platform Bridge API (default active bridge)
+// Poki SDK implementation of the Platform Bridge API
 window.PlatformBridge = {
-    platform: 'local',
+    platform: 'poki',
+    sdkLoaded: false,
 
-    init: async function() {
-        console.log("[PlatformBridge] Initialized in local mode.");
-        return Promise.resolve();
+    init: function() {
+        return new Promise((resolve) => {
+            if (this.sdkLoaded) {
+                resolve();
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = 'https://game-cdn.poki.com/scripts/v2/poki-sdk.js';
+            script.onload = () => {
+                this.sdkLoaded = true;
+                if (typeof PokiSDK !== 'undefined') {
+                    PokiSDK.init().then(() => {
+                        console.log("[PlatformBridge] Poki SDK successfully initialized.");
+                        resolve();
+                    }).catch(() => {
+                        console.warn("[PlatformBridge] Poki SDK failed to initialize; using fallback mode.");
+                        resolve();
+                    });
+                } else {
+                    console.warn("[PlatformBridge] PokiSDK variable not found; using fallback mode.");
+                    resolve();
+                }
+            };
+            script.onerror = () => {
+                console.warn("[PlatformBridge] Poki SDK script failed to load; using fallback mode.");
+                resolve();
+            };
+            document.head.appendChild(script);
+        });
     },
 
     gameplayStart: function() {
-        console.log("[PlatformBridge] Gameplay Start triggered.");
+        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
+            PokiSDK.gameplayStart();
+        }
     },
 
     gameplayStop: function() {
-        console.log("[PlatformBridge] Gameplay Stop triggered.");
+        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
+            PokiSDK.gameplayStop();
+        }
     },
 
     showAdBreak: function(onComplete) {
-        console.log("[PlatformBridge] Requesting commercial/ad break...");
-        
+        console.log("[PlatformBridge] Poki commercial break requested.");
+
         // Pause audio and game loop
         window.gamePausedForAd = true;
         if (window.soundManager && window.soundManager.context) {
             window.soundManager.context.suspend().catch(() => {});
         }
 
-        this._runTransitionIn(() => {
-            if (onComplete) onComplete();
+        let adFinished = false;
+        let transitionInFinished = false;
 
-            window.gamePausedForAd = false;
-            if (window.soundManager && window.soundManager.context && window.soundManager.isInitialized) {
-                window.soundManager.context.resume().catch(() => {});
+        const tryResume = () => {
+            if (adFinished && transitionInFinished) {
+                window.gamePausedForAd = false;
+                if (window.soundManager && window.soundManager.context && window.soundManager.isInitialized) {
+                    window.soundManager.context.resume().catch(() => {});
+                }
+                if (onComplete) onComplete();
+                
+                // Transition away once everything is completed
+                this._runTransitionOut();
             }
+        };
 
-            this._runTransitionOut();
+        // 1. Start transition-in immediately
+        this._runTransitionIn(() => {
+            transitionInFinished = true;
+            tryResume();
         });
+
+        // 2. Request Poki ad immediately (running in parallel to transition-in)
+        const onAdComplete = () => {
+            adFinished = true;
+            tryResume();
+        };
+
+        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
+            PokiSDK.commercialBreak()
+                .then(() => {
+                    console.log("[PlatformBridge] Commercial break completed successfully.");
+                    onAdComplete();
+                })
+                .catch((err) => {
+                    console.warn("[PlatformBridge] Commercial break failed or was skipped:", err);
+                    onAdComplete();
+                });
+        } else {
+            // Fallback if SDK failed to load
+            console.log("[PlatformBridge] Fallback: No Poki SDK loaded, skipping commercial break.");
+            onAdComplete();
+        }
     },
 
     _runTransitionIn: function(onMidpoint) {
@@ -56,10 +121,10 @@ window.PlatformBridge = {
                     pointer-events: all;
                 }
                 .ad-transition-in {
-                    animation: adTransitionIn 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+                    animation: adTransitionIn 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards;
                 }
                 .ad-transition-out {
-                    animation: adTransitionOut 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+                    animation: adTransitionOut 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards;
                 }
                 @keyframes adTransitionIn {
                     0% {
@@ -93,7 +158,7 @@ window.PlatformBridge = {
         overlay.classList.add('ad-transition-in');
         setTimeout(() => {
             if (onMidpoint) onMidpoint();
-        }, 300);
+        }, 220);
     },
 
     _runTransitionOut: function() {
@@ -104,6 +169,6 @@ window.PlatformBridge = {
         overlay.classList.add('ad-transition-out');
         setTimeout(() => {
             overlay.remove();
-        }, 300);
+        }, 220);
     }
 };
