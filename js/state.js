@@ -19,12 +19,79 @@ let laserSoundCounter = 0;
 const PLANET_ORDER = ['earth', 'mars', 'neptune', 'jupiter', 'sun'];
 let unlockedPlanets = ['earth'];
 let weapons = [];
-let particles = [];
+
+// High-performance pre-allocated particle pool class
+class ParticlePool {
+    constructor(maxSize = 250) {
+        this.maxSize = maxSize;
+        this.pool = [];
+        for (let i = 0; i < maxSize; i++) {
+            this.pool.push({
+                active: false,
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                life: 0,
+                maxLife: 0,
+                size: 0,
+                color: '',
+                type: '',
+                moonExhaust: false,
+                isComet: false
+            });
+        }
+    }
+
+    push(properties) {
+        // Find inactive particle
+        let p = null;
+        for (let i = 0; i < this.maxSize; i++) {
+            if (!this.pool[i].active) {
+                p = this.pool[i];
+                break;
+            }
+        }
+        // Fallback: steal oldest (lowest life)
+        if (!p) {
+            let minLife = Infinity;
+            for (let i = 0; i < this.maxSize; i++) {
+                if (this.pool[i].active && this.pool[i].life < minLife) {
+                    minLife = this.pool[i].life;
+                    p = this.pool[i];
+                }
+            }
+        }
+        if (p) {
+            p.active = true;
+            p.x = properties.x;
+            p.y = properties.y;
+            p.vx = properties.vx;
+            p.vy = properties.vy;
+            p.life = properties.life !== undefined ? properties.life : 1.0;
+            p.maxLife = properties.maxLife;
+            p.size = properties.size;
+            p.color = properties.color;
+            p.type = properties.type;
+            p.moonExhaust = !!properties.moonExhaust;
+            p.isComet = !!properties.isComet;
+        }
+    }
+
+    clear() {
+        for (let i = 0; i < this.maxSize; i++) {
+            this.pool[i].active = false;
+        }
+    }
+}
+
+let particles = new ParticlePool(50);
 let shockwaves = []; // (User feature 7: Shockwave rings)
 let holyRays = []; // Holy rays effect for Excalibur
 let totalShotsFired = 0; // (User feature 4: Stats tracking)
 let totalCratersMade = 0; // (User feature 4: Stats tracking)
 let planetTimeSpent = 0;
+let bestTimes = {};
 let planetRotation = 0;
 let planetScale = 1.0;
 let isPlanetSwitching = false;
@@ -94,6 +161,17 @@ async function saveUnlockedPlanets() {
     }
 }
 
+async function saveBestTimes() {
+    try {
+        const current = await getGameState();
+        const state = (current && current.state) ? current.state : {};
+        state.bestTimes = bestTimes;
+        await saveGameState(state);
+    } catch (error) {
+        console.warn('Failed to save best times:', error.message);
+    }
+}
+
 async function saveOptions(options) {
     try {
         const current = await getGameState();
@@ -111,11 +189,16 @@ let initiallyUnlockedPlanets = new Set(['earth']);
 async function loadUnlockedPlanets() {
     try {
         const response = await getGameState();
-        if (response.state && response.state.unlockedPlanets) {
-            unlockedPlanets = response.state.unlockedPlanets;
-            initiallyUnlockedPlanets = new Set(unlockedPlanets);
-            updatePlanetButtons();
-            refreshWeaponLocks();
+        if (response.state) {
+            if (response.state.unlockedPlanets) {
+                unlockedPlanets = response.state.unlockedPlanets;
+                initiallyUnlockedPlanets = new Set(unlockedPlanets);
+                updatePlanetButtons();
+                refreshWeaponLocks();
+            }
+            if (response.state.bestTimes) {
+                bestTimes = response.state.bestTimes;
+            }
         }
     } catch (error) {
         console.warn('Failed to load unlocked planets:', error.message);

@@ -575,7 +575,7 @@ function eraseTerrain(localX, localY, radius, isCollision, weaponType) {
                         continue;
                     }
                     // Otherwise, erases with radius reduced by 4 and a percentage
-                    if (d_exp <= Math.max(0, (radius - 4) * 0.7)) {
+                    if (d_exp <= Math.max(0, (radius - 4) * 0.78)) {
                         data[idx + 3] = 0; // erase
                     } else {
                         // Reveal core at the edge of core-damaging explosions
@@ -942,11 +942,11 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     const dy = localY - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const planetSize = getPlanetSize();
-    const coreThreshold = planetSize * 0.08;
+    const coreThreshold = planetSize * 0.13;
 
     let finalRadius = radius;
     if (dist <= coreThreshold) {
-        finalRadius = Math.max(0, radius - 2);
+        finalRadius = Math.max(0, radius - 2.75);
     }
 
     // Erase using centralized core-aware terrain logic
@@ -1175,11 +1175,11 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
     const dy = localY - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const planetSize = getPlanetSize();
-    const coreThreshold = (planetSize / 2) * 0.4;
+    const coreThreshold = planetSize * 0.13;
 
     let finalRadius = radius;
     if (dist <= coreThreshold) {
-        finalRadius = Math.max(0, radius - 2) * 0.9;
+        finalRadius = Math.max(0, radius - 2.75);
     }
 
     // Erase using centralized core-aware terrain logic
@@ -1296,6 +1296,30 @@ function triggerVictory() {
             }
         }
 
+        const previousBest = bestTimes[currentPlanet];
+        const bestRow = document.getElementById('stat-best-time-row');
+        const bestVal = document.getElementById('stat-best-time-value');
+        if (bestRow && bestVal) {
+            if (previousBest !== undefined) {
+                bestRow.style.display = 'flex';
+                const seconds = Math.floor(previousBest);
+                if (seconds < 60) {
+                    bestVal.textContent = `${seconds}s`;
+                } else {
+                    const m = Math.floor(seconds / 60);
+                    const s = seconds % 60;
+                    bestVal.textContent = `${m}m ${s}s`;
+                }
+            } else {
+                bestRow.style.display = 'none';
+            }
+        }
+
+        if (previousBest === undefined || planetTimeSpent < previousBest) {
+            bestTimes[currentPlanet] = planetTimeSpent;
+            saveBestTimes();
+        }
+
         if (vicTitle && vicSubtitle) {
             const t = translations[currentLanguage] || translations['en'];
             if (currentPlanet === 'mars') {
@@ -1388,7 +1412,7 @@ function resetGame(keepCooldowns = false) {
     soundManager.stopLoop('sfx_gamma_beam');
     soundManager.stopLoop('sfx_sword_rumble_loop');
     weapons = [];
-    particles = [];
+    particles.clear();
     shockwaves = [];
     holyRays = [];
     if (!keepCooldowns) {

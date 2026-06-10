@@ -176,6 +176,51 @@ if (smokeMslAsset) spriteSmokeMissile.src = smokeMslAsset.url;
 
 setLoadingProgress(60, 'Generating planet terrain...');
 
+// Cache for radial gradient canvases (pre-rendered for circular_flash performance)
+const gradientCanvasCache = {};
+
+function getGradientCanvas(color) {
+    let rgbKey = '255, 255, 255';
+    if (color) {
+        if (color.startsWith('rgba(') || color.startsWith('rgb(')) {
+            const match = color.match(/\(([^)]+)\)/);
+            if (match) {
+                const parts = match[1].split(',');
+                if (parts.length >= 3) {
+                    rgbKey = `${parts[0].trim()}, ${parts[1].trim()}, ${parts[2].trim()}`;
+                }
+            }
+        } else {
+            rgbKey = color; // e.g. "0, 230, 255"
+        }
+    }
+
+    if (gradientCanvasCache[rgbKey]) {
+        return gradientCanvasCache[rgbKey];
+    }
+
+    // Create offscreen canvas for caching
+    const size = 128;
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = size;
+    offCanvas.height = size;
+    const offCtx = offCanvas.getContext('2d');
+
+    const half = size / 2;
+    const grad = offCtx.createRadialGradient(half, half, 0, half, half, half);
+    grad.addColorStop(0, `rgba(${rgbKey}, 0.98)`);
+    grad.addColorStop(0.25, `rgba(${rgbKey}, 0.75)`);
+    grad.addColorStop(1, `rgba(${rgbKey}, 0)`);
+
+    offCtx.fillStyle = grad;
+    offCtx.beginPath();
+    offCtx.arc(half, half, half, 0, Math.PI * 2);
+    offCtx.fill();
+
+    gradientCanvasCache[rgbKey] = offCanvas;
+    return offCanvas;
+}
+
 let gamePausedForAd = false;
 
 async function run(mode) {
@@ -2422,18 +2467,10 @@ async function run(mode) {
                 }
             }
 
-            // Update particles (cap max count to prevent performance drops)
-            if (particles.length > 600) {
-                // Gracefully age out oldest particles instead of hard-cutting
-                const excess = particles.length - 600;
-                for (let ei = 0; ei < excess; ei++) {
-                    particles[ei].life = Math.min(particles[ei].life, 0.05);
-                }
-            }
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-
-
+            // Update particles using the static pool (no array splicing, no allocations)
+            for (let i = 0; i < particles.pool.length; i++) {
+                const p = particles.pool[i];
+                if (!p.active) continue;
 
                 p.x += p.vx * dt60;
                 p.y += p.vy * dt60;
@@ -2450,7 +2487,7 @@ async function run(mode) {
                 }
 
                 if (p.life <= 0) {
-                    particles.splice(i, 1);
+                    p.active = false;
                 }
             }
 
@@ -4008,16 +4045,17 @@ async function run(mode) {
             ctx.restore();
         }
 
-        // Draw moon exhaust particles behind weapons
+        // Draw moon exhaust particles behind weapons using the static pool
         const originalAlpha = ctx.globalAlpha;
-        particles.forEach(p => {
-            if (!p.moonExhaust) return;
+        for (let i = 0; i < particles.pool.length; i++) {
+            const p = particles.pool[i];
+            if (!p.active || !p.moonExhaust) continue;
             ctx.globalAlpha = p.life * 0.7;
             ctx.fillStyle = p.color;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }
         ctx.globalAlpha = originalAlpha;
 
         // Draw weapons
@@ -4286,10 +4324,11 @@ async function run(mode) {
             ctx.restore();
         });
 
-        // Draw fire and smoke particles using high-performance sprites
+        // Draw fire and smoke particles using the static pool and cached gradients
         const originalMainAlpha = ctx.globalAlpha;
-        particles.forEach(p => {
-            if (p.moonExhaust) return;
+        for (let i = 0; i < particles.pool.length; i++) {
+            const p = particles.pool[i];
+            if (!p.active || p.moonExhaust) continue;
             ctx.globalAlpha = p.life;
 
             if (p.type === 'fire' || p.type === 'explosion_ring') {
@@ -4344,25 +4383,15 @@ async function run(mode) {
                     }
                 }
             } else if (p.type === 'circular_flash') {
-                ctx.beginPath();
+                const gradCanvas = getGradientCanvas(p.color);
                 const currentSize = p.size * (1 + (1 - p.life) * 0.35);
-                let baseColor = p.color || '255, 255, 255';
-                if (baseColor.startsWith('rgba(') || baseColor.startsWith('rgb(')) {
-                    const match = baseColor.match(/\(([^)]+)\)/);
-                    if (match) {
-                        const parts = match[1].split(',');
-                        if (parts.length >= 3) {
-                            baseColor = `${parts[0].trim()}, ${parts[1].trim()}, ${parts[2].trim()}`;
-                        }
-                    }
-                }
-                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, currentSize);
-                grad.addColorStop(0, `rgba(${baseColor}, 0.98)`);
-                grad.addColorStop(0.25, `rgba(${baseColor}, 0.75)`);
-                grad.addColorStop(1, `rgba(${baseColor}, 0)`);
-                ctx.fillStyle = grad;
-                ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.drawImage(
+                    gradCanvas,
+                    p.x - currentSize,
+                    p.y - currentSize,
+                    currentSize * 2,
+                    currentSize * 2
+                );
             } else { // smoke
                 const isMissile = p.color && p.color.includes('180, 190, 200');
                 const img = isMissile ? spriteSmokeMissile : spriteSmokeStandard;
@@ -4379,7 +4408,7 @@ async function run(mode) {
                     ctx.fill();
                 }
             }
-        });
+        }
         ctx.globalAlpha = originalMainAlpha;
 
         // Screen flash overlay (big impacts only, fades quickly - excludes black flash)
@@ -4678,6 +4707,7 @@ async function run(mode) {
                     btn.classList.add('selected');
 
                     updateGameTitle();
+                    planetTimeSpent = 0;
                     resetGame(true);
 
                     isPlanetSwitching = false;
@@ -4765,8 +4795,10 @@ async function run(mode) {
         // Victory stats labels (User feature 4)
         const shotsLabel = document.getElementById('stat-shots-label');
         const timeLabel = document.getElementById('stat-time-label');
+        const bestTimeLabel = document.getElementById('stat-best-time-label');
         if (shotsLabel) shotsLabel.textContent = t.shotsFired || 'SHOTS FIRED';
         if (timeLabel) timeLabel.textContent = t.timeSpent || 'TIME SPENT';
+        if (bestTimeLabel) bestTimeLabel.textContent = t.bestTime || 'BEST TIME';
 
         // HUD target integrity label
         const integrityLabel = document.getElementById('integrity-label-text');
@@ -4908,6 +4940,7 @@ async function run(mode) {
             // Reset state variables
             unlockedPlanets = ['earth'];
             initiallyUnlockedPlanets = new Set(['earth']);
+            bestTimes = {};
 
             // Update UI/Locks
             updatePlanetButtons();
