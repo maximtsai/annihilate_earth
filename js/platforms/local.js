@@ -7,6 +7,10 @@ window.PlatformBridge = {
         return Promise.resolve();
     },
 
+    gameLoadingFinished: function() {
+        console.log("[PlatformBridge] Local gameLoadingFinished triggered.");
+    },
+
     gameplayStart: function() {
         console.log("[PlatformBridge] Gameplay Start triggered.");
     },

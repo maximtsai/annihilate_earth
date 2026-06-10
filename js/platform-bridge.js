@@ -35,6 +35,13 @@ window.PlatformBridge = {
         });
     },
 
+    gameLoadingFinished: function() {
+        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
+            PokiSDK.gameLoadingFinished();
+            console.log("[PlatformBridge] Poki gameLoadingFinished triggered.");
+        }
+    },
+
     gameplayStart: function() {
         if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
             PokiSDK.gameplayStart();

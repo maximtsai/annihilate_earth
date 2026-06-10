@@ -4663,6 +4663,10 @@ async function run(mode) {
                 }
                 if (nextPlanet === currentPlanet || isPlanetSwitching) return;
 
+                if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
+                    window.PlatformBridge.gameplayStop();
+                }
+
                 try { soundManager.play('sfx_ui_switch'); } catch (sfxErr) { }
 
                 // Start cinematic transition (User feature 5)
@@ -4894,6 +4898,10 @@ async function run(mode) {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
 
+            if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
+                window.PlatformBridge.gameplayStop();
+            }
+
             // Clear saved progress
             localStorage.removeItem('annihilate_earth_save');
 
@@ -4977,8 +4985,6 @@ async function run(mode) {
     });
 
     // Setup scene
-    initializePlanet();
-    generateStars();
     updatePlanetButtons();
 
     // Load saved planet unlocks
@@ -5026,8 +5032,9 @@ async function run(mode) {
                 }
             });
             updateGameTitle();
-            resetGame(true);
         }
+        // Always reset the game to set up the starting planet state and trigger gameplayStart
+        resetGame(true);
     });
 
     setLoadingProgress(90, 'Calibrating orbital systems...');
@@ -5068,6 +5075,9 @@ async function run(mode) {
     // Dismiss loading screen after a brief delay
     setTimeout(() => {
         setLoadingProgress(100, 'READY');
+        if (window.PlatformBridge && typeof window.PlatformBridge.gameLoadingFinished === 'function') {
+            window.PlatformBridge.gameLoadingFinished();
+        }
         setTimeout(() => {
             if (loadingAnimId) cancelAnimationFrame(loadingAnimId);
             window.removeEventListener('resize', resizeLoadingCanvas);
