@@ -281,10 +281,16 @@ async function run(mode) {
         bgCanvas.width = window.innerWidth;
         bgCanvas.height = window.innerHeight;
         if (gameContainer) {
-            const scaleX = window.innerWidth / SCREEN_W;
             const scaleY = window.innerHeight / SCREEN_H;
             const isVertical = window.innerHeight > window.innerWidth;
-            const scale = isVertical ? (window.innerHeight * 0.55) / SCREEN_H : Math.min(scaleX, scaleY);
+            let scale;
+            if (isVertical) {
+                const minHeight = window.innerWidth * (14 / 9);
+                const targetHeight = Math.max(window.innerHeight, minHeight);
+                scale = (targetHeight * 0.55) / SCREEN_H;
+            } else {
+                scale = scaleY;
+            }
             gameContainer.style.transform = `translate(-50%, -50%) scale(${scale})`;
         }
         if (uiContainer) {
