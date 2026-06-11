@@ -4435,8 +4435,11 @@ async function run(mode) {
     // Prevent context menu from popping up on the canvas
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // Scale-aware input handler directly on canvas (handles uniform and non-uniform stretching)
-    canvas.addEventListener('mousedown', (e) => {
+    // Scale-aware input handler directly on gameWorld to allow clicks on black bars
+    gameWorld.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+            return;
+        }
         startBGM();
         if (!gameplayStarted) {
             gameplayStarted = true;
@@ -4459,7 +4462,10 @@ async function run(mode) {
         }
     });
 
-    canvas.addEventListener('mousemove', (e) => {
+    gameWorld.addEventListener('mousemove', (e) => {
+        // if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        //     return;
+        // }
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -4468,11 +4474,14 @@ async function run(mode) {
         showPointer = true;
     });
 
-    canvas.addEventListener('mouseleave', () => {
+    gameWorld.addEventListener('mouseleave', () => {
         showPointer = false;
     });
 
-    canvas.addEventListener('touchstart', (e) => {
+    gameWorld.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+            return;
+        }
         startBGM();
         if (!gameplayStarted) {
             gameplayStarted = true;
@@ -4497,7 +4506,10 @@ async function run(mode) {
         }
     });
 
-    canvas.addEventListener('touchmove', (e) => {
+    gameWorld.addEventListener('touchmove', (e) => {
+        // if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        //     return;
+        // }
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -4573,7 +4585,7 @@ async function run(mode) {
                 const isHorizontal = window.getComputedStyle(panelInner).flexDirection === 'row';
                 const buttonRect = button.getBoundingClientRect();
                 const wrapperRect = scrollWrapper.getBoundingClientRect();
-                
+
                 if (isHorizontal) {
                     const buttonCenterRelative = (buttonRect.left + buttonRect.width / 2) - wrapperRect.left;
                     const targetScrollLeft = scrollWrapper.scrollLeft + (buttonCenterRelative - wrapperRect.width / 2);
@@ -4680,13 +4692,13 @@ async function run(mode) {
                     const btnMoon = document.getElementById('btn-moon');
                     if (btnMoon) btnMoon.click();
                 }
-            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 e.preventDefault();
                 const buttons = Array.from(document.querySelectorAll('.weapon-button'));
                 if (buttons.length > 0) {
                     const currentIndex = buttons.findIndex(btn => btn.classList.contains('selected'));
                     let nextIndex = currentIndex;
-                    if (e.key === 'ArrowUp') {
+                    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
                         nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
                     } else {
                         nextIndex = (currentIndex + 1) % buttons.length;
