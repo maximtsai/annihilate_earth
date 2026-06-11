@@ -77,13 +77,13 @@
                     </div>
                 </div>
 
-                <div id="weapon-unlock-notification"
-                    style="position: absolute; bottom: 118px; left: 50%; transform: translate(-50%, 15px); color: #00ffaa; font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 900; text-shadow: 0 0 10px rgba(0, 255, 170, 0.6), 0 0 20px rgba(0, 255, 170, 0.3); pointer-events: none; opacity: 0; text-transform: uppercase; white-space: nowrap; z-index: 1000; letter-spacing: 2px; transition: opacity 0.4s ease, transform 0.4s ease;">
+                <div id="weapon-unlock-notification">
                 </div>
 
                 <div class="weapon-bar-wrapper">
                     <div class="weapon-bar-container">
-                        <button class="scroll-arrow scroll-left" id="scroll-left-btn"><span class="arrow-text">▲</span></button>
+                        <button class="scroll-arrow scroll-left" id="scroll-left-btn"><span
+                                class="arrow-text">▲</span></button>
                         <div class="weapon-scroll-wrapper" id="weapon-scroll-wrapper">
                             <div class="weapon-panel-inner" id="weapon-panel-inner">
                                 <button class="weapon-button selected" data-weapon="missile" id="btn-missile">
@@ -192,7 +192,8 @@
                                 </button>
                             </div>
                         </div>
-                        <button class="scroll-arrow scroll-right" id="scroll-right-btn"><span class="arrow-text">▼</span></button>
+                        <button class="scroll-arrow scroll-right" id="scroll-right-btn"><span
+                                class="arrow-text">▼</span></button>
                     </div>
                 </div>
 
@@ -241,15 +242,43 @@
                     </div>
                 </div>
 
-                <div class="options-popup-overlay" id="confirm-popup-overlay" style="display: none; z-index: 300; background: rgba(2, 2, 8, 0.85);">
-                    <div class="options-popup" style="border-color: rgba(255, 30, 80, 0.85); box-shadow: 0 0 40px rgba(255, 30, 80, 0.25);">
-                        <div class="options-popup-title" style="color: #ff3e6c; font-size: 22px; text-shadow: 0 0 8px rgba(255, 30, 80, 0.4);">RESET PROGRESS?</div>
-                        <div class="confirm-message" style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 12px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
+                <div class="options-popup-overlay" id="confirm-popup-overlay"
+                    style="display: none; z-index: 300; background: rgba(2, 2, 8, 0.85);">
+                    <div class="options-popup"
+                        style="border-color: rgba(255, 30, 80, 0.85); box-shadow: 0 0 40px rgba(255, 30, 80, 0.25);">
+                        <div class="options-popup-title"
+                            style="color: #ff3e6c; font-size: 22px; text-shadow: 0 0 8px rgba(255, 30, 80, 0.4);">RESET
+                            PROGRESS?</div>
+                        <div class="confirm-message"
+                            style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 12px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
                             THIS WILL ERASE ALL COMPLETED PLANETS AND RESTORE SIMULATION LOCKS. ARE YOU ABSOLUTELY SURE?
                         </div>
                         <div style="display: flex; gap: 15px; justify-content: center; width: 100%;">
-                            <button id="confirm-reset-yes" class="options-reset-button" style="margin: 0; width: 50%; height: 38px;">YES, RESET</button>
-                            <button id="confirm-reset-no" class="confirm-cancel-button" style="margin: 0; width: 50%; height: 38px;">CANCEL</button>
+                            <button id="confirm-reset-yes" class="options-reset-button"
+                                style="margin: 0; width: 50%; height: 38px;">YES, RESET</button>
+                            <button id="confirm-reset-no" class="confirm-cancel-button"
+                                style="margin: 0; width: 50%; height: 38px;">CANCEL</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="options-popup-overlay" id="ad-spin-popup-overlay"
+                    style="display: none; z-index: 400; background: rgba(2, 2, 8, 0.85);">
+                    <div class="options-popup"
+                        style="border-color: #ffe600; box-shadow: 0 0 40px rgba(255, 230, 0, 0.25);">
+                        <div class="options-popup-title"
+                            style="color: #ffe600; font-size: 22px; text-shadow: 0 0 8px rgba(255, 230, 0, 0.4);">FREE
+                            SPIN?</div>
+                        <div class="confirm-message"
+                            style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 12px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
+                            WATCH AD TO GET A NEW WEAPON?
+                        </div>
+                        <div style="display: flex; gap: 15px; justify-content: center; width: 100%;">
+                            <button id="ad-spin-no" class="confirm-cancel-button"
+                                style="margin: 0; width: 50%; height: 38px;">NO, THANKS</button>
+                            <button id="ad-spin-yes" class="options-reset-button"
+                                style="margin: 0; width: 50%; height: 38px; background: rgba(255, 230, 0, 0.08); border-color: rgba(255, 230, 0, 0.4); color: #ffe600;">
+                                WATCH!</button>
                         </div>
                     </div>
                 </div>
@@ -284,6 +313,7 @@
     <script src="js/state.js"></script>
     <script src="js/planet.js"></script>
     <script src="js/weapons.js"></script>
+    <script src="js/shooting-star.js"></script>
     <script src="js/main.js"></script>
 </body>
 

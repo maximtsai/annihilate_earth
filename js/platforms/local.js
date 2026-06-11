@@ -40,6 +40,27 @@ window.PlatformBridge = {
         });
     },
 
+    showRewardedAd: function(onComplete) {
+        console.log("[PlatformBridge] Requesting rewarded ad break...");
+        
+        // Pause audio and game loop
+        window.gamePausedForAd = true;
+        if (window.soundManager && window.soundManager.context) {
+            window.soundManager.context.suspend().catch(() => {});
+        }
+
+        this._runTransitionIn(() => {
+            if (onComplete) onComplete();
+
+            window.gamePausedForAd = false;
+            if (window.soundManager && window.soundManager.context && window.soundManager.isInitialized) {
+                window.soundManager.context.resume().catch(() => {});
+            }
+
+            this._runTransitionOut();
+        });
+    },
+
     _runTransitionIn: function(onMidpoint) {
         let overlay = document.getElementById('ad-transition-overlay');
         if (!overlay) {

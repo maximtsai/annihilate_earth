@@ -108,6 +108,62 @@ window.PlatformBridge = {
         }
     },
 
+    showRewardedAd: function(onComplete) {
+        console.log("[PlatformBridge] Poki rewarded ad break requested.");
+
+        // Pause audio and game loop
+        window.gamePausedForAd = true;
+        if (window.soundManager && window.soundManager.context) {
+            window.soundManager.context.suspend().catch(() => {});
+        }
+
+        let adFinished = false;
+        let transitionInFinished = false;
+        let rewardGranted = false;
+
+        const tryResume = () => {
+            if (adFinished && transitionInFinished) {
+                window.gamePausedForAd = false;
+                if (window.soundManager && window.soundManager.context && window.soundManager.isInitialized) {
+                    window.soundManager.context.resume().catch(() => {});
+                }
+                if (rewardGranted && onComplete) onComplete();
+                
+                // Transition away once everything is completed
+                this._runTransitionOut();
+            }
+        };
+
+        // 1. Start transition-in immediately
+        this._runTransitionIn(() => {
+            transitionInFinished = true;
+            tryResume();
+        });
+
+        // 2. Request Poki rewarded ad immediately
+        const onAdComplete = (success) => {
+            rewardGranted = success;
+            adFinished = true;
+            tryResume();
+        };
+
+        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
+            PokiSDK.rewardedBreak()
+                .then((withReward) => {
+                    console.log("[PlatformBridge] Rewarded break completed. Reward status: " + withReward);
+                    onAdComplete(withReward);
+                })
+                .catch((err) => {
+                    console.warn("[PlatformBridge] Rewarded break failed or was skipped:", err);
+                    onAdComplete(false);
+                });
+        } else {
+            // Fallback if SDK failed to load - grant reward for testing
+            console.log("[PlatformBridge] Fallback: No Poki SDK loaded, skipping rewarded break but granting mock reward.");
+            onAdComplete(true);
+        }
+    },
+
     _runTransitionIn: function(onMidpoint) {
         let overlay = document.getElementById('ad-transition-overlay');
         if (!overlay) {

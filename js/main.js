@@ -285,9 +285,9 @@ async function run(mode) {
             const isVertical = window.innerHeight > window.innerWidth;
             let scale;
             if (isVertical) {
-                const minHeight = window.innerWidth * (14 / 9);
+                const minHeight = window.innerWidth * (12 / 9);
                 const targetHeight = Math.max(window.innerHeight, minHeight);
-                scale = (targetHeight * 0.55) / SCREEN_H;
+                scale = (targetHeight * 0.64) / SCREEN_H;
             } else {
                 scale = scaleY;
             }
@@ -321,7 +321,7 @@ async function run(mode) {
         laser: 11.0,
         fist: 20.0,
         star: 15.0,
-        comet: 2.5
+        comet: 2.0
     };
 
     // ── Cached DOM references (avoids per-frame getElementById / querySelector) ──
@@ -371,6 +371,10 @@ async function run(mode) {
 
         if (!victoryTriggered) {
             planetTimeSpent += deltaTime;
+        }
+
+        if (window.ShootingStarManager) {
+            window.ShootingStarManager.update(deltaTime);
         }
 
         // Planet scale transition (User feature 5)
@@ -4424,6 +4428,10 @@ async function run(mode) {
         }
         ctx.globalAlpha = originalMainAlpha;
 
+        if (window.ShootingStarManager) {
+            window.ShootingStarManager.draw(ctx);
+        }
+
         // Screen flash overlay (big impacts only, fades quickly - excludes black flash)
         if (screenFlash.alpha > 0 && !(screenFlash.r === 0 && screenFlash.g === 0 && screenFlash.b === 0)) {
             ctx.save();
@@ -4468,6 +4476,12 @@ async function run(mode) {
         pointerX = x;
         pointerY = y;
         showPointer = true;
+
+        // Check shooting star click
+        if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
+            return;
+        }
+
         if (mode === 'play') {
             isHolding = true;
             missileLaunchTimer = 0;
@@ -4512,6 +4526,12 @@ async function run(mode) {
         pointerX = x;
         pointerY = y;
         showPointer = true;
+
+        // Check shooting star click
+        if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
+            return;
+        }
+
         if (mode === 'play') {
             isHolding = true;
             missileLaunchTimer = 0;
@@ -4653,6 +4673,7 @@ async function run(mode) {
 
     // Keyboard shortcut hooks
     window.addEventListener('keydown', (e) => {
+        if (window.gamePausedForAd) return;
         if (e.key === 'Escape') {
             const optionsOverlay = document.getElementById('options-overlay');
             if (optionsOverlay && optionsOverlay.classList.contains('show')) {
@@ -4727,6 +4748,7 @@ async function run(mode) {
     });
 
     window.addEventListener('keyup', (e) => {
+        if (window.gamePausedForAd) return;
         if (e.key === ' ' || e.code === 'Space') {
             isHolding = false;
             soundManager.stopLoop('sfx_laser_fire');
@@ -5019,6 +5041,35 @@ async function run(mode) {
             // Hide popups
             if (confirmOverlay) confirmOverlay.style.display = 'none';
             if (optionsOverlay) optionsOverlay.classList.remove('show');
+        });
+    }
+
+    // Ad Spin Popup Click Handlers
+    const adSpinOverlay = document.getElementById('ad-spin-popup-overlay');
+    const adSpinYes = document.getElementById('ad-spin-yes');
+    const adSpinNo = document.getElementById('ad-spin-no');
+
+    if (adSpinYes) {
+        adSpinYes.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            
+            // Trigger the ad break
+            if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
+                window.PlatformBridge.showRewardedAd(() => {
+                    console.log("[ShootingStar] Ad finished. Spinner reward granted.");
+                });
+            }
+
+            if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+        });
+    }
+
+    if (adSpinNo) {
+        adSpinNo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            if (adSpinOverlay) adSpinOverlay.style.display = 'none';
         });
     }
 

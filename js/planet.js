@@ -1582,6 +1582,9 @@ function resetGame(keepCooldowns = false) {
     if (window.PlatformBridge && gameplayStarted) {
         window.PlatformBridge.gameplayStart();
     }
+    if (window.ShootingStarManager) {
+        window.ShootingStarManager.init();
+    }
 }
 
 // Find impact point of laser on rotating planet surface

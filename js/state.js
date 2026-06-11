@@ -130,23 +130,21 @@ function showUnlockNotification(text) {
     }
 
     notif.textContent = text;
-    notif.style.transition = 'none';
-    notif.style.opacity = '0';
-    notif.style.transform = 'translate(-50%, 15px)';
+    
+    // Clear any previous transition state classes
+    notif.classList.remove('show', 'hide');
 
     // Trigger reflow
     notif.offsetHeight;
 
-    notif.style.transition = 'opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    notif.style.opacity = '1';
-    notif.style.transform = 'translate(-50%, 0px)';
+    // Apply the show class to animate entry
+    notif.classList.add('show');
 
     soundManager.play('sfx_ui_switch', false, 0.7, 400);
 
     unlockNotificationTimeout = setTimeout(() => {
-        notif.style.transition = 'opacity 0.5s ease-in, transform 0.5s ease-in';
-        notif.style.opacity = '0';
-        notif.style.transform = 'translate(-50%, -25px)';
+        notif.classList.remove('show');
+        notif.classList.add('hide');
     }, 2000);
 }
 

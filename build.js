@@ -13,6 +13,7 @@ const JS_FILES = [
     path.join(__dirname, 'js', 'state.js'),
     path.join(__dirname, 'js', 'planet.js'),
     path.join(__dirname, 'js', 'weapons.js'),
+    path.join(__dirname, 'js', 'shooting-star.js'),
     path.join(__dirname, 'js', 'main.js')
 ];
 
@@ -81,6 +82,7 @@ async function build() {
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/state\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/planet\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/weapons\.js["']><\/script>\s*/gi, '');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/shooting-star\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/main\.js["']><\/script>\s*/gi, '');
     }
 
