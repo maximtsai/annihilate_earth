@@ -1579,7 +1579,7 @@ function resetGame(keepCooldowns = false) {
     document.getElementById('victory-screen').classList.remove('show');
     initializePlanet();
     generateStars();
-    if (window.PlatformBridge) {
+    if (window.PlatformBridge && gameplayStarted) {
         window.PlatformBridge.gameplayStart();
     }
 }

@@ -4438,6 +4438,12 @@ async function run(mode) {
     // Scale-aware input handler directly on canvas (handles uniform and non-uniform stretching)
     canvas.addEventListener('mousedown', (e) => {
         startBGM();
+        if (!gameplayStarted) {
+            gameplayStarted = true;
+            if (window.PlatformBridge) {
+                window.PlatformBridge.gameplayStart();
+            }
+        }
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -4468,6 +4474,12 @@ async function run(mode) {
 
     canvas.addEventListener('touchstart', (e) => {
         startBGM();
+        if (!gameplayStarted) {
+            gameplayStarted = true;
+            if (window.PlatformBridge) {
+                window.PlatformBridge.gameplayStart();
+            }
+        }
         e.preventDefault(); // Prevents duplicate mouse trigger on mobile
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
@@ -4554,23 +4566,29 @@ async function run(mode) {
             }, 300);
 
             // Auto-scroll logic to center the selected weapon card in the panel.
-            // getBoundingClientRect() returns viewport (post-CSS-scale) pixels, but
-            // scrollTop operates in layout (pre-scale) pixels — divide by scale to compensate.
+            // Since the weapon bar is now outside the scaled #game-container, scale is 1.
             const scrollWrapper = document.getElementById('weapon-scroll-wrapper');
-            if (scrollWrapper) {
-                const gameContainer = document.getElementById('game-container');
-                const scale = gameContainer
-                    ? gameContainer.getBoundingClientRect().width / 1600
-                    : 1;
-
+            const panelInner = document.getElementById('weapon-panel-inner');
+            if (scrollWrapper && panelInner) {
+                const isHorizontal = window.getComputedStyle(panelInner).flexDirection === 'row';
                 const buttonRect = button.getBoundingClientRect();
                 const wrapperRect = scrollWrapper.getBoundingClientRect();
-                const buttonCenterRelative = (buttonRect.top + buttonRect.height / 2) - wrapperRect.top;
-                const targetScrollTop = scrollWrapper.scrollTop + (buttonCenterRelative - wrapperRect.height / 2) / scale;
-                scrollWrapper.scrollTo({
-                    top: targetScrollTop,
-                    behavior: 'smooth'
-                });
+                
+                if (isHorizontal) {
+                    const buttonCenterRelative = (buttonRect.left + buttonRect.width / 2) - wrapperRect.left;
+                    const targetScrollLeft = scrollWrapper.scrollLeft + (buttonCenterRelative - wrapperRect.width / 2);
+                    scrollWrapper.scrollTo({
+                        left: targetScrollLeft,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    const buttonCenterRelative = (buttonRect.top + buttonRect.height / 2) - wrapperRect.top;
+                    const targetScrollTop = scrollWrapper.scrollTop + (buttonCenterRelative - wrapperRect.height / 2);
+                    scrollWrapper.scrollTo({
+                        top: targetScrollTop,
+                        behavior: 'smooth'
+                    });
+                }
             }
         });
     });
@@ -4584,7 +4602,13 @@ async function run(mode) {
         scrollLeftBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_scroll');
-            scrollWrapper.scrollBy({ top: -130, behavior: 'smooth' });
+            const panelInner = document.getElementById('weapon-panel-inner');
+            const isHorizontal = panelInner ? window.getComputedStyle(panelInner).flexDirection === 'row' : false;
+            if (isHorizontal) {
+                scrollWrapper.scrollBy({ left: -130, behavior: 'smooth' });
+            } else {
+                scrollWrapper.scrollBy({ top: -130, behavior: 'smooth' });
+            }
         });
     }
 
@@ -4592,7 +4616,13 @@ async function run(mode) {
         scrollRightBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_scroll');
-            scrollWrapper.scrollBy({ top: 130, behavior: 'smooth' });
+            const panelInner = document.getElementById('weapon-panel-inner');
+            const isHorizontal = panelInner ? window.getComputedStyle(panelInner).flexDirection === 'row' : false;
+            if (isHorizontal) {
+                scrollWrapper.scrollBy({ left: 130, behavior: 'smooth' });
+            } else {
+                scrollWrapper.scrollBy({ top: 130, behavior: 'smooth' });
+            }
         });
     }
 
@@ -4708,6 +4738,7 @@ async function run(mode) {
 
                     updateGameTitle();
                     planetTimeSpent = 0;
+                    gameplayStarted = true;
                     resetGame(true);
 
                     isPlanetSwitching = false;
@@ -4739,6 +4770,7 @@ async function run(mode) {
                 nextBtn.click();
             } else {
                 // Fallback: just reset on same planet
+                gameplayStarted = true;
                 resetGame();
             }
         };
@@ -4956,6 +4988,7 @@ async function run(mode) {
             }
 
             // Reset game state and reload planet
+            gameplayStarted = true;
             resetGame(false);
 
             // Hide popups
