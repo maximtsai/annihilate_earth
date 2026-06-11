@@ -1225,7 +1225,7 @@ html {
 }
 
 /* Responsive Adaptive Layouts for Mobile & Portrait Screens */
-@media (max-width: 1024px) or (orientation: portrait) {
+@media (max-width: 800px) or (orientation: portrait) {
 
     /* Keep header narrow enough to not overlap the options button */
     .hud-header-wrapper {
