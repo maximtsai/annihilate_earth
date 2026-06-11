@@ -141,6 +141,7 @@ html {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: calc(16px * var(--ui-scale)) calc(24px * var(--ui-scale)) calc(10px * var(--ui-scale)) calc(24px * var(--ui-scale));
+    max-height: 106px;
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px));
     text-align: center;
     width: 100%;
@@ -1250,7 +1251,7 @@ html {
 /* Responsive Adaptive Layouts for Mobile & Portrait Screens */
 @media (max-width: 1024px) or (orientation: portrait) {
     .hud-header-wrapper {
-        max-width: calc(100% - 160px);
+        max-width: calc(90% - 80px);
     }
 }
 
@@ -1260,7 +1261,7 @@ html {
     .planet-selector {
         position: absolute;
         left: 50%;
-        top: 130px;
+        top: calc(80px + 50px * var(--ui-scale));
         transform: translateX(-50%);
         flex-direction: row;
         justify-content: center;
