@@ -703,11 +703,11 @@ html {
 .weapon-bar-wrapper {
     position: absolute;
     right: 24px;
-    top: calc(50% + var(--planet-offset-y));
+    top: calc(54% + var(--planet-offset-y) * var(--ui-scale));
     transform: translateY(-50%);
     width: calc(140px * var(--ui-scale));
     height: 80%;
-    max-height: calc(100% - 220px);
+    max-height: calc(80% - 50px);
     padding: 1.5px;
     background: linear-gradient(90deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
@@ -838,7 +838,7 @@ html {
     align-items: center;
     justify-content: center;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 26px;
+    font-size: calc(26px * var(--ui-scale));
     color: #ffd200;
     font-weight: 700;
     opacity: 0;
@@ -1296,7 +1296,7 @@ html {
         transform: translateX(-50%);
         width: 90%;
         max-width: 800px;
-        height: calc(100px * var(--ui-scale));
+        height: calc(10px + 90px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
         background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
@@ -1308,7 +1308,7 @@ html {
     .weapon-bar-container {
         flex-direction: row;
         padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
-        gap: calc(10px * var(--ui-scale));
+        gap: calc(6px * var(--ui-scale));
         clip-path: none;
         border-radius: 1px;
     }
