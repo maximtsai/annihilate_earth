@@ -22,7 +22,7 @@ let weapons = [];
 
 // High-performance pre-allocated particle pool class
 class ParticlePool {
-    constructor(maxSize = 250) {
+    constructor(maxSize = 450) {
         this.maxSize = maxSize;
         this.pool = [];
         for (let i = 0; i < maxSize; i++) {
@@ -85,7 +85,7 @@ class ParticlePool {
     }
 }
 
-let particles = new ParticlePool(50);
+let particles = new ParticlePool(150);
 let shockwaves = []; // (User feature 7: Shockwave rings)
 let holyRays = []; // Holy rays effect for Excalibur
 let totalShotsFired = 0; // (User feature 4: Stats tracking)

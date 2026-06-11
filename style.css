@@ -2,6 +2,25 @@
 
 :root {
     --planet-offset-y: 30px;
+    --ui-scale: 1;
+}
+
+@media (max-width: 1024px) {
+    :root {
+        --ui-scale: calc(100vw / 1024px);
+    }
+}
+
+@media (orientation: portrait) {
+    :root {
+        --ui-scale: calc(100vh / 1024px);
+    }
+}
+
+@media (orientation: portrait) and (min-height: 1025px) {
+    :root {
+        --ui-scale: 1;
+    }
 }
 
 /* CSS Reset */
@@ -72,6 +91,16 @@ html {
     display: none;
 }
 
+#ui-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+}
+
 /* UI Overlay */
 .ui-overlay {
     position: absolute;
@@ -107,11 +136,11 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: calc(5px * var(--ui-scale));
     background: rgba(12, 12, 28, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding: 16px 24px 10px 24px;
+    padding: calc(16px * var(--ui-scale)) calc(24px * var(--ui-scale)) calc(10px * var(--ui-scale)) calc(24px * var(--ui-scale));
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px));
     text-align: center;
     width: 100%;
@@ -184,30 +213,21 @@ html {
 
 .planet-btn {
     background: transparent;
-    /* Transparent button backing! */
     border: 1px solid rgba(0, 217, 255, 0.55);
-    /* Brighter outline */
     border-radius: 0px !important;
-    /* SQUARE */
     color: rgba(0, 217, 255, 0.8);
     font-family: 'Orbitron', sans-serif;
-    /* Same as weapon card */
-    font-size: 14px;
-    /* Same as weapon card */
+    font-size: calc(14px * var(--ui-scale));
     font-weight: 700;
-    /* Same as weapon card */
-    padding: 8px;
-    width: 96px;
-    /* 2px wider than before (94px) */
-    height: 84px;
-    /* Aspect-ratio */
+    padding: calc(8px * var(--ui-scale));
+    width: calc(96px * var(--ui-scale));
+    height: calc(84px * var(--ui-scale));
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    /* Icon on top, name below */
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: calc(6px * var(--ui-scale));
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -216,7 +236,7 @@ html {
 }
 
 .planet-btn-icon {
-    font-size: 30px;
+    font-size: calc(30px * var(--ui-scale));
     /* Make the planet icon prominent and large */
     line-height: 1;
     transition: filter 250ms ease;
@@ -348,7 +368,7 @@ html {
 
 .game-title {
     font-family: 'Orbitron', sans-serif;
-    font-size: 28px;
+    font-size: calc(28px * var(--ui-scale));
     font-weight: 900;
     color: #ffffff;
     text-shadow: 0 0 10px rgba(0, 217, 255, 0.4);
@@ -373,8 +393,8 @@ html {
     position: absolute;
     right: 24px;
     top: 24px;
-    width: 64px;
-    height: 64px;
+    width: calc(64px * var(--ui-scale));
+    height: calc(64px * var(--ui-scale));
     padding: 1.5px;
     background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
@@ -418,8 +438,8 @@ html {
 }
 
 .options-toggle svg {
-    width: 40px;
-    height: 40px;
+    width: calc(40px * var(--ui-scale));
+    height: calc(40px * var(--ui-scale));
     fill: #ffffff;
     filter: drop-shadow(0 0 4px rgba(0, 238, 255, 0.6));
     transition: filter 250ms ease;
@@ -461,6 +481,8 @@ html {
     gap: 22px;
     box-shadow: 0 0 40px rgba(0, 217, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5);
     position: relative;
+    transform: scale(var(--ui-scale));
+    transform-origin: center center;
 }
 
 .options-popup-title {
@@ -682,7 +704,7 @@ html {
     right: 24px;
     top: calc(50% + var(--planet-offset-y));
     transform: translateY(-50%);
-    width: 140px;
+    width: calc(140px * var(--ui-scale));
     height: 80%;
     max-height: calc(100% - 220px);
     padding: 1.5px;
@@ -697,11 +719,11 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: calc(12px * var(--ui-scale));
     background: rgba(12, 12, 28, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding: 15px 10px;
+    padding: calc(15px * var(--ui-scale)) calc(10px * var(--ui-scale));
     clip-path: polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 0 calc(100% - 20px), 0 20px);
     width: 100%;
     height: 100%;
@@ -734,9 +756,9 @@ html {
 
 .weapon-button {
     position: relative;
-    flex: 0 0 114px;
-    width: 114px;
-    height: 114px;
+    flex: 0 0 calc(114px * var(--ui-scale));
+    width: calc(114px * var(--ui-scale));
+    height: calc(114px * var(--ui-scale));
     background: rgba(0, 217, 255, 0.05);
     border: 1px solid rgba(0, 217, 255, 0.25);
     border-radius: 4px;
@@ -747,7 +769,7 @@ html {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: calc(6px * var(--ui-scale));
     outline: none;
     overflow: hidden;
 }
@@ -778,13 +800,13 @@ html {
 }
 
 .scroll-arrow {
-    flex: 0 0 38px;
+    flex: 0 0 calc(38px * var(--ui-scale));
     background: rgba(4, 4, 18, 0.7);
     border: 1.5px solid rgba(0, 217, 255, 0.6);
     color: #00d9ff;
-    font-size: 20px;
-    width: 114px;
-    height: 38px;
+    font-size: calc(20px * var(--ui-scale));
+    width: calc(114px * var(--ui-scale));
+    height: calc(38px * var(--ui-scale));
     border-radius: 4px;
     cursor: pointer;
     display: flex;
@@ -905,7 +927,7 @@ html {
 }
 
 .weapon-icon {
-    font-size: 32px;
+    font-size: calc(32px * var(--ui-scale));
     filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.3));
     transition: transform 250ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -917,7 +939,7 @@ html {
 
 .weapon-name {
     font-family: 'Orbitron', sans-serif;
-    font-size: 14px;
+    font-size: calc(14px * var(--ui-scale));
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -926,7 +948,7 @@ html {
     word-break: break-word;
     overflow-wrap: break-word;
     line-height: 1.25;
-    max-width: 110px;
+    max-width: calc(110px * var(--ui-scale));
     text-align: center;
 }
 
@@ -962,6 +984,7 @@ html {
     left: 0;
     width: 100%;
     height: 100%;
+    pointer-events: auto;
     background: rgba(2, 2, 8, 0.95);
     display: none;
     flex-direction: column;
@@ -1231,7 +1254,7 @@ html {
     }
 }
 
-@media (max-width: 800px) or (orientation: portrait) {
+@media (orientation: portrait) {
 
     /* Move planet selector to top horizontal row */
     .planet-selector {
@@ -1257,8 +1280,8 @@ html {
     }
 
     .planet-btn {
-        font-size: 14px;
-        padding: 8px 12px;
+        font-size: calc(14px * var(--ui-scale));
+        padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
         flex-shrink: 0;
     }
 
@@ -1272,7 +1295,7 @@ html {
         transform: translateX(-50%);
         width: 90%;
         max-width: 800px;
-        height: 100px;
+        height: calc(100px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
         background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
@@ -1283,17 +1306,17 @@ html {
 
     .weapon-bar-container {
         flex-direction: row;
-        padding: 8px 12px;
-        gap: 10px;
+        padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+        gap: calc(10px * var(--ui-scale));
         clip-path: none;
         border-radius: 1px;
     }
 
     .scroll-arrow {
-        flex: 0 0 36px;
-        width: 36px;
+        flex: 0 0 calc(36px * var(--ui-scale));
+        width: calc(36px * var(--ui-scale));
         height: 100%;
-        font-size: 16px;
+        font-size: calc(16px * var(--ui-scale));
     }
 
     #scroll-left-btn .arrow-text {
@@ -1327,19 +1350,19 @@ html {
     }
 
     .weapon-button {
-        flex: 0 0 88px;
-        width: 88px;
-        height: 76px;
-        gap: 3px;
+        flex: 0 0 calc(88px * var(--ui-scale));
+        width: calc(88px * var(--ui-scale));
+        height: calc(76px * var(--ui-scale));
+        gap: calc(3px * var(--ui-scale));
     }
 
     .weapon-icon {
-        font-size: 28px;
+        font-size: calc(28px * var(--ui-scale));
     }
 
     .weapon-name {
-        font-size: 12px;
-        max-width: 88px;
+        font-size: calc(12px * var(--ui-scale));
+        max-width: calc(88px * var(--ui-scale));
     }
 
     /* Scaling overlay elements */
@@ -1400,7 +1423,7 @@ html {
 
 @media (max-width: 660px) {
     .game-title {
-        font-size: 20px;
+        font-size: calc(20px * var(--ui-scale));
     }
 }
 

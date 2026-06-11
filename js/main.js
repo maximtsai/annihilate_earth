@@ -276,6 +276,7 @@ async function run(mode) {
     bgCtx = bgCanvas.getContext('2d');
 
     const gameContainer = document.getElementById('game-container');
+    const uiContainer = document.getElementById('ui-container');
     function resizeBackground() {
         bgCanvas.width = window.innerWidth;
         bgCanvas.height = window.innerHeight;
@@ -285,6 +286,11 @@ async function run(mode) {
             const isVertical = window.innerHeight > window.innerWidth;
             const scale = isVertical ? (window.innerHeight * 0.55) / SCREEN_H : Math.min(scaleX, scaleY);
             gameContainer.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+        if (uiContainer) {
+            uiContainer.style.width = '100%';
+            uiContainer.style.height = '100%';
+            uiContainer.style.transform = 'none';
         }
     }
     window.addEventListener('resize', resizeBackground);
@@ -4438,7 +4444,7 @@ async function run(mode) {
 
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
-        if ((e.target.closest('.ui-overlay') && !e.target.closest('.hud-header-wrapper')) || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -4480,7 +4486,7 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchstart', (e) => {
-        if ((e.target.closest('.ui-overlay') && !e.target.closest('.hud-header-wrapper')) || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
