@@ -4438,7 +4438,7 @@ async function run(mode) {
 
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if ((e.target.closest('.ui-overlay') && !e.target.closest('.hud-header-wrapper')) || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -4480,7 +4480,7 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if ((e.target.closest('.ui-overlay') && !e.target.closest('.hud-header-wrapper')) || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
