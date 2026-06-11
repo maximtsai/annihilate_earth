@@ -1231,6 +1231,15 @@ html {
     color: #ffffff;
 }
 
+.options-reset-button:disabled {
+    color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(100, 100, 100, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
 .confirm-cancel-button {
     width: 100%;
     height: 38px;
@@ -1469,4 +1478,172 @@ html {
     opacity: 0;
     transform: translate(-50%, calc(-25px * var(--ui-scale)));
     transition: opacity 0.5s ease-in, transform 0.5s ease-in;
+}
+
+/* Spinner Styles */
+.weapon-spinner-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10, 10, 20, 0.4);
+    border: 1.5px solid rgba(255, 230, 0, 0.15);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+    box-sizing: border-box;
+}
+
+.weapon-spinner-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    width: 100%;
+}
+
+.weapon-spinner-preview {
+    width: 50px;
+    height: 50px;
+    background: #0d0d18;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.1s ease, box-shadow 0.1s ease;
+}
+
+.weapon-spinner-canvas {
+    background: #0d0d18;
+    border-radius: 6px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
+    display: block;
+}
+
+.weapon-spinner-stop-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #ffe600;
+    background: rgba(255, 230, 0, 0.08);
+    border: 1.5px solid rgba(255, 230, 0, 0.4);
+    border-radius: 4px;
+    padding: 8px 36px;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 230, 0, 0.1);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.weapon-spinner-stop-btn:hover:not(:disabled) {
+    background: rgba(255, 230, 0, 0.16);
+    border-color: rgba(255, 230, 0, 0.7);
+    box-shadow: 0 0 20px rgba(255, 230, 0, 0.35);
+    transform: scale(1.05);
+}
+
+.weapon-spinner-stop-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.weapon-spinner-stop-btn:disabled {
+    color: #666666;
+    background: rgba(50, 50, 50, 0.08);
+    border-color: rgba(100, 100, 100, 0.25);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Close Button Styling */
+.close-x {
+    transition: color 0.2s, transform 0.2s;
+}
+
+.close-x:hover {
+    color: #ff3e6c !important;
+    transform: scale(1.15);
+}
+
+/* Ad Spin Popup Width Override for Large Spinner */
+#ad-spin-popup-overlay .options-popup {
+    max-width: 630px;
+}
+
+/* Celebration & Announcement Area Styles */
+.weapon-spinner-action-area {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.weapon-spinner-announcement {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-align: center;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.weapon-spinner-preview.celebrate {
+    animation: previewPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes previewPop {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.4);
+    }
+    100% {
+        transform: scale(1.25);
+    }
+}
+
+.spinner-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+    transition: transform 0.8s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.8s ease-out;
+}
+
+/* Grey Cancel Button Styling for Ad Spin Popup */
+.ad-spin-cancel-btn {
+    margin: 0;
+    width: 40%;
+    height: 38px;
+    background: rgba(150, 150, 150, 0.08);
+    border: 1.2px solid rgba(150, 150, 150, 0.4);
+    border-radius: 4px;
+    color: #999999;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 200ms ease;
+    letter-spacing: 2px;
+}
+
+.ad-spin-cancel-btn:hover:not(:disabled) {
+    background: rgba(150, 150, 150, 0.16);
+    border-color: rgba(150, 150, 150, 0.7);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(150, 150, 150, 0.25);
+}
+
+.ad-spin-cancel-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    color: #555555;
+    border-color: rgba(100, 100, 100, 0.2);
+    box-shadow: none;
 }

@@ -1355,6 +1355,7 @@ function triggerVictory() {
 
     setTimeout(() => {
         document.getElementById('victory-screen').classList.add('show');
+        
         // Update the button to show the next planet
         const restartBtn = document.getElementById('restart-button');
         if (restartBtn) {
@@ -1362,6 +1363,30 @@ function triggerVictory() {
             const t = translations[currentLanguage] || translations['en'];
             const label = next === 'earth' ? t.restartSim : `${t.next}: ${(t.planets[next] || next).toUpperCase()}`;
             restartBtn.textContent = label;
+        }
+
+        // Setup the Victory Spinner
+        const container = document.getElementById('victory-spinner-container');
+        if (container) {
+            const allLockedWeapons = ['kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+            const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
+
+            if (restartBtn) {
+                restartBtn.style.opacity = '1';
+                restartBtn.style.pointerEvents = 'auto';
+                restartBtn.style.display = 'block';
+            }
+
+            if (hasLocked) {
+                const spinner = new WeaponSpinner(container, {
+                    onStop: (weaponToUnlock) => {
+                        unlockSpecificWeapon(weaponToUnlock);
+                    }
+                });
+                spinner.start();
+            } else {
+                new WeaponSpinner(container); // Shows "ALL WEAPONS UNLOCKED!"
+            }
         }
     }, 1200);
 }

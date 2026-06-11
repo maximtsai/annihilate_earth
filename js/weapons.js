@@ -2,8 +2,10 @@
 function spawnWeapon(clickX, clickY, typeOverride = null) {
     if (victoryTriggered) return;
 
-    totalShotsFired++;
     const type = typeOverride || selectedWeapon;
+    if (type === 'lightning') return;
+
+    totalShotsFired++;
 
     // Precalculate orbital angle and spawn coordinates once
     const angle = Math.atan2(clickY - CENTER_Y, clickX - CENTER_X);
@@ -78,7 +80,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'kraken') {
-        if (!unlockedPlanets.includes('mars')) {
+        if (!isWeaponUnlocked('kraken')) {
             addFloatingText(clickX, clickY, "LOCKED");
             return;
         }
@@ -109,7 +111,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'bowling') {
-        if (!unlockedPlanets.includes('sun')) {
+        if (!isWeaponUnlocked('bowling')) {
             addFloatingText(clickX, clickY, "LOCKED");
             return;
         }
@@ -141,7 +143,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'fist') {
-        if (!unlockedPlanets.includes('jupiter')) {
+        if (!isWeaponUnlocked('fist')) {
             addFloatingText(clickX, clickY, "LOCKED");
             return;
         }
@@ -174,7 +176,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'star') {
-        if (!unlockedPlanets.includes('sun')) {
+        if (!isWeaponUnlocked('star')) {
             addFloatingText(clickX, clickY, "LOCKED");
             return;
         }
@@ -203,7 +205,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'comet') {
-        if (!unlockedPlanets.includes('neptune')) {
+        if (!isWeaponUnlocked('comet')) {
             addFloatingText(clickX, clickY, "LOCKED");
             return;
         }
@@ -220,7 +222,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     }
 
     if (type === 'worm') {
-        if (!unlockedPlanets.includes('neptune')) {
+        if (!isWeaponUnlocked('worm')) {
             addFloatingText(clickX, clickY, "LOCKED");
             return;
         }
@@ -357,6 +359,8 @@ function executeSpawn(type, clickX, clickY) {
 
     if (type === 'asteroid' || type === 'moon') {
         soundManager.play('sfx_launch_heavy', false, 0.55);
+    } else if (type === 'nuke') {
+        soundManager.play('sfx_launch_heavy', false, 0.1, 580 + 200 * Math.random());
     }
 
     weapons.push({
@@ -380,6 +384,85 @@ function executeSpawn(type, clickX, clickY) {
     if (type === 'missile') {
         missileCooldown = 0.1025;
     }
+}
+
+function generateLightningSegments(x1, y1, x2, y2) {
+    const segments = [];
+    segments.push({ x: x1, y: y1 });
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance === 0) return [{ x: x1, y: y1 }, { x: x2, y: y2 }];
+
+    const numSegments = Math.max(8, Math.floor(distance / 12));
+    for (let i = 1; i < numSegments; i++) {
+        const t = i / numSegments;
+        const targetX = x1 + dx * t;
+        const targetY = y1 + dy * t;
+
+        const perpX = -dy / distance;
+        const perpY = dx / distance;
+        const offset = (Math.random() - 0.5) * 45 * Math.sin(t * Math.PI); // snaking arc, tapered at ends
+
+        segments.push({
+            x: targetX + perpX * offset,
+            y: targetY + perpY * offset
+        });
+    }
+    segments.push({ x: x2, y: y2 });
+    return segments;
+}
+
+function fireLightning(clickX, clickY, count = 0) {
+    if (victoryTriggered) return;
+
+    totalShotsFired++; // increment shots fired when a lightning bolt is successfully shot!
+
+    const screenCenterX = CENTER_X;
+    const screenCenterY = CENTER_Y;
+
+    const baseAngle = Math.atan2(clickY - screenCenterY, clickX - screenCenterX);
+
+    const spawnRadius = 310;
+    const spawnX = screenCenterX + Math.cos(baseAngle) * spawnRadius;
+    const spawnY = screenCenterY + Math.sin(baseAngle) * spawnRadius;
+
+    // Add erratic direction jitter so consecutive strikes branch out but target different spots nearby
+    const targetAngle = baseAngle + Math.PI + (Math.random() - 0.5) * 0.6;
+    const dirX = Math.cos(targetAngle);
+    const dirY = Math.sin(targetAngle);
+
+    const imgData = hiddenCtx.getImageData(0, 0, PLANET_CANVAS_SIZE, PLANET_CANVAS_SIZE);
+    let impact = findLaserImpactWithData(spawnX, spawnY, imgData, dirX, dirY);
+    if (!impact.local) {
+        // Try a straight targetAngle pointing directly at center (0 randomness)
+        const straightAngle = baseAngle + Math.PI;
+        const sDirX = Math.cos(straightAngle);
+        const sDirY = Math.sin(straightAngle);
+        impact = findLaserImpactWithData(spawnX, spawnY, imgData, sDirX, sDirY);
+
+        if (!impact.local) {
+            impact.local = {
+                x: planetCenterX,
+                y: planetCenterY
+            };
+            impact.x = screenCenterX;
+            impact.y = screenCenterY;
+        }
+    }
+
+    const segments = generateLightningSegments(spawnX, spawnY, impact.x, impact.y);
+    activeLightnings.push({
+        segments: segments,
+        life: 0.15,
+        maxLife: 0.15
+    });
+
+    soundManager.play('sfx_laser_crack', false, 0.75, (Math.random() - 0.5) * 400 + 200);
+
+    const explosionRadius = 18 + count * 3;
+    const shakeIntensity = 3 + count * 3;
+    createExplosion(impact.local.x, impact.local.y, explosionRadius, shakeIntensity, 'lightning', false, true);
 }
 
 // Game Update Logic

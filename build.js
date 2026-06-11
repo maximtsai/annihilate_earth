@@ -13,6 +13,7 @@ const JS_FILES = [
     path.join(__dirname, 'js', 'state.js'),
     path.join(__dirname, 'js', 'planet.js'),
     path.join(__dirname, 'js', 'weapons.js'),
+    path.join(__dirname, 'js', 'spinner.js'),
     path.join(__dirname, 'js', 'shooting-star.js'),
     path.join(__dirname, 'js', 'main.js')
 ];

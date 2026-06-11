@@ -107,7 +107,7 @@ function cubicEaseIn(t) {
     return t * t * t;
 }
 
-function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5) {
+function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5, maxOffset = 50) {
     floatingTexts.push({
         x: x,
         y: y,
@@ -115,7 +115,8 @@ function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5
         text: text,
         color: color,
         life: duration,
-        maxLife: duration
+        maxLife: duration,
+        maxOffset: maxOffset
     });
 }
 
@@ -130,7 +131,7 @@ function showUnlockNotification(text) {
     }
 
     notif.textContent = text;
-    
+
     // Clear any previous transition state classes
     notif.classList.remove('show', 'hide');
 
@@ -185,10 +186,102 @@ async function saveOptions(options) {
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
+let weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'lightning', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+let unlockedWeapons = ['missile', 'nuke', 'asteroid', 'laser', 'lightning', 'gamma', 'sword', 'moon', 'blackhole'];
+let initiallyUnlockedWeapons = new Set(unlockedWeapons);
+
+function isWeaponUnlocked(wid) {
+    return unlockedWeapons.includes(wid);
+}
+
+async function saveUnlockedWeapons() {
+    try {
+        const current = await getGameState();
+        const state = (current && current.state) ? current.state : {};
+        state.unlockedWeapons = unlockedWeapons;
+        await saveGameState(state);
+    } catch (error) {
+        console.warn('Failed to save unlocked weapons:', error.message);
+    }
+}
+
+function unlockRandomWeapon() {
+    const allLockedWeapons = ['kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+    const lockedRemaining = allLockedWeapons.filter(wid => !unlockedWeapons.includes(wid));
+    if (lockedRemaining.length > 0) {
+        const randomIndex = Math.floor(Math.random() * lockedRemaining.length);
+        const weaponToUnlock = lockedRemaining[randomIndex];
+        unlockedWeapons.push(weaponToUnlock);
+        saveUnlockedWeapons();
+        return weaponToUnlock;
+    }
+    return null;
+}
+
+function unlockSpecificWeapon(wid) {
+    if (!unlockedWeapons.includes(wid)) {
+        unlockedWeapons.push(wid);
+        saveUnlockedWeapons();
+        updateWeaponOrderOnUnlock();
+        refreshWeaponLocks();
+        
+        const btn = document.getElementById(`btn-${wid}`);
+        const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : wid.toUpperCase();
+        const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
+        showUnlockNotification(`${icon} ${name} UNLOCKED!`);
+        return true;
+    }
+    return false;
+}
+
+async function saveWeaponOrder() {
+    try {
+        const current = await getGameState();
+        const state = (current && current.state) ? current.state : {};
+        state.weaponOrder = weaponOrder;
+        await saveGameState(state);
+    } catch (error) {
+        console.warn('Failed to save weapon order:', error.message);
+    }
+}
+
+function applyWeaponOrderToDOM() {
+    const container = document.getElementById('weapon-panel-inner');
+    if (!container) return;
+    weaponOrder.forEach(wid => {
+        const btn = document.getElementById(`btn-${wid}`);
+        if (btn) {
+            container.appendChild(btn);
+        }
+    });
+}
+
+function updateWeaponOrderOnUnlock() {
+    const unlocked = [];
+    const locked = [];
+    weaponOrder.forEach(wid => {
+        if (isWeaponUnlocked(wid)) {
+            unlocked.push(wid);
+        } else {
+            locked.push(wid);
+        }
+    });
+    weaponOrder = [...unlocked, ...locked];
+    saveWeaponOrder();
+    applyWeaponOrderToDOM();
+}
+
 async function loadUnlockedPlanets() {
     try {
         const response = await getGameState();
         if (response.state) {
+            if (response.state.weaponOrder) {
+                weaponOrder = response.state.weaponOrder;
+            }
+            if (response.state.unlockedWeapons) {
+                unlockedWeapons = response.state.unlockedWeapons;
+                initiallyUnlockedWeapons = new Set(unlockedWeapons);
+            }
             if (response.state.unlockedPlanets) {
                 unlockedPlanets = response.state.unlockedPlanets;
                 initiallyUnlockedPlanets = new Set(unlockedPlanets);
@@ -199,143 +292,43 @@ async function loadUnlockedPlanets() {
                 bestTimes = response.state.bestTimes;
             }
         }
+        updateWeaponOrderOnUnlock();
     } catch (error) {
         console.warn('Failed to load unlocked planets:', error.message);
     }
 }
 
 function refreshWeaponLocks() {
-    // Handle Kraken (Cthulhu) Progression locks and starting cooldown overrides
-    if (!unlockedPlanets.includes('mars')) {
-        krakenCooldown = 99999.0;
-        isInitialKrakenCooldown = false;
-    } else {
-        if (initiallyUnlockedPlanets.has('mars')) {
-            krakenCooldown = 0.0;
-            isInitialKrakenCooldown = false;
+    const weaponsInfo = [
+        { id: 'kraken', getCd: () => krakenCooldown, setCd: (v) => krakenCooldown = v, getInitCd: () => isInitialKrakenCooldown, setInitCd: (v) => isInitialKrakenCooldown = v },
+        { id: 'bowling', getCd: () => bowlingCooldown, setCd: (v) => bowlingCooldown = v, getInitCd: () => isInitialBowlingCooldown, setInitCd: (v) => isInitialBowlingCooldown = v },
+        { id: 'worm', getCd: () => wormCooldown, setCd: (v) => wormCooldown = v, getInitCd: () => isInitialWormCooldown, setInitCd: (v) => isInitialWormCooldown = v },
+        { id: 'fist', getCd: () => fistCooldown, setCd: (v) => fistCooldown = v, getInitCd: () => isInitialFistCooldown, setInitCd: (v) => isInitialFistCooldown = v },
+        { id: 'star', getCd: () => starCooldown, setCd: (v) => starCooldown = v, getInitCd: () => isInitialStarCooldown, setInitCd: (v) => isInitialStarCooldown = v },
+        { id: 'comet', getCd: () => cometCooldown, setCd: (v) => cometCooldown = v, getInitCd: () => isInitialCometCooldown, setInitCd: (v) => isInitialCometCooldown = v }
+    ];
+
+    weaponsInfo.forEach(w => {
+        if (!unlockedWeapons.includes(w.id)) {
+            w.setCd(99999.0);
+            w.setInitCd(false);
         } else {
-            if (currentPlanet === 'mars') {
-                krakenCooldown = 2.0;
-                isInitialKrakenCooldown = true;
+            if (initiallyUnlockedWeapons.has(w.id)) {
+                w.setCd(0.0);
+                w.setInitCd(false);
             } else {
-                krakenCooldown = 0.0;
-                isInitialKrakenCooldown = false;
+                w.setCd(1.25);
+                w.setInitCd(true);
             }
         }
-    }
-
-    // Handle Bowling Progression locks and starting cooldown overrides (Locked behind Sun)
-    if (!unlockedPlanets.includes('sun')) {
-        bowlingCooldown = 99999.0;
-        isInitialBowlingCooldown = false;
-    } else {
-        if (initiallyUnlockedPlanets.has('sun')) {
-            bowlingCooldown = 0.0;
-            isInitialBowlingCooldown = false;
-        } else {
-            if (currentPlanet === 'sun') {
-                bowlingCooldown = 2.0;
-                isInitialBowlingCooldown = true;
-            } else {
-                bowlingCooldown = 0.0;
-                isInitialBowlingCooldown = false;
-            }
-        }
-    }
-
-    // Handle Worm Progression locks and starting cooldown overrides (Locked behind Neptune)
-    if (!unlockedPlanets.includes('neptune')) {
-        wormCooldown = 99999.0;
-        isInitialWormCooldown = false;
-    } else {
-        if (initiallyUnlockedPlanets.has('neptune')) {
-            wormCooldown = 0.0;
-            isInitialWormCooldown = false;
-        } else {
-            if (currentPlanet === 'neptune') {
-                wormCooldown = 2.0;
-                isInitialWormCooldown = true;
-            } else {
-                wormCooldown = 0.0;
-                isInitialWormCooldown = false;
-            }
-        }
-    }
-
-    // Handle Fist Progression locks and starting cooldown overrides (Locked behind Jupiter)
-    if (!unlockedPlanets.includes('jupiter')) {
-        fistCooldown = 99999.0;
-        isInitialFistCooldown = false;
-    } else {
-        if (initiallyUnlockedPlanets.has('jupiter')) {
-            fistCooldown = 0.0;
-            isInitialFistCooldown = false;
-        } else {
-            if (currentPlanet === 'jupiter') {
-                fistCooldown = 2.0;
-                isInitialFistCooldown = true;
-            } else {
-                fistCooldown = 0.0;
-                isInitialFistCooldown = false;
-            }
-        }
-    }
-
-    // Handle Star Progression locks and starting cooldown overrides (Locked behind Sun)
-    if (!unlockedPlanets.includes('sun')) {
-        starCooldown = 99999.0;
-        isInitialStarCooldown = false;
-    } else {
-        if (initiallyUnlockedPlanets.has('sun')) {
-            starCooldown = 0.0;
-            isInitialStarCooldown = false;
-        } else {
-            if (currentPlanet === 'sun') {
-                starCooldown = 2.0;
-                isInitialStarCooldown = true;
-            } else {
-                starCooldown = 0.0;
-                isInitialStarCooldown = false;
-            }
-        }
-    }
-
-    // Handle Comet Progression locks and starting cooldown overrides (Locked behind Neptune)
-    if (!unlockedPlanets.includes('neptune')) {
-        cometCooldown = 99999.0;
-        isInitialCometCooldown = false;
-    } else {
-        if (initiallyUnlockedPlanets.has('neptune')) {
-            cometCooldown = 0.0;
-            isInitialCometCooldown = false;
-        } else {
-            if (currentPlanet === 'neptune') {
-                cometCooldown = 2.0;
-                isInitialCometCooldown = true;
-            } else {
-                cometCooldown = 0.0;
-                isInitialCometCooldown = false;
-            }
-        }
-    }
-
-    // Handle Black Hole Progression locks and starting cooldown overrides (Locked behind Sun)
-    // Black hole is now unlocked by time only (no more planet lock).
+    });
 
     // Instantly update active/inactive cooldown states in UI for unlocked weapons
-    const weaponsToCheck = [
-        { id: 'kraken', key: 'mars', cd: krakenCooldown },
-        { id: 'bowling', key: 'sun', cd: bowlingCooldown },
-        { id: 'fist', key: 'jupiter', cd: fistCooldown },
-        { id: 'worm', key: 'neptune', cd: wormCooldown },
-        { id: 'star', key: 'sun', cd: starCooldown },
-        { id: 'comet', key: 'neptune', cd: cometCooldown }
-    ];
-    weaponsToCheck.forEach(w => {
+    weaponsInfo.forEach(w => {
         const btn = document.getElementById(`btn-${w.id}`);
         const ui = document.getElementById(`${w.id}-cooldown-ui`);
-        if (unlockedPlanets.includes(w.key)) {
-            if (w.cd <= 0) {
+        if (unlockedWeapons.includes(w.id)) {
+            if (w.getCd() <= 0) {
                 if (btn) btn.classList.remove('cooldown-active');
                 if (ui) {
                     const text = ui.querySelector('.cooldown-text');
@@ -346,6 +339,8 @@ function refreshWeaponLocks() {
             }
         }
     });
+
+    updateWeaponOrderOnUnlock();
 }
 
 function getPlanetSize() {
@@ -429,6 +424,13 @@ let laserFlicker2Time = 0;
 let laserFlicker2Triggered = false;
 let lastLaserImpact = null;
 let lastLaserTier = 1;
+let activeLightnings = [];
+let lightningCooldown = 0;
+let lightningHoldTime = 0;
+let lightningQueue = [];
+let lightningChargeFlashTimer = 0;
+let lightningChargeShakeTimer = 0;
+let lightningLastChargedCount = 0;
 
 
 

@@ -321,7 +321,8 @@ async function run(mode) {
         laser: 11.0,
         fist: 20.0,
         star: 15.0,
-        comet: 2.0
+        comet: 2.0,
+        lightning: 1.0
     };
 
     // ── Cached DOM references (avoids per-frame getElementById / querySelector) ──
@@ -350,6 +351,8 @@ async function run(mode) {
         starUi: document.getElementById('star-cooldown-ui'),
         cometBtn: document.getElementById('btn-comet'),
         cometUi: document.getElementById('comet-cooldown-ui'),
+        lightningBtn: document.getElementById('btn-lightning'),
+        lightningUi: document.getElementById('lightning-cooldown-ui'),
         uiOverlay: document.querySelector('.ui-overlay'),
         massText: document.getElementById('mass-text'),
         massBar: document.getElementById('mass-bar'),
@@ -357,7 +360,7 @@ async function run(mode) {
     };
     // Pre-resolve child elements for cooldown UIs
     const _cdChildren = {};
-    ['gamma', 'laser', 'asteroid', 'sword', 'bowling', 'kraken', 'worm', 'blackhole', 'fist', 'moon', 'star', 'comet'].forEach(name => {
+    ['gamma', 'laser', 'lightning', 'asteroid', 'sword', 'bowling', 'kraken', 'worm', 'blackhole', 'fist', 'moon', 'star', 'comet'].forEach(name => {
         const ui = _dom[name + 'Ui'];
         _cdChildren[name] = ui ? {
             text: ui.querySelector('.cooldown-text'),
@@ -562,6 +565,35 @@ async function run(mode) {
                 }
             }
 
+            // Handle Lightning Cooldown UI ticking
+            const lightningBtn = _dom.lightningBtn;
+            const lightningUi = _dom.lightningUi;
+            if (lightningCooldown > 0) {
+                lightningCooldown -= deltaTime;
+                if (lightningCooldown <= 0) {
+                    lightningCooldown = 0;
+                    if (lightningBtn) {
+                        lightningBtn.classList.add('weapon-ready-glow');
+                        setTimeout(() => lightningBtn.classList.remove('weapon-ready-glow'), 600);
+                    }
+                }
+                if (lightningBtn) lightningBtn.classList.add('cooldown-active');
+                if (lightningUi) {
+                    const text = _cdChildren.lightning.text;
+                    const bar = _cdChildren.lightning.bar;
+                    if (text) text.textContent = `${Math.ceil(lightningCooldown)}s`;
+                    if (bar) bar.style.height = `${(lightningCooldown / MAX_COOLDOWNS.lightning) * 100}%`;
+                }
+            } else {
+                if (lightningBtn) lightningBtn.classList.remove('cooldown-active');
+                if (lightningUi) {
+                    const text = _cdChildren.lightning.text;
+                    const bar = _cdChildren.lightning.bar;
+                    if (text) text.textContent = '';
+                    if (bar) bar.style.height = '0%';
+                }
+            }
+
             // Handle Nuke Cooldown
             if (nukeCooldown > 0) {
                 nukeCooldown -= deltaTime;
@@ -643,7 +675,7 @@ async function run(mode) {
             // Handle Bowling Cooldown UI ticking
             const bowlingBtn = _dom.bowlingBtn;
             const bowlingUi = _dom.bowlingUi;
-            if (!unlockedPlanets.includes('sun')) {
+            if (!unlockedWeapons.includes('bowling')) {
                 if (bowlingBtn) bowlingBtn.classList.add('cooldown-active');
                 if (bowlingUi) {
                     const text = _cdChildren.bowling.text;
@@ -667,7 +699,7 @@ async function run(mode) {
                 if (bowlingUi) {
                     const text = _cdChildren.bowling.text;
                     const bar = _cdChildren.bowling.bar;
-                    const maxCd = isInitialBowlingCooldown ? 3.0 : MAX_COOLDOWNS.bowling;
+                    const maxCd = isInitialBowlingCooldown ? 1.25 : MAX_COOLDOWNS.bowling;
                     if (text) text.textContent = `${bowlingCooldown.toFixed(1)}s`;
                     if (bar) bar.style.height = `${(bowlingCooldown / maxCd) * 100}%`;
                 }
@@ -684,7 +716,7 @@ async function run(mode) {
             // Handle Kraken (Cthulhu) Cooldown UI ticking
             const krakenBtn = _dom.krakenBtn;
             const krakenUi = _dom.krakenUi;
-            if (!unlockedPlanets.includes('mars')) {
+            if (!unlockedWeapons.includes('kraken')) {
                 if (krakenBtn) krakenBtn.classList.add('cooldown-active');
                 if (krakenUi) {
                     const text = _cdChildren.kraken.text;
@@ -709,7 +741,7 @@ async function run(mode) {
                 if (krakenUi) {
                     const text = krakenUi.querySelector('.cooldown-text');
                     const bar = krakenUi.querySelector('.cooldown-bar');
-                    const maxCd = isInitialKrakenCooldown ? 3.0 : MAX_COOLDOWNS.kraken;
+                    const maxCd = isInitialKrakenCooldown ? 1.25 : MAX_COOLDOWNS.kraken;
                     if (text) text.textContent = `${Math.ceil(krakenCooldown)}s`;
                     if (bar) bar.style.height = `${(krakenCooldown / maxCd) * 100}%`;
                 }
@@ -726,7 +758,7 @@ async function run(mode) {
             // Handle Worm Cooldown UI ticking
             const wormBtn = _dom.wormBtn;
             const wormUi = _dom.wormUi;
-            if (!unlockedPlanets.includes('neptune')) {
+            if (!unlockedWeapons.includes('worm')) {
                 if (wormBtn) wormBtn.classList.add('cooldown-active');
                 if (wormUi) {
                     const text = _cdChildren.worm.text;
@@ -751,7 +783,7 @@ async function run(mode) {
                 if (wormUi) {
                     const text = wormUi.querySelector('.cooldown-text');
                     const bar = wormUi.querySelector('.cooldown-bar');
-                    const maxCd = isInitialWormCooldown ? 2.0 : MAX_COOLDOWNS.worm;
+                    const maxCd = isInitialWormCooldown ? 1.25 : MAX_COOLDOWNS.worm;
                     if (text) text.textContent = `${Math.ceil(wormCooldown)}s`;
                     if (bar) bar.style.height = `${(wormCooldown / maxCd) * 100}%`;
                 }
@@ -802,7 +834,7 @@ async function run(mode) {
             // Handle Fist Cooldown UI ticking
             const fistBtn = _dom.fistBtn;
             const fistUi = _dom.fistUi;
-            if (!unlockedPlanets.includes('jupiter')) {
+            if (!unlockedWeapons.includes('fist')) {
                 if (fistBtn) fistBtn.classList.add('cooldown-active');
                 if (fistUi) {
                     const text = _cdChildren.fist.text;
@@ -827,7 +859,7 @@ async function run(mode) {
                 if (fistUi) {
                     const text = fistUi.querySelector('.cooldown-text');
                     const bar = fistUi.querySelector('.cooldown-bar');
-                    const maxCd = isInitialFistCooldown ? 3.0 : MAX_COOLDOWNS.fist;
+                    const maxCd = isInitialFistCooldown ? 1.25 : MAX_COOLDOWNS.fist;
                     if (text) text.textContent = `${Math.ceil(fistCooldown)}s`;
                     if (bar) bar.style.height = `${(fistCooldown / maxCd) * 100}%`;
                 }
@@ -877,7 +909,7 @@ async function run(mode) {
             // Handle Star Cooldown UI ticking
             const starBtn = _dom.starBtn;
             const starUi = _dom.starUi;
-            if (!unlockedPlanets.includes('sun')) {
+            if (!unlockedWeapons.includes('star')) {
                 if (starBtn) starBtn.classList.add('cooldown-active');
                 if (starUi) {
                     const text = _cdChildren.star.text;
@@ -902,7 +934,7 @@ async function run(mode) {
                 if (starUi) {
                     const text = _cdChildren.star.text;
                     const bar = _cdChildren.star.bar;
-                    const maxCd = isInitialStarCooldown ? 3.0 : MAX_COOLDOWNS.star;
+                    const maxCd = isInitialStarCooldown ? 1.25 : MAX_COOLDOWNS.star;
                     if (text) text.textContent = `${Math.ceil(starCooldown)}s`;
                     if (bar) bar.style.height = `${(starCooldown / maxCd) * 100}%`;
                 }
@@ -919,7 +951,7 @@ async function run(mode) {
             // Handle Comet Cooldown UI ticking
             const cometBtn = _dom.cometBtn;
             const cometUi = _dom.cometUi;
-            if (!unlockedPlanets.includes('neptune')) {
+            if (!unlockedWeapons.includes('comet')) {
                 if (cometBtn) cometBtn.classList.add('cooldown-active');
                 if (cometUi) {
                     const text = _cdChildren.comet.text;
@@ -944,7 +976,7 @@ async function run(mode) {
                 if (cometUi) {
                     const text = _cdChildren.comet.text;
                     const bar = _cdChildren.comet.bar;
-                    const maxCd = isInitialCometCooldown ? 3.0 : MAX_COOLDOWNS.comet;
+                    const maxCd = isInitialCometCooldown ? 1.25 : MAX_COOLDOWNS.comet;
                     if (text) text.textContent = `${Math.ceil(cometCooldown)}s`;
                     if (bar) bar.style.height = `${(cometCooldown / maxCd) * 100}%`;
                 }
@@ -970,6 +1002,53 @@ async function run(mode) {
                 spawnWeapon(q.x, q.y, 'missile');
             }
 
+            // Handle Lightning hold time increment
+            if (isHolding && selectedWeapon === 'lightning' && !victoryTriggered && lightningCooldown <= 0) {
+                lightningHoldTime += deltaTime;
+                const chargeCount = Math.floor(lightningHoldTime / 0.4);
+                if (chargeCount > lightningLastChargedCount && chargeCount <= 6) {
+                    lightningLastChargedCount = chargeCount;
+                    // Play sfx_laser_crack detuned low to start and rising in detune with each bolt
+                    const detune = -800 + (chargeCount - 1) * 300;
+                    soundManager.play('sfx_laser_crack', false, 0.75, detune);
+                    // Shake the bar and make it briefly glow white each time a new lightning bolt is charged up
+                    lightningChargeFlashTimer = 0.15;
+                    lightningChargeShakeTimer = 0.15;
+                }
+            } else {
+                if (!isHolding || selectedWeapon !== 'lightning') {
+                    lightningLastChargedCount = 0;
+                }
+            }
+
+            if (lightningChargeFlashTimer > 0) {
+                lightningChargeFlashTimer -= deltaTime;
+            }
+            if (lightningChargeShakeTimer > 0) {
+                lightningChargeShakeTimer -= deltaTime;
+            }
+
+            // Handle Lightning Queue strikes
+            if (lightningQueue.length > 0) {
+                for (let i = lightningQueue.length - 1; i >= 0; i--) {
+                    const strike = lightningQueue[i];
+                    strike.delay -= deltaTime;
+                    if (strike.delay <= 0) {
+                        fireLightning(pointerX, pointerY, lightningQueue.length - i);
+                        lightningQueue.splice(i, 1);
+                    }
+                }
+            }
+
+            // Handle Active Lightnings lifetime decrement
+            if (activeLightnings.length > 0) {
+                for (let i = activeLightnings.length - 1; i >= 0; i--) {
+                    activeLightnings[i].life -= deltaTime;
+                    if (activeLightnings[i].life <= 0) {
+                        activeLightnings.splice(i, 1);
+                    }
+                }
+            }
 
             // Update floating texts
             for (let i = floatingTexts.length - 1; i >= 0; i--) {
@@ -3498,8 +3577,9 @@ async function run(mode) {
         // Draw floating texts
         floatingTexts.forEach(ft => {
             const elapsed = ft.maxLife - ft.life;
-            const floatDuration = 0.25; // 250ms
-            const fadeDuration = 0.25; // remaining 250ms
+            const floatDuration = Math.min(0.25, ft.maxLife * 0.5);
+            const fadeDuration = ft.maxLife - floatDuration;
+            const maxOffset = ft.maxOffset !== undefined ? ft.maxOffset : 50;
 
             let yOffset = 0;
             let alpha = 1;
@@ -3508,10 +3588,10 @@ async function run(mode) {
                 const t = elapsed / floatDuration;
                 // Quart.easeOut: 1 - (1-t)^4
                 const ease = 1 - Math.pow(1 - t, 4);
-                yOffset = ease * -50;
+                yOffset = ease * -maxOffset;
             } else {
-                yOffset = -50;
-                const tFade = (elapsed - floatDuration) / fadeDuration;
+                yOffset = -maxOffset;
+                const tFade = Math.min(1.0, Math.max(0.0, (elapsed - floatDuration) / fadeDuration));
                 alpha = 1 - tFade;
             }
 
@@ -4078,6 +4158,89 @@ async function run(mode) {
         // Draw weapons
         weapons.forEach(drawWeaponProjectile);
 
+        // Draw active lightnings
+        activeLightnings.forEach(lightning => {
+            const alpha = lightning.life / lightning.maxLife;
+            ctx.save();
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.lineWidth = 4.5;
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = 'rgba(0, 191, 255, 0.9)'; // deep sky blue glow
+            ctx.beginPath();
+            ctx.moveTo(lightning.segments[0].x, lightning.segments[0].y);
+            for (let i = 1; i < lightning.segments.length; i++) {
+                ctx.lineTo(lightning.segments[i].x, lightning.segments[i].y);
+            }
+            ctx.stroke();
+
+            // Inner core
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.95})`;
+            ctx.lineWidth = 1.8;
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(lightning.segments[0].x, lightning.segments[0].y);
+            for (let i = 1; i < lightning.segments.length; i++) {
+                ctx.lineTo(lightning.segments[i].x, lightning.segments[i].y);
+            }
+            ctx.stroke();
+            ctx.restore();
+        });
+
+        // Draw Lightning Charge Meter
+        if (isHolding && selectedWeapon === 'lightning' && !victoryTriggered && mode === 'play' && lightningCooldown <= 0) {
+            const isMax = lightningHoldTime >= 2.40;
+            let meterX = pointerX;
+            let meterY = pointerY - 45;
+            if (isMax || lightningChargeShakeTimer > 0) {
+                const shakeAmt = isMax ? 4 : 3;
+                meterX += (Math.random() - 0.5) * shakeAmt;
+                meterY += (Math.random() - 0.5) * shakeAmt;
+            }
+
+            const width = 80;
+            const height = 8;
+            const x = meterX - width / 2;
+            const y = meterY;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(15, 15, 15, 0.6)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.rect(x, y, width, height);
+            ctx.fill();
+            ctx.stroke();
+
+            const pct = Math.min(1.0, lightningHoldTime / 2.40);
+            if (pct > 0) {
+                if (isMax || lightningChargeFlashTimer > 0) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ffffff';
+                } else {
+                    ctx.fillStyle = '#ffd200';
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = 'rgba(255, 210, 0, 0.6)';
+                }
+                ctx.beginPath();
+                ctx.rect(x + 1.5, y + 1.5, (width - 3) * pct, height - 3);
+                ctx.fill();
+            }
+
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.shadowBlur = 0;
+            for (let i = 1; i < 6; i++) {
+                const tx = x + (width / 6) * i;
+                ctx.beginPath();
+                ctx.moveTo(tx, y + 1.5);
+                ctx.lineTo(tx, y + height - 1.5);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
         // Draw black flash if active (above planet, below laser beam)
         if (screenFlash.alpha > 0 && screenFlash.r === 0 && screenFlash.g === 0 && screenFlash.b === 0) {
             ctx.save();
@@ -4552,20 +4715,45 @@ async function run(mode) {
         showPointer = true;
     });
 
+    function handleLightningRelease() {
+        if (selectedWeapon === 'lightning') {
+            if (lightningCooldown <= 0) {
+                const boltCount = Math.min(6, Math.max(lightningLastChargedCount, Math.floor(lightningHoldTime / 0.4)));
+                if (boltCount < 1) {
+                    addFloatingText(pointerX, pointerY - 40, "HOLD LONGER", 'rgba(0, 240, 255,', 1.5, 15);
+                } else {
+                    lightningCooldown = 1.0;
+                    for (let i = 0; i < boltCount; i++) {
+                        lightningQueue.push({
+                            x: pointerX,
+                            y: pointerY,
+                            delay: i * 0.1
+                        });
+                    }
+                }
+            }
+            lightningHoldTime = 0;
+            lightningLastChargedCount = 0;
+        }
+    }
+
     window.addEventListener('mouseup', () => {
         isHolding = false;
         soundManager.stopLoop('sfx_laser_fire');
         soundManager.stopLoop('sfx_laser_hum');
+        handleLightningRelease();
     });
 
     window.addEventListener('touchend', () => {
         isHolding = false;
         soundManager.stopLoop('sfx_laser_fire');
         soundManager.stopLoop('sfx_laser_hum');
+        handleLightningRelease();
     });
 
     window.addEventListener('touchcancel', () => {
         isHolding = false;
+        handleLightningRelease();
     });
 
     function handleVisibilityChange() {
@@ -4670,7 +4858,6 @@ async function run(mode) {
             }
         });
     }
-
     // Keyboard shortcut hooks
     window.addEventListener('keydown', (e) => {
         if (window.gamePausedForAd) return;
@@ -4682,53 +4869,27 @@ async function run(mode) {
             }
         }
         if (mode === 'play') {
-            if (e.key === '1') {
-                selectedWeapon = 'missile';
-                document.getElementById('btn-missile').click();
-            } else if (e.key === '2') {
-                selectedWeapon = 'nuke';
-                document.getElementById('btn-nuke').click();
-            } else if (e.key === '3') {
-                selectedWeapon = 'asteroid';
-                document.getElementById('btn-asteroid').click();
-            } else if (e.key === '4') {
-                selectedWeapon = 'laser';
-                document.getElementById('btn-laser').click();
-            } else if (e.key === '5') {
-                selectedWeapon = 'gamma';
-                document.getElementById('btn-gamma').click();
-            } else if (e.key === '6') {
-                selectedWeapon = 'sword';
-                document.getElementById('btn-sword').click();
-            } else if (e.key === '7') {
-                selectedWeapon = 'kraken';
-                document.getElementById('btn-kraken').click();
-            } else if (e.key === '8') {
-                selectedWeapon = 'bowling';
-                document.getElementById('btn-bowling').click();
-            } else if (e.key === '9') {
-                selectedWeapon = 'fist';
-                const btnFist = document.getElementById('btn-fist');
-                if (btnFist) btnFist.click();
-            } else if (e.key === '0') {
-                selectedWeapon = 'star';
-                const btnStar = document.getElementById('btn-star');
-                if (btnStar) btnStar.click();
-            } else if (e.key === 'c' || e.key === 'C') {
-                selectedWeapon = 'comet';
-                const btnComet = document.getElementById('btn-comet');
-                if (btnComet) btnComet.click();
-            } else if (e.key === 'r' || e.key === 'R') {
+            // Handle restart shortcut on victory screen
+            if (e.key === 'r' || e.key === 'R') {
                 if (victoryTriggered) {
                     document.getElementById('restart-button').click();
-                } else {
-                    selectedWeapon = 'moon';
-                    const btnMoon = document.getElementById('btn-moon');
-                    if (btnMoon) btnMoon.click();
+                    return;
                 }
+            }
+
+            const buttons = Array.from(document.querySelectorAll('.weapon-button'));
+            const keyToIdx = {
+                '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8, '0': 9,
+                'q': 10, 'w': 11, 'e': 12, 'r': 13, 't': 14,
+                'Q': 10, 'W': 11, 'E': 12, 'R': 13, 'T': 14
+            };
+            const idx = keyToIdx[e.key];
+            if (idx !== undefined && idx < buttons.length) {
+                const btn = buttons[idx];
+                selectedWeapon = btn.getAttribute('data-weapon');
+                btn.click();
             } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 e.preventDefault();
-                const buttons = Array.from(document.querySelectorAll('.weapon-button'));
                 if (buttons.length > 0) {
                     const currentIndex = buttons.findIndex(btn => btn.classList.contains('selected'));
                     let nextIndex = currentIndex;
@@ -4753,6 +4914,7 @@ async function run(mode) {
             isHolding = false;
             soundManager.stopLoop('sfx_laser_fire');
             soundManager.stopLoop('sfx_laser_hum');
+            handleLightningRelease();
         }
     });
 
@@ -5020,12 +5182,16 @@ async function run(mode) {
             unlockedPlanets = ['earth'];
             initiallyUnlockedPlanets = new Set(['earth']);
             bestTimes = {};
+            weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+            unlockedWeapons = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole'];
+            initiallyUnlockedWeapons = new Set(unlockedWeapons);
+            saveWeaponOrder();
+            saveUnlockedWeapons();
 
             // Update UI/Locks
             updatePlanetButtons();
             refreshWeaponLocks();
 
-            // Switch back to Earth
             if (currentPlanet !== 'earth') {
                 currentPlanet = 'earth';
                 document.querySelectorAll('.planet-btn').forEach(b => b.classList.remove('selected'));
@@ -5048,17 +5214,28 @@ async function run(mode) {
     const adSpinOverlay = document.getElementById('ad-spin-popup-overlay');
     const adSpinYes = document.getElementById('ad-spin-yes');
     const adSpinNo = document.getElementById('ad-spin-no');
+    const adSpinClose = document.getElementById('ad-spin-close');
 
     if (adSpinYes) {
         adSpinYes.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
-            
+
             // Trigger the ad break
             if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
                 window.PlatformBridge.showRewardedAd(() => {
                     console.log("[ShootingStar] Ad finished. Spinner reward granted.");
+                    if (window.starSelectedWeapon) {
+                        unlockSpecificWeapon(window.starSelectedWeapon);
+                        window.starSelectedWeapon = null;
+                    }
                 });
+            } else {
+                // Fallback unlock if PlatformBridge isn't available
+                if (window.starSelectedWeapon) {
+                    unlockSpecificWeapon(window.starSelectedWeapon);
+                    window.starSelectedWeapon = null;
+                }
             }
 
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
@@ -5067,6 +5244,14 @@ async function run(mode) {
 
     if (adSpinNo) {
         adSpinNo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+        });
+    }
+
+    if (adSpinClose) {
+        adSpinClose.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';

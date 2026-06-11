@@ -231,6 +231,45 @@
                 const popup = document.getElementById('ad-spin-popup-overlay');
                 if (popup) {
                     popup.style.display = 'flex';
+                    
+                    // Reset and initialize the spinner inside the ad popup
+                    const container = document.getElementById('star-spinner-container');
+                    if (container) {
+                        const allLockedWeapons = ['kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+                        const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
+
+                        const btnContainer = document.getElementById('ad-spin-buttons-container');
+                        const msg = document.getElementById('ad-spin-message');
+                        const adSpinYes = document.getElementById('ad-spin-yes');
+                        const adSpinNo = document.getElementById('ad-spin-no');
+                        
+                        if (hasLocked) {
+                            if (adSpinYes) adSpinYes.disabled = true;
+                            if (adSpinNo) adSpinNo.disabled = true;
+                            if (msg) msg.textContent = 'SPIN THE WHEEL TO DISCOVER A WEAPON!';
+                            window.starSelectedWeapon = null;
+ 
+                            const spinner = new WeaponSpinner(container, {
+                                onStop: (weaponToUnlock) => {
+                                    window.starSelectedWeapon = weaponToUnlock;
+                                    if (adSpinYes) adSpinYes.disabled = false;
+                                    if (adSpinNo) adSpinNo.disabled = false;
+                                    
+                                    const btn = document.getElementById(`btn-${weaponToUnlock}`);
+                                    const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : weaponToUnlock.toUpperCase();
+                                    const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
+                                    if (msg) msg.textContent = `WATCH AD TO UNLOCK ${icon} ${name}?`;
+                                }
+                            });
+                            spinner.start();
+                        } else {
+                            // Show disabled greyed out spinner, disable watch/cancel buttons
+                            if (adSpinYes) adSpinYes.disabled = true;
+                            if (adSpinNo) adSpinNo.disabled = true;
+                            if (msg) msg.textContent = 'ALL WEAPONS UNLOCKED!';
+                            new WeaponSpinner(container);
+                        } }
+                    }
                 }
                 return true;
             }
