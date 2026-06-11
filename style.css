@@ -1326,19 +1326,19 @@ html {
     }
 
     .weapon-button {
-        flex: 0 0 78px;
-        width: 78px;
+        flex: 0 0 88px;
+        width: 88px;
         height: 76px;
         gap: 3px;
     }
 
     .weapon-icon {
-        font-size: 24px;
+        font-size: 28px;
     }
 
     .weapon-name {
-        font-size: 10px;
-        max-width: 76px;
+        font-size: 12px;
+        max-width: 88px;
     }
 
     /* Scaling overlay elements */
