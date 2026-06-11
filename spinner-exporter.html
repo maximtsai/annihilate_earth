@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spinner Wheel Exporter</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Roboto:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #020206;
+            color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            background: rgba(10, 10, 20, 0.6);
+            border: 1.5px solid rgba(0, 217, 255, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 0 50px rgba(0, 217, 255, 0.1), inset 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            margin: 0;
+            color: #00d9ff;
+            text-shadow: 0 0 10px rgba(0, 217, 255, 0.4);
+            letter-spacing: 2px;
+        }
+
+        canvas {
+            background: transparent;
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+            display: block;
+        }
+
+        .download-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #ffe600;
+            background: rgba(255, 230, 0, 0.08);
+            border: 1.5px solid rgba(255, 230, 0, 0.4);
+            border-radius: 6px;
+            padding: 12px 36px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 230, 0, 0.15);
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .download-btn:hover {
+            background: rgba(255, 230, 0, 0.16);
+            border-color: rgba(255, 230, 0, 0.7);
+            box-shadow: 0 0 25px rgba(255, 230, 0, 0.35);
+            transform: scale(1.05);
+        }
+
+        .download-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>SPINNER WHEEL EXPORTER</h1>
+    <canvas id="wheelCanvas" width="800" height="800"></canvas>
+    <button class="download-btn" id="downloadBtn">DOWNLOAD PNG</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    // Colors mapping from Weapons Config cyclic colors
+    const colors = [
+        '#a855f7', // Purple (Kraken)
+        '#10b981', // Green (Worm)
+        '#f59e0b', // Amber (Fist)
+        '#ef4444', // Red (Bowling)
+        '#3b82f6', // Blue (Star)
+        '#06b6d4'  // Cyan (Comet)
+    ];
+
+    const numSectors = 16;
+    const radius = 360;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const anglePerSector = (Math.PI * 2) / numSectors;
+
+    function drawWheel() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Draw sectors
+        for (let i = 0; i < numSectors; i++) {
+            const startAng = i * anglePerSector;
+            const endAng = (i + 1) * anglePerSector;
+
+            // Cyclic fill colors
+            const color = colors[i % colors.length];
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAng, endAng);
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Draw divider lines
+            ctx.strokeStyle = '#111116';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+
+
+        // 3. Draw Divider Pins
+        ctx.fillStyle = '#000000';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < numSectors; i++) {
+            const pinAng = i * anglePerSector;
+            const px = centerX + Math.cos(pinAng) * (radius - 4);
+            const py = centerY + Math.sin(pinAng) * (radius - 4);
+
+            ctx.beginPath();
+            ctx.arc(px, py, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
+
+    // Initialize draw
+    drawWheel();
+
+    // Setup Download Click Handler
+    downloadBtn.addEventListener('click', () => {
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = 'weapon-spinner-wheel.png';
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+</script>
+
+</body>
+</html>

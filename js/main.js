@@ -680,6 +680,7 @@ async function run(mode) {
                 if (bowlingUi) {
                     const text = _cdChildren.bowling.text;
                     const bar = _cdChildren.bowling.bar;
+                    if (text) text.textContent = 'LOCKED';
                     if (bar) bar.style.height = '100%';
                 }
             } else if (bowlingCooldown > 0) {
@@ -1005,8 +1006,8 @@ async function run(mode) {
             // Handle Lightning hold time increment
             if (isHolding && selectedWeapon === 'lightning' && !victoryTriggered && lightningCooldown <= 0) {
                 lightningHoldTime += deltaTime;
-                const chargeCount = Math.floor(lightningHoldTime / 0.4);
-                if (chargeCount > lightningLastChargedCount && chargeCount <= 6) {
+                const chargeCount = Math.floor(lightningHoldTime / 0.3);
+                if (chargeCount > lightningLastChargedCount && chargeCount <= 7) {
                     lightningLastChargedCount = chargeCount;
                     // Play sfx_laser_crack detuned low to start and rising in detune with each bolt
                     const detune = -800 + (chargeCount - 1) * 300;
@@ -4188,7 +4189,7 @@ async function run(mode) {
 
         // Draw Lightning Charge Meter
         if (isHolding && selectedWeapon === 'lightning' && !victoryTriggered && mode === 'play' && lightningCooldown <= 0) {
-            const isMax = lightningHoldTime >= 2.40;
+            const isMax = lightningHoldTime >= 2.10;
             let meterX = pointerX;
             let meterY = pointerY - 45;
             if (isMax || lightningChargeShakeTimer > 0) {
@@ -4211,7 +4212,7 @@ async function run(mode) {
             ctx.fill();
             ctx.stroke();
 
-            const pct = Math.min(1.0, lightningHoldTime / 2.40);
+            const pct = Math.min(1.0, lightningHoldTime / 2.10);
             if (pct > 0) {
                 if (isMax || lightningChargeFlashTimer > 0) {
                     ctx.fillStyle = '#ffffff';
@@ -4230,8 +4231,8 @@ async function run(mode) {
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.lineWidth = 1;
             ctx.shadowBlur = 0;
-            for (let i = 1; i < 6; i++) {
-                const tx = x + (width / 6) * i;
+            for (let i = 1; i < 7; i++) {
+                const tx = x + (width / 7) * i;
                 ctx.beginPath();
                 ctx.moveTo(tx, y + 1.5);
                 ctx.lineTo(tx, y + height - 1.5);
@@ -4718,7 +4719,7 @@ async function run(mode) {
     function handleLightningRelease() {
         if (selectedWeapon === 'lightning') {
             if (lightningCooldown <= 0) {
-                const boltCount = Math.min(6, Math.max(lightningLastChargedCount, Math.floor(lightningHoldTime / 0.4)));
+                const boltCount = Math.min(7, Math.max(lightningLastChargedCount, Math.floor(lightningHoldTime / 0.3)));
                 if (boltCount < 1) {
                     addFloatingText(pointerX, pointerY - 40, "HOLD LONGER", 'rgba(0, 240, 255,', 1.5, 15);
                 } else {

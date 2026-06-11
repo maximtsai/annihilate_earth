@@ -30,6 +30,15 @@ class WeaponSpinner {
         this.lastTime = 0;
         this.lastTickIndex = -1;
 
+        // Visual effects and physics states
+        this.pointerWobble = 0;
+        this.pointerWobbleVelocity = 0;
+        this.winPulseTime = 0;
+        this.winningSegmentScale = 1.0;
+        this.winningSectorIdx = -1;
+        this.flashAlpha = 0;
+        this.stopSparks = [];
+
         this.initDOM();
         this.startLoop();
     }
@@ -99,7 +108,7 @@ class WeaponSpinner {
         if (this.lockedWeapons.length === 0) return;
         this.isSpinning = true;
         this.isStopping = false;
-        
+
         // Reset celebration/announcement state
         if (this.stopButton) {
             this.stopButton.style.display = 'block';
@@ -115,12 +124,22 @@ class WeaponSpinner {
             this.rightPreview.classList.remove('celebrate');
         }
 
+        // Reset visual effect states
+        this.pointerWobble = 0;
+        this.pointerWobbleVelocity = 0;
+        this.winPulseTime = 0;
+        this.winningSegmentScale = 1.0;
+        this.winningSectorIdx = -1;
+        this.flashAlpha = 0;
+        this.stopSparks = [];
+        this.container.classList.remove('stop-shake');
+
         // Windup state parameters
         this.spinPhase = 'windup';
         this.spinTime = 0;
         this.spinSpeed = 0;
         this.targetSpeed = 5 + Math.random() * 1.2;
-        
+
         // Disable stop button during windup
         this.stopButton.disabled = true;
         this.stopButton.classList.add('disabled');
@@ -135,13 +154,86 @@ class WeaponSpinner {
         this.isStopping = true;
         this.stopButton.disabled = true;
         this.stopButton.classList.add('disabled');
+
+        // 1. Trigger CSS shake on container wrapper
+        this.container.classList.remove('stop-shake');
+        void this.container.offsetWidth; // force reflow
+        this.container.classList.add('stop-shake');
+
+        // 2. Trigger subtle canvas flash
+        this.flashAlpha = 0.25;
+
+        // 3. Spawn mechanical brake sparks from pointer tip (w/2, 30)
+        const w = this.canvas.width;
+        const numSectors = 16;
+        const anglePerSector = (Math.PI * 2) / numSectors;
+        const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
+        const winningWeapon = this.lockedWeapons[sectorIndex % this.lockedWeapons.length];
+        const meta = this.weaponsConfig[winningWeapon];
+        const sparkColor = meta ? meta.color : '#ffe600';
+
+        for (let i = 0; i < 24; i++) {
+            const angle = Math.random() * Math.PI + Math.PI * 0.5;
+            const speed = 100 + Math.random() * 140;
+            // Mix in bright yellow sparks with the thematic segment color
+            const finalColor = Math.random() < 0.4 ? '#ffe600' : sparkColor;
+            this.stopSparks.push({
+                x: w / 2,
+                y: 30,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                color: finalColor,
+                size: 3.0 + Math.random() * 3.5,
+                life: 0.55 + Math.random() * 0.35,
+                maxLife: 0.9,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 5
+            });
+        }
+
         if (typeof soundManager !== 'undefined') {
             soundManager.play('sfx_ui_switch', false, 0.8, -400);
         }
     }
 
     update(dt) {
-        if (!this.isSpinning) return;
+        // Update pointer wobble spring
+        if (Math.abs(this.pointerWobble) > 0.001 || Math.abs(this.pointerWobbleVelocity) > 0.001) {
+            const springConstant = 250;
+            const damping = 12;
+            const acceleration = -springConstant * this.pointerWobble - damping * this.pointerWobbleVelocity;
+            this.pointerWobbleVelocity += acceleration * dt;
+            this.pointerWobble += this.pointerWobbleVelocity * dt;
+        } else {
+            this.pointerWobble = 0;
+            this.pointerWobbleVelocity = 0;
+        }
+
+        // Decay subtle flash alpha
+        if (this.flashAlpha > 0) {
+            this.flashAlpha = Math.max(0, this.flashAlpha - 1.8 * dt);
+        }
+
+        // Update mechanical brake sparks
+        if (this.stopSparks) {
+            this.stopSparks.forEach(s => {
+                s.x += s.vx * dt;
+                s.y += s.vy * dt;
+                s.rotation += s.rotSpeed * dt;
+                s.life -= dt;
+            });
+            this.stopSparks = this.stopSparks.filter(s => s.life > 0);
+        }
+
+        if (!this.isSpinning) {
+            // If stopped and showing winning segment, update bounce scale animation (livelier bounce!)
+            if (this.winningSectorIdx !== -1) {
+                this.winPulseTime += dt;
+                this.winningSegmentScale = 1.0 + 0.55 * Math.sin(this.winPulseTime * 14) * Math.exp(-this.winPulseTime * 1.8);
+            }
+            return;
+        }
 
         // Apply rotation
         this.rotation += this.spinSpeed * dt;
@@ -166,35 +258,75 @@ class WeaponSpinner {
             }
         } else if (this.isStopping) {
             // Decelerate if stopping
-            // FPS-agnostic decay: slow down by a percentage of the current speed, plus a linear component to guarantee stopping
             this.spinSpeed = this.spinSpeed * Math.pow(0.42, dt) - 0.3 * dt;
             if (this.spinSpeed <= 0.15) {
                 this.spinSpeed = 0;
-                this.isSpinning = false;
+                this.settleVelocity = 0;
+
+                const numSectors = 16;
+                const anglePerSector = (Math.PI * 2) / numSectors;
+                const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+                const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
+
+                // Target: align this sector's center exactly with -Math.PI / 2 (top pointer)
+                const sectorCenterOffset = sectorIndex * anglePerSector + anglePerSector / 2;
+                const targetRotation = -Math.PI / 2 - sectorCenterOffset;
+
+                // Find shortest angular distance to target
+                const diff = ((targetRotation - this.rotation) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+                this.settleTarget = this.rotation + diff;
+                this.winningSectorIdx = sectorIndex;
+
+                this.spinPhase = 'snapping';
                 this.isStopping = false;
+            }
+        } else if (this.spinPhase === 'snapping') {
+            // Snaps very quickly with a spring bounce
+            const springConstant = 480;
+            const damping = 16;
+            const displacement = this.rotation - this.settleTarget;
+            const acceleration = -springConstant * displacement - damping * this.settleVelocity;
+            this.settleVelocity += acceleration * dt;
+            this.rotation += this.settleVelocity * dt;
+
+            // Settle complete when very close to target and velocity is low
+            if (Math.abs(displacement) < 0.002 && Math.abs(this.settleVelocity) < 0.05) {
+                this.rotation = this.settleTarget;
+                this.isSpinning = false;
+                this.spinPhase = 'idle';
+                this.winPulseTime = 0;
+                this.winningSegmentScale = 1.0;
                 this.onSpinnerEnd();
             }
         }
 
-        // Ticking sound when divider pins pass the top pointer (only while decelerating)
-        if (this.isSpinning && this.isStopping && this.lockedWeapons.length > 0) {
-            const numSectors = 14;
+        // Ticking sound & wobble when divider pins pass the top pointer
+        if (this.isSpinning && this.lockedWeapons.length > 0) {
+            const numSectors = 16;
             const anglePerSector = (Math.PI * 2) / numSectors;
             const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
             const currentIdx = Math.floor(norm / anglePerSector) % numSectors;
 
             if (currentIdx !== this.lastTickIndex) {
                 this.lastTickIndex = currentIdx;
-                if (typeof soundManager !== 'undefined') {
-                    // Quick high-pitched tick sound
-                    soundManager.play('sfx_ui_switch', false, 0.3, 1000);
+
+                // Elastic wobble only if not in windup
+                if (this.spinPhase !== 'windup') {
+                    // Tilt only counterclockwise (negative offset)
+                    this.pointerWobble = -0.32;
+                    this.pointerWobbleVelocity = 0;
+
+                    if (typeof soundManager !== 'undefined') {
+                        // Quick high-pitched tick sound
+                        soundManager.play('sfx_ui_switch', false, 0.3, 1000);
+                    }
                 }
             }
         }
     }
 
     onSpinnerEnd() {
-        const numSectors = 14;
+        const numSectors = 16;
         const anglePerSector = (Math.PI * 2) / numSectors;
 
         // Normalize rotation to find which sector landed straight up (angle -Math.PI / 2)
@@ -202,6 +334,8 @@ class WeaponSpinner {
         const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
         const winningWeapon = this.lockedWeapons[sectorIndex % this.lockedWeapons.length];
         const meta = this.weaponsConfig[winningWeapon];
+
+        this.winningSectorIdx = sectorIndex;
 
         if (typeof soundManager !== 'undefined') {
             soundManager.play('sfx_magical_star_fade', false, 0.9);
@@ -242,19 +376,19 @@ class WeaponSpinner {
             p.style.boxShadow = `0 0 8px ${color}`;
             p.style.left = `${centerX}px`;
             p.style.top = `${centerY}px`;
-            
+
             const angle = Math.random() * Math.PI * 2;
             const speed = 40 + Math.random() * 80;
             const tx = Math.cos(angle) * speed;
             const ty = Math.sin(angle) * speed;
-            
+
             element.offsetParent.appendChild(p);
-            
+
             requestAnimationFrame(() => {
                 p.style.transform = `translate(${tx}px, ${ty}px) scale(0)`;
                 p.style.opacity = '0';
             });
-            
+
             setTimeout(() => p.remove(), 1000);
         }
     }
@@ -292,8 +426,12 @@ class WeaponSpinner {
         const centerX = w / 2;
         const centerY = h + radius - 150; // Wheel center shifted up to fit larger display area
 
-        const numSectors = 14;
+        const numSectors = 16;
         const anglePerSector = (Math.PI * 2) / numSectors;
+
+        // Find which sector is currently active (top center pointer lane)
+        const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        const activeIdx = Math.floor(norm / anglePerSector) % numSectors;
 
         // Draw sectors
         for (let i = 0; i < numSectors; i++) {
@@ -316,12 +454,21 @@ class WeaponSpinner {
             ctx.lineWidth = 3;
             ctx.stroke();
 
+            // Calculate segment scales (grow active segment slightly, bounce winning segment when stopped)
+            let segmentScale = 1.0;
+            if (i === this.winningSectorIdx) {
+                segmentScale = this.winningSegmentScale;
+            } else if (i === activeIdx) {
+                segmentScale = 1.12;
+            }
+
             // Draw Label and Icon oriented outwards
             const midAng = startAng + anglePerSector / 2;
             ctx.save();
             ctx.translate(centerX, centerY);
             ctx.rotate(midAng + Math.PI / 2); // Rotate to orient label vertically
             ctx.translate(0, -radius + 45);
+            ctx.scale(segmentScale, segmentScale);
 
             // Icon (42px, 50% larger than 28px)
             ctx.font = '42px sans-serif';
@@ -361,19 +508,21 @@ class WeaponSpinner {
             ctx.stroke();
         }
 
-        // Draw Top Center Red Pointer/Arrow pointing down (scaled up by 50%)
+        // Draw Top Center Red Pointer/Arrow pointing down (scaled up by 50% with elastic wobble)
         ctx.save();
+        ctx.translate(w / 2, 0);
+        ctx.rotate(this.pointerWobble);
         ctx.shadowBlur = 12;
         ctx.shadowColor = 'rgba(255, 0, 0, 0.7)';
         ctx.fillStyle = '#ff1e50'; // Vibrant red
         ctx.strokeStyle = '#111116';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(w / 2 - 12, 0);
-        ctx.lineTo(w / 2 + 12, 0);
-        ctx.lineTo(w / 2 + 12, 12);
-        ctx.lineTo(w / 2, 30);
-        ctx.lineTo(w / 2 - 12, 12);
+        ctx.moveTo(-12, 0);
+        ctx.lineTo(12, 0);
+        ctx.lineTo(12, 12);
+        ctx.lineTo(0, 30);
+        ctx.lineTo(-12, 12);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -397,6 +546,29 @@ class WeaponSpinner {
                     this.rightPreview.style.boxShadow = `0 0 15px ${currentMeta.color}`;
                 }
             }
+        }
+
+        // Draw mechanical brake sparks
+        if (this.stopSparks && this.stopSparks.length > 0) {
+            this.stopSparks.forEach(s => {
+                ctx.save();
+                ctx.translate(s.x, s.y);
+                ctx.rotate(s.rotation);
+                ctx.fillStyle = s.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = s.color;
+                ctx.globalAlpha = s.life / s.maxLife;
+                ctx.fillRect(-s.size, -s.size, s.size * 2, s.size * 2);
+                ctx.restore();
+            });
+        }
+
+        // Draw subtle impact flash overlay
+        if (this.flashAlpha > 0) {
+            ctx.save();
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.flashAlpha})`;
+            ctx.fillRect(0, 0, w, h);
+            ctx.restore();
         }
     }
 
