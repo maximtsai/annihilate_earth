@@ -972,7 +972,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
         finalRadius = Math.max(0, radius - 3) * 0.95;
     }
     if (currentPlanet === 'neutron_star') {
-        finalRadius *= 0.25;
+        finalRadius *= 0.225;
     }
 
     // Erase using centralized core-aware terrain logic
@@ -1102,7 +1102,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
         particleCount = Math.floor(particleCount * 0.6);
     }
     if (weaponType === 'lightning') {
-        particleCount = Math.floor(particleCount * 0.6);
+        particleCount = Math.floor(particleCount * 0.4);
     }
     const speedScale = getConfigValue(`weapons.${weaponType}.particleSpeedScale`, 1.0);
     const lifeScale = getConfigValue(`weapons.${weaponType}.particleLifeScale`, 1.0);
@@ -1211,7 +1211,7 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
         finalRadius = Math.max(0, radius - 3) * 0.95;
     }
     if (currentPlanet === 'neutron_star') {
-        finalRadius *= 0.25;
+        finalRadius *= 0.225;
     }
 
     // Erase using centralized core-aware terrain logic
@@ -1349,7 +1349,7 @@ function triggerVictory() {
                     const s = seconds % 60;
                     bestVal.textContent = `${m}m ${s}s`;
                 }
-                
+
                 if (isNewBest && bestBadge) {
                     bestBadge.style.display = 'inline-block';
                 }

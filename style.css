@@ -415,8 +415,6 @@ html {
     margin: 0;
     padding: 0;
     background: rgba(12, 12, 28, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: none;
     display: flex;
     align-items: center;
@@ -739,7 +737,7 @@ html {
     right: 24px;
     top: calc(54% + var(--planet-offset-y) * var(--ui-scale));
     transform: translateY(-50%);
-    width: calc(140px * var(--ui-scale));
+    width: calc(126px * var(--ui-scale));
     height: 80%;
     max-height: calc(80% - 50px);
     padding: 1.5px;
@@ -754,11 +752,11 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(12px * var(--ui-scale));
+    gap: calc(11px * var(--ui-scale));
     background: rgba(12, 12, 28, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding: calc(15px * var(--ui-scale)) calc(10px * var(--ui-scale));
+    padding: calc(13px * var(--ui-scale)) calc(9px * var(--ui-scale));
     clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
     width: 100%;
     height: 100%;
@@ -783,7 +781,7 @@ html {
 .weapon-panel-inner {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 7px;
     padding: 4px 0;
     width: 100%;
     align-items: center;
@@ -791,9 +789,9 @@ html {
 
 .weapon-button {
     position: relative;
-    flex: 0 0 calc(114px * var(--ui-scale));
-    width: calc(114px * var(--ui-scale));
-    height: calc(114px * var(--ui-scale));
+    flex: 0 0 calc(102px * var(--ui-scale));
+    width: calc(102px * var(--ui-scale));
+    height: calc(102px * var(--ui-scale));
     background: rgba(0, 217, 255, 0.05);
     border: 1px solid rgba(0, 217, 255, 0.25);
     border-radius: 4px;
@@ -804,7 +802,7 @@ html {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: calc(6px * var(--ui-scale));
+    gap: calc(5px * var(--ui-scale));
     outline: none;
     overflow: hidden;
 }
@@ -835,13 +833,14 @@ html {
 }
 
 .scroll-arrow {
-    flex: 0 0 calc(38px * var(--ui-scale));
+    flex: 0 0 calc(34px * var(--ui-scale));
+    margin: 0 2px;
     background: rgba(4, 4, 18, 0.7);
     border: 1.5px solid rgba(0, 217, 255, 0.6);
     color: #00d9ff;
-    font-size: calc(20px * var(--ui-scale));
-    width: calc(114px * var(--ui-scale));
-    height: calc(38px * var(--ui-scale));
+    font-size: calc(18px * var(--ui-scale));
+    width: calc(102px * var(--ui-scale));
+    height: calc(34px * var(--ui-scale));
     border-radius: 4px;
     cursor: pointer;
     display: flex;
@@ -965,7 +964,6 @@ html {
     background: rgba(0, 217, 255, 0.12);
     border-color: rgba(0, 217, 255, 0.65);
     color: #ffffff;
-    transform: translateY(-2px);
     box-shadow: 0 0 22px rgba(0, 217, 255, 0.6), inset 0 0 8px rgba(0, 217, 255, 0.15);
 }
 
@@ -983,14 +981,12 @@ html {
 }
 
 .weapon-button:active {
-    transform: translateY(-1px);
 }
 
 .weapon-button.selected {
     background: rgba(0, 217, 255, 0.2);
     border: 2px solid #00d9ff;
     color: #ffffff;
-    transform: translateY(-2px);
     box-shadow: 0 0 20px rgba(0, 217, 255, 0.45);
 }
 
@@ -1413,15 +1409,15 @@ html {
     }
 
     .planet-btn {
-        font-size: calc(12px * var(--ui-scale));
-        width: calc(84px * var(--ui-scale));
-        height: calc(66px * var(--ui-scale));
-        padding: calc(7px * var(--ui-scale)) calc(10px * var(--ui-scale));
+        font-size: calc(17px * var(--ui-scale));
+        width: calc(116px * var(--ui-scale));
+        height: calc(91px * var(--ui-scale));
+        padding: calc(10px * var(--ui-scale)) calc(14px * var(--ui-scale));
         flex-shrink: 0;
     }
 
     .planet-btn-icon {
-        font-size: calc(26px * var(--ui-scale));
+        font-size: calc(36px * var(--ui-scale));
     }
 
     /* Move weapon selector bar to bottom horizontal panel */
@@ -1434,7 +1430,7 @@ html {
         transform: translateX(-50%);
         width: 90%;
         max-width: 800px;
-        height: calc(10px + 104px * var(--ui-scale));
+        height: calc(11px + 154px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
         background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
@@ -1445,17 +1441,17 @@ html {
 
     .weapon-bar-container {
         flex-direction: row;
-        padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
-        gap: calc(6px * var(--ui-scale));
+        padding: calc(8px * var(--ui-scale)) calc(13px * var(--ui-scale));
+        gap: calc(7px * var(--ui-scale));
         clip-path: none;
         border-radius: 1px;
     }
 
     .scroll-arrow {
-        flex: 0 0 calc(36px * var(--ui-scale));
-        width: calc(36px * var(--ui-scale));
-        height: 100%;
-        font-size: calc(16px * var(--ui-scale));
+        flex: 0 0 calc(40px * var(--ui-scale));
+        width: calc(40px * var(--ui-scale));
+        height: calc(133px * var(--ui-scale));
+        font-size: calc(28px * var(--ui-scale));
     }
 
     #scroll-left-btn .arrow-text {
@@ -1481,7 +1477,7 @@ html {
 
     .weapon-panel-inner {
         flex-direction: row;
-        gap: 10px;
+        gap: 6px;
         padding: 0 10px;
         height: 100%;
         width: auto;
@@ -1489,22 +1485,34 @@ html {
     }
 
     .weapon-button {
-        flex: 0 0 calc(101px * var(--ui-scale));
-        width: calc(101px * var(--ui-scale));
-        height: calc(87px * var(--ui-scale));
-        gap: calc(3px * var(--ui-scale));
+        flex: 0 0 calc(138.5px * var(--ui-scale));
+        width: calc(138.5px * var(--ui-scale));
+        height: calc(133px * var(--ui-scale));
+        gap: calc(4.5px * var(--ui-scale));
     }
 
     .weapon-icon {
-        font-size: calc(28px * var(--ui-scale));
+        font-size: calc(38.5px * var(--ui-scale));
     }
 
     .weapon-name {
-        font-size: calc(12px * var(--ui-scale));
-        max-width: calc(101px * var(--ui-scale));
+        font-size: calc(16.5px * var(--ui-scale));
+        max-width: calc(138.6px * var(--ui-scale));
     }
 
+    .weapon-button.selected::after {
+        height: calc(2.75px * var(--ui-scale));
+    }
 
+    .options-toggle-wrapper {
+        width: calc(80px * var(--ui-scale));
+        height: calc(80px * var(--ui-scale));
+    }
+
+    .options-toggle svg {
+        width: calc(50px * var(--ui-scale));
+        height: calc(50px * var(--ui-scale));
+    }
 
     /* Scaling Options popup */
     .options-popup,
@@ -1633,7 +1641,8 @@ html {
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
     display: block;
     cursor: default;
-    transform: scale(calc(0.5 + 0.5 * var(--ui-scale)));
+    width: calc(420px * (0.5 + 0.5 * var(--ui-scale)));
+    height: calc(180px * (0.5 + 0.5 * var(--ui-scale)));
 }
 
 .weapon-spinner-canvas.clickable {

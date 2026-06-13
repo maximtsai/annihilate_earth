@@ -283,8 +283,9 @@ async function run(mode) {
     const gameContainer = document.getElementById('game-container');
     const uiContainer = document.getElementById('ui-container');
     function resizeBackground() {
-        bgCanvas.width = window.innerWidth;
-        bgCanvas.height = window.innerHeight;
+        // Render at 50% resolution to drastically reduce GPU pixel fill-rate on high-DPI/mobile screens
+        bgCanvas.width = Math.ceil(window.innerWidth * 0.5);
+        bgCanvas.height = Math.ceil(window.innerHeight * 0.5);
         if (gameContainer) {
             const scaleY = window.innerHeight / SCREEN_H;
             const isVertical = window.innerHeight > window.innerWidth;
@@ -307,7 +308,7 @@ async function run(mode) {
 
         const scaleHeight = (window.innerHeight * 0.88) / 720;
         const isLandscape = window.innerWidth >= window.innerHeight;
-        const baseWidth = isLandscape ? window.innerWidth * 1.6 : 600;
+        const baseWidth = isLandscape ? window.innerWidth * 1.15 : 600;
         const scaleWidth = (window.innerWidth * 0.94) / baseWidth;
         const victoryScale = Math.min(scaleWidth, scaleHeight);
         document.documentElement.style.setProperty('--victory-scale', victoryScale);
@@ -2072,7 +2073,10 @@ async function run(mode) {
                     screenShake = { x: 0, y: 0, intensity: 7, duration: 70 };
                     // Use head position for damage!
                     const local = screenToLocal(head.x, head.y, CENTER_X, CENTER_Y, planetRotation);
-                    const eraseRadius = worm.radius * 0.5 + 5;
+                    let eraseRadius = worm.radius * 0.5 + 5;
+                    if (currentPlanet === 'neutron_star') {
+                        eraseRadius *= 0.35;
+                    }
                     eraseTerrain(local.x, local.y, eraseRadius, false, 'worm');
                     collapseTerrain();
                     const remainingPixels = calculateCenterOfMass();
@@ -2288,6 +2292,8 @@ async function run(mode) {
                     }
                 }
 
+                let blackholeHitThisFrame = false;
+
                 // Update rain projectiles
                 for (let pIdx = bh.projectiles.length - 1; pIdx >= 0; pIdx--) {
                     const rp = bh.projectiles[pIdx];
@@ -2318,14 +2324,7 @@ async function run(mode) {
 
                             // Erase terrain with radius
                             eraseTerrain(local.x, local.y, radius, false, 'blackhole');
-                            collapseTerrain();
-                            const remainingPixels = calculateCenterOfMass();
-                            if (!victoryTriggered) {
-                                const massPct = (remainingPixels / initialPixelCount) * 100;
-                                if (massPct < getConfigValue('gameplay.victoryThreshold', 1.75)) {
-                                    triggerVictory();
-                                }
-                            }
+                            blackholeHitThisFrame = true;
 
                             // Spawn visual chunk at rotated screen coordinate
                             const cos = Math.cos(planetRotation);
@@ -2357,6 +2356,18 @@ async function run(mode) {
                     const dy = rp.y - CENTER_Y;
                     if (Math.sqrt(dx * dx + dy * dy) > 1000) {
                         bh.projectiles.splice(pIdx, 1);
+                    }
+                }
+
+                // If any blackhole projectile hit the planet this frame, run the heavy passes exactly once
+                if (blackholeHitThisFrame) {
+                    collapseTerrain();
+                    const remainingPixels = calculateCenterOfMass();
+                    if (!victoryTriggered) {
+                        const massPct = (remainingPixels / initialPixelCount) * 100;
+                        if (massPct < getConfigValue('gameplay.victoryThreshold', 1.75)) {
+                            triggerVictory();
+                        }
                     }
                 }
 
@@ -3677,15 +3688,15 @@ async function run(mode) {
 
         // Draw background stars
         bgCtx.save();
-        bgCtx.translate(screenShake.x, screenShake.y);
+        bgCtx.translate(screenShake.x * 0.5, screenShake.y * 0.5);
         const scaleY = bgCanvas.height / 900;
         const scaleX = bgCanvas.width / 1600;
         const starScale = scaleY; // height-based scaling for stars size!
 
         stars.forEach(star => {
             bgCtx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
-            const pxOff = star.size > 2.0 ? screenShake.x * -0.22 : screenShake.x * -0.07;
-            const pyOff = star.size > 2.0 ? screenShake.y * -0.22 : screenShake.y * -0.07;
+            const pxOff = star.size > 2.0 ? (screenShake.x * -0.22) * 0.5 : (screenShake.x * -0.07) * 0.5;
+            const pyOff = star.size > 2.0 ? (screenShake.y * -0.22) * 0.5 : (screenShake.y * -0.07) * 0.5;
             const renderX = star.x * scaleX + pxOff;
             const renderY = star.y * scaleY + pyOff;
             const renderSize = star.size * starScale;
@@ -4611,8 +4622,6 @@ async function run(mode) {
                 grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
                 ctx.fillStyle = grad;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = 'rgba(255, 255, 150, 0.5)';
                 ctx.beginPath();
                 ctx.moveTo(-hr.rayWidth / 2, 0);
                 ctx.lineTo(hr.rayWidth / 2, 0);
@@ -4719,10 +4728,16 @@ async function run(mode) {
         const flashOverlay = _dom.flashOverlay;
         if (flashOverlay) {
             if (screenFlash.alpha > 0) {
+                if (flashOverlay.style.display !== 'block') {
+                    flashOverlay.style.display = 'block';
+                }
                 flashOverlay.style.backgroundColor = `rgb(${screenFlash.r}, ${screenFlash.g}, ${screenFlash.b})`;
                 flashOverlay.style.opacity = screenFlash.alpha;
             } else {
-                flashOverlay.style.opacity = 0;
+                if (flashOverlay.style.display !== 'none') {
+                    flashOverlay.style.opacity = 0;
+                    flashOverlay.style.display = 'none';
+                }
             }
         }
 

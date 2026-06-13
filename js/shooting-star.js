@@ -3,6 +3,7 @@
     let star = null;
     let spawnTime = 0;
     let spawned = false;
+    let secondAttemptAttempted = false;
     let clickStars = [];
     let lastSpawnTimestamp = 0;
     let lastUnlockedCount = -1;
@@ -12,11 +13,12 @@
         init: function () {
             // Pick a random spawn time based on the planet
             if (typeof currentPlanet !== 'undefined' && currentPlanet === 'earth') {
-                spawnTime = 24 + Math.random() * 6; // 24 to 30 seconds
+                spawnTime = 26 + Math.random() * 6; // 24 to 30 seconds
             } else {
                 spawnTime = 14 + Math.random() * 6; // 14 to 20 seconds
             }
             spawned = false;
+            secondAttemptAttempted = false;
             star = null;
             clickStars = [];
             lastUnlockedCount = -1;
@@ -41,9 +43,19 @@
                 return;
             }
 
+            const isEarth = (typeof currentPlanet !== 'undefined' && currentPlanet === 'earth');
+            const now = Date.now();
+            const adCooldownActive = (now - (window.lastAdPlayTime || 0) < 30000);
+
             if (!spawned && planetTimeSpent >= spawnTime) {
-                const now = Date.now();
-                if (now - lastSpawnTimestamp >= 75000) {
+                if (!adCooldownActive && (now - lastSpawnTimestamp >= 100000)) {
+                    this.spawn();
+                }
+            }
+
+            if (!isEarth && !spawned && planetTimeSpent >= 35 && !secondAttemptAttempted) {
+                secondAttemptAttempted = true;
+                if (!adCooldownActive && (now - lastSpawnTimestamp >= 100000)) {
                     this.spawn();
                 }
             }
@@ -177,7 +189,7 @@
                     ctx.fillStyle = "#ffe600";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-                    
+
                     // Shadow glow
                     ctx.shadowBlur = 8;
                     ctx.shadowColor = "rgba(255, 230, 0, 0.7)";
@@ -217,8 +229,6 @@
                 ctx.arc(0, 0, cs.size * 1.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = 'rgba(255, 200, 0, 0.85)';
                 this.drawStarShape(ctx, 5, cs.size, cs.size * 0.4, '#ffe600', '#ffa500');
                 ctx.restore();
             });

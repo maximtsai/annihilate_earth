@@ -27,6 +27,29 @@ class WeaponSpinner {
         const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
         this.lockedWeapons = allLockedWeapons.filter(wid => !currentUnlocked.includes(wid));
 
+        // Build sectorWeapons mapping to avoid adjacent duplicates
+        this.sectorWeapons = [];
+        const numSectors = 16;
+        if (this.lockedWeapons.length > 0) {
+            if (this.lockedWeapons.length === 1) {
+                for (let i = 0; i < numSectors; i++) {
+                    this.sectorWeapons.push(this.lockedWeapons[0]);
+                }
+            } else {
+                for (let i = 0; i < numSectors; i++) {
+                    this.sectorWeapons.push(this.lockedWeapons[i % this.lockedWeapons.length]);
+                }
+                if (this.sectorWeapons[numSectors - 1] === this.sectorWeapons[0]) {
+                    const first = this.sectorWeapons[0];
+                    const secondToLast = this.sectorWeapons[numSectors - 2];
+                    const replacement = this.lockedWeapons.find(w => w !== first && w !== secondToLast);
+                    if (replacement) {
+                        this.sectorWeapons[numSectors - 1] = replacement;
+                    }
+                }
+            }
+        }
+
         this.canvas = null;
         this.ctx = null;
         this.stopButton = null;
@@ -132,7 +155,7 @@ class WeaponSpinner {
 
     updatePreviews(sectorIndex) {
         if (this.lockedWeapons.length === 0) return;
-        const currentWeaponId = this.lockedWeapons[sectorIndex % this.lockedWeapons.length];
+        const currentWeaponId = this.sectorWeapons[sectorIndex];
         const currentMeta = this.weaponsConfig[currentWeaponId];
         if (currentMeta) {
             if (this.leftPreview) {
@@ -220,7 +243,7 @@ class WeaponSpinner {
         const anglePerSector = (Math.PI * 2) / numSectors;
         const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
         const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
-        const winningWeapon = this.lockedWeapons[sectorIndex % this.lockedWeapons.length];
+        const winningWeapon = this.sectorWeapons[sectorIndex];
         const meta = this.weaponsConfig[winningWeapon];
         const sparkColor = meta ? meta.color : '#ffe600';
 
@@ -390,7 +413,7 @@ class WeaponSpinner {
         // Normalize rotation to find which sector landed straight up (angle -Math.PI / 2)
         const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
         const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
-        const winningWeapon = this.lockedWeapons[sectorIndex % this.lockedWeapons.length];
+        const winningWeapon = this.sectorWeapons[sectorIndex];
         const meta = this.weaponsConfig[winningWeapon];
 
         this.winningSectorIdx = sectorIndex;
@@ -504,7 +527,7 @@ class WeaponSpinner {
             const startAng = this.rotation + i * anglePerSector;
             const endAng = this.rotation + (i + 1) * anglePerSector;
 
-            const weaponId = this.lockedWeapons[i % this.lockedWeapons.length];
+            const weaponId = this.sectorWeapons[i];
             const meta = this.weaponsConfig[weaponId] || { icon: '⚡', name: '?', color: '#888' };
 
             // Draw pie segment

@@ -95,6 +95,7 @@ window.PlatformBridge = {
             PokiSDK.commercialBreak()
                 .then(() => {
                     console.log("[PlatformBridge] Commercial break completed successfully.");
+                    window.lastAdPlayTime = Date.now();
                     onAdComplete();
                 })
                 .catch((err) => {
@@ -175,41 +176,36 @@ window.PlatformBridge = {
                 #ad-transition-overlay {
                     position: fixed;
                     top: 0;
-                    left: 0;
-                    width: 100vw;
+                    left: -30vw;
+                    width: 160vw;
                     height: 100vh;
                     background: #000000;
                     z-index: 999999;
-                    transform-origin: center center;
                     pointer-events: all;
+                    border-right: 6px solid #00ffff;
+                    box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+                    transform: skewX(-20deg) translateX(-100%);
                 }
                 .ad-transition-in {
-                    animation: adTransitionIn 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+                    animation: adTransitionIn 0.42s cubic-bezier(0.25, 1, 0.5, 1) forwards;
                 }
                 .ad-transition-out {
-                    animation: adTransitionOut 0.22s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+                    animation: adTransitionOut 0.42s cubic-bezier(0.25, 1, 0.5, 1) forwards;
                 }
                 @keyframes adTransitionIn {
                     0% {
-                        transform: scale(0, 0);
-                        opacity: 0;
-                    }
-                    10% {
-                        opacity: 1;
+                        transform: skewX(-20deg) translateX(-100%);
                     }
                     100% {
-                        transform: scale(1, 1);
-                        opacity: 1;
+                        transform: skewX(-20deg) translateX(0%);
                     }
                 }
                 @keyframes adTransitionOut {
                     0% {
-                        transform: scale(1, 1);
-                        clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%);
+                        transform: skewX(-20deg) translateX(0%);
                     }
                     100% {
-                        transform: scale(1, 1);
-                        clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%);
+                        transform: skewX(-20deg) translateX(100%);
                     }
                 }
             `;
@@ -221,7 +217,7 @@ window.PlatformBridge = {
         overlay.classList.add('ad-transition-in');
         setTimeout(() => {
             if (onMidpoint) onMidpoint();
-        }, 220);
+        }, 420);
     },
 
     _runTransitionOut: function() {
@@ -232,6 +228,6 @@ window.PlatformBridge = {
         overlay.classList.add('ad-transition-out');
         setTimeout(() => {
             overlay.remove();
-        }, 220);
+        }, 420);
     }
 };
