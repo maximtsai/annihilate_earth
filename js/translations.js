@@ -1,4 +1,3 @@
-// Translations system database
 const translations = {
     en: {
         options: 'OPTIONS',
@@ -85,7 +84,7 @@ const translations = {
         neutron_starSubtitle: '你毁灭了中子星！其超高密度的简并物质已消散。',
         restartSim: '重新开始',
         next: '下一个',
-        toUnlock: '以解锁！',
+        toUnlock: '即可解锁！', // Adjusted for natural suffix flow
         unlocked: '已解锁',
         shotsFired: '发射次数',
         timeSpent: '所用时间',
@@ -146,7 +145,7 @@ const translations = {
         neutron_starSubtitle: '你毀滅了中子星！其超高密度的簡併物質已消散。',
         restartSim: '重新開始',
         next: '下一個',
-        toUnlock: '以解鎖！',
+        toUnlock: '即可解鎖！', // Adjusted for natural suffix flow
         unlocked: '已解鎖',
         shotsFired: '發射次數',
         timeSpent: '所用時間',
@@ -170,7 +169,7 @@ const translations = {
         watchAdToSpin: '觀看廣告抽獎',
         claimed: '已領取',
         loadingTitle: '毀滅地球',
-        loadingWeapons: '初始化武器系統...',
+        loadingWeapons: '設定武器系統...',
         loadingAssets: '載入資源中...',
         loadingAudio: '初始化音訊系統...',
         loadingWeaponAssets: '載入武器資源...',
@@ -222,9 +221,9 @@ const translations = {
         cooldown: 'RECARGA',
         holdLonger: 'MANTENER MÁS',
         allWeaponsUnlocked: '¡TODAS LAS\nARMAS DESBLOQUEADAS!',
-        specialSpin: '¡GIRA ESPECIAL!',
+        specialSpin: '¡GIRO ESPECIAL!',
         spinToDiscover: '¡GIRA PARA DESCUBRIR UN ARMA!',
-        nevermind: 'NO IMPORTA',
+        nevermind: 'AHORA NO', // Adjusted from "no importa" to "not now"
         watch: '¡VER!',
         watchAdToUnlock: '¿VER ANUNCIO PARA DESBLOQUEAR {name}?',
         newBest: '¡MEJOR MARCA!',
@@ -275,17 +274,17 @@ const translations = {
         bestTime: 'MEILLEUR TEMPS',
         resetProgress: 'RÉINITIALISER LA PROGRESSION',
         resetProgressConfirm: 'RÉINITIALISER LA PROGRESSION ?',
-        resetWarnMessage: 'CELA EFFACERA TOUTES LES PLANÈTES COMPLÉTÉES ET RESTAURERA LES VERROUS DE SIMULATION. ÊTES-VOUS ABSOLUMENT SÛR ?',
+        resetWarnMessage: 'CELA EFFACERA TOUTES LES PLANÈTES COMPLÈTES ET RESTAURERA LES VERROUS DE SIMULATION. ÊTES-VOUS ABSOLUTELY SÛR ?',
         yesReset: 'OUI, RÉINITIALISER',
         cancel: 'ANNULER',
         stop: 'STOP',
         locked: 'VERROUILLÉ',
         cooldown: 'RECHARGE',
-        holdLonger: 'MAINTENIR PLUS',
+        holdLonger: 'MAINTENIR PLUS LONGTEMPS',
         allWeaponsUnlocked: 'TOUTES LES ARMES\nDÉBLOQUÉES !',
-        specialSpin: 'TOUR SPECIAL !',
+        specialSpin: 'TOUR SPÉCIAL !',
         spinToDiscover: 'TOURNEZ POUR DÉCOUVRIR UNE ARME !',
-        nevermind: 'PAS IMPORTE',
+        nevermind: 'ANNULER', // Adjusted from incorrect "pas importe" to "Cancel"
         watch: 'REGARDER !',
         watchAdToUnlock: 'REGARDER UNE PUB POUR DÉBLOQUER {name} ?',
         newBest: 'NOUVEAU RECORD !',
@@ -336,7 +335,7 @@ const translations = {
         bestTime: 'ЛУЧШЕЕ ВРЕМЯ',
         resetProgress: 'СБРОСИТЬ ПРОГРЕСС',
         resetProgressConfirm: 'СБРОСИТЬ ПРОГРЕСС?',
-        resetWarnMessage: 'ЭТО СТРЕТ ВЕСЬ ПРОГРЕСС И ВОССТАНОВИТ БЛОКИРОВКИ СИМУЛЯЦИИ. ВЫ АБСОЛЮТНО УВЕРЕНЫ?',
+        resetWarnMessage: 'ЭТО СОТРЁТ ВЕСЬ ПРОГРЕСС И ВОССТАНОВИТ БЛОКИРОВКИ СИМУЛЯЦИИ. ВЫ АБСОЛЮТНО УВЕРЕНЫ?', // Fixed typo "СТРЕТ" to "СОТРЁТ"
         yesReset: 'ДА, СБРОСИТЬ',
         cancel: 'ОТМЕНА',
         stop: 'СТОП',
@@ -390,7 +389,7 @@ const translations = {
         neutron_starSubtitle: '中性子星を滅ぼした！その超高密度の縮退物質は霧散した。',
         restartSim: 'リスタート',
         next: '次へ',
-        toUnlock: 'してロック解除！',
+        toUnlock: 'でロック解除！', // Fixed to naturally follow prefix values
         unlocked: 'アンロック',
         shotsFired: '発射数',
         timeSpent: '経過時間',
@@ -448,7 +447,7 @@ const translations = {
         neptuneSubtitle: 'لقد دمرت نبتون! لم يبقَ سوى فراغ مظلم متجمد.',
         jupiterSubtitle: 'لقد دمرت المشتري! عين العاصفة انطفأت.',
         sunSubtitle: 'لقد دمرت الشمس! الظلام يبتلع النظام الشمسي.',
-        neutron_starSubtitle: 'لقد دمرت النجم النيوتروني! لقد تشتت مادته المتحللة فائقة الكثافة.',
+        neutron_starSubtitle: 'لقد دمرت النجم النيوتروني! لقد تشتت مادته المنحطة فائقة الكثافة.', // Fixed scientific term for degenerate matter
         restartSim: 'إعادة التشغيل',
         next: 'التالي',
         toUnlock: 'لفتح القفل!',
@@ -463,12 +462,12 @@ const translations = {
         cancel: 'إلغاء',
         stop: 'توقف',
         locked: 'مقفل',
-        cooldown: 'تبريد',
+        cooldown: 'فترة الانتظار', // Changed from physical cooling to standard game terminology
         holdLonger: 'استمر لفترة أطول',
         allWeaponsUnlocked: 'جميع الأسلحة\nمفتوحة!',
         specialSpin: 'دوران خاص!',
         spinToDiscover: 'دور لاستكشاف سلاح!',
-        nevermind: 'لا مشكلة',
+        nevermind: 'ليس الآن',
         watch: 'شاهد!',
         watchAdToUnlock: 'شاهد إعلانًا لفتح {name}؟',
         newBest: 'رقم قياسي جديد!',
