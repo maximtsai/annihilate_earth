@@ -476,7 +476,7 @@ html {
     gap: 15px;
     box-shadow: 0 0 40px rgba(0, 217, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5);
     position: relative;
-    transform: scale(var(--ui-scale));
+    transform: scale(var(--options-scale, 1));
     transform-origin: center center;
 }
 
@@ -1511,7 +1511,6 @@ html {
     .ad-spin-popup {
         padding: 18px 16px;
         gap: 14px;
-        transform: scale(calc(0.5 + 0.5 * var(--ui-scale)));
     }
 
     .options-popup {
@@ -1748,6 +1747,7 @@ html {
 /* Ad Spin Popup Width Override for Large Spinner */
 #ad-spin-popup-overlay .ad-spin-popup {
     max-width: 630px;
+    transform: scale(var(--ad-spin-scale, 1));
 }
 
 /* Celebration & Announcement Area Styles */

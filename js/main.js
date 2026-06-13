@@ -311,6 +311,18 @@ async function run(mode) {
         const scaleWidth = (window.innerWidth * 0.94) / baseWidth;
         const victoryScale = Math.min(scaleWidth, scaleHeight);
         document.documentElement.style.setProperty('--victory-scale', victoryScale);
+
+        // Options popup scale (base size 420x520)
+        const optScaleH = (window.innerHeight * 0.88) / 520;
+        const optScaleW = (window.innerWidth * 0.94) / 420;
+        const optionsScale = Math.min(1.0, Math.min(optScaleW, optScaleH));
+        document.documentElement.style.setProperty('--options-scale', optionsScale);
+
+        // Ad spin popup scale (base size 630x520)
+        const adScaleH = (window.innerHeight * 0.88) / 520;
+        const adScaleW = (window.innerWidth * 0.94) / 630;
+        const adSpinScale = Math.min(1.0, Math.min(adScaleW, adScaleH));
+        document.documentElement.style.setProperty('--ad-spin-scale', adSpinScale);
     }
     window.addEventListener('resize', resizeBackground);
     resizeBackground();
