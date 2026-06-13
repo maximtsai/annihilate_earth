@@ -186,8 +186,8 @@ async function saveOptions(options) {
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
-let weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'lightning', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
-let unlockedWeapons = ['missile', 'nuke', 'asteroid', 'laser', 'lightning', 'gamma', 'sword', 'moon', 'blackhole'];
+let weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
+let unlockedWeapons = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 
 function isWeaponUnlocked(wid) {
@@ -206,7 +206,7 @@ async function saveUnlockedWeapons() {
 }
 
 function unlockRandomWeapon() {
-    const allLockedWeapons = ['kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+    const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
     const lockedRemaining = allLockedWeapons.filter(wid => !unlockedWeapons.includes(wid));
     if (lockedRemaining.length > 0) {
         const randomIndex = Math.floor(Math.random() * lockedRemaining.length);
@@ -277,9 +277,29 @@ async function loadUnlockedPlanets() {
         if (response.state) {
             if (response.state.weaponOrder) {
                 weaponOrder = response.state.weaponOrder;
+                // Enforce that 'lightning' is positioned after 'bowling' in weaponOrder
+                const lightningIdx = weaponOrder.indexOf('lightning');
+                const bowlingIdx = weaponOrder.indexOf('bowling');
+                if (lightningIdx !== -1 && bowlingIdx !== -1 && lightningIdx < bowlingIdx) {
+                    weaponOrder.splice(lightningIdx, 1);
+                    const newBowlingIdx = weaponOrder.indexOf('bowling');
+                    weaponOrder.splice(newBowlingIdx + 1, 0, 'lightning');
+                }
             }
             if (response.state.unlockedWeapons) {
                 unlockedWeapons = response.state.unlockedWeapons;
+                if (!response.state.lightning_migrated && unlockedWeapons.includes('lightning')) {
+                    unlockedWeapons = unlockedWeapons.filter(w => w !== 'lightning');
+                    (async () => {
+                        try {
+                            const current = await getGameState();
+                            const state = (current && current.state) ? current.state : {};
+                            state.lightning_migrated = true;
+                            state.unlockedWeapons = unlockedWeapons;
+                            await saveGameState(state);
+                        } catch (e) {}
+                    })();
+                }
                 initiallyUnlockedWeapons = new Set(unlockedWeapons);
             }
             if (response.state.unlockedPlanets) {
@@ -300,6 +320,7 @@ async function loadUnlockedPlanets() {
 
 function refreshWeaponLocks() {
     const weaponsInfo = [
+        { id: 'lightning', getCd: () => lightningCooldown, setCd: (v) => lightningCooldown = v, getInitCd: () => isInitialLightningCooldown, setInitCd: (v) => isInitialLightningCooldown = v },
         { id: 'kraken', getCd: () => krakenCooldown, setCd: (v) => krakenCooldown = v, getInitCd: () => isInitialKrakenCooldown, setInitCd: (v) => isInitialKrakenCooldown = v },
         { id: 'bowling', getCd: () => bowlingCooldown, setCd: (v) => bowlingCooldown = v, getInitCd: () => isInitialBowlingCooldown, setInitCd: (v) => isInitialBowlingCooldown = v },
         { id: 'worm', getCd: () => wormCooldown, setCd: (v) => wormCooldown = v, getInitCd: () => isInitialWormCooldown, setInitCd: (v) => isInitialWormCooldown = v },
@@ -344,11 +365,19 @@ function refreshWeaponLocks() {
 }
 
 function getPlanetSize() {
-    if (currentPlanet === 'mars') return 190;
+    if (currentPlanet === 'mars') return 195;
     if (currentPlanet === 'neptune') return 340;
     if (currentPlanet === 'jupiter') return 380;
     if (currentPlanet === 'sun') return 455;
     return getConfigValue('planet.size', 230);
+}
+
+function getCoreRadius(planetSize, planetName = currentPlanet) {
+    let radius = 25 + 0.4 * (planetSize / 2);
+    if (planetName === 'mars') {
+        radius += 20;
+    }
+    return radius;
 }
 
 // Dynamic Center of Mass variables
@@ -401,6 +430,7 @@ let isInitialWormCooldown = false;
 let isInitialBlackholeCooldown = true;
 let isInitialStarCooldown = false;
 let isInitialCometCooldown = false;
+let isInitialLightningCooldown = false;
 let iceGrid = new Uint8Array(115 * 115);
 let activeGammaBursts = [];
 let activeSwords = [];

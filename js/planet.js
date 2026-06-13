@@ -274,7 +274,7 @@ function initializePlanet() {
     const planetCanvasCX = hiddenCanvas.width / 2;
     const planetCanvasCY = hiddenCanvas.height / 2;
     const planetSize = getPlanetSize();
-    const coreRadius = 25 + 0.4 * (planetSize / 2);
+    const coreRadius = getCoreRadius(planetSize);
 
     let x = 0, y = 0;
     for (let i = 3; i < rawData.data.length; i += 4) {
@@ -312,7 +312,7 @@ function calculateCenterOfMass() {
     const cx = PLANET_CANVAS_SIZE / 2;
     const cy = PLANET_CANVAS_SIZE / 2;
     const planetSize = getPlanetSize();
-    const coreRadius = 25 + 0.4 * (planetSize / 2);
+    const coreRadius = getCoreRadius(planetSize);
 
     for (let i = 3; i < len; i += 4) {
         if (data[i] > 0) {
@@ -448,7 +448,7 @@ function eraseTerrain(localX, localY, radius, isCollision, weaponType) {
     const cx = PLANET_CANVAS_SIZE / 2;
     const cy = PLANET_CANVAS_SIZE / 2;
     const planetSize = getPlanetSize();
-    const coreRadius = 25 + 0.4 * (planetSize / 2);
+    const coreRadius = getCoreRadius(planetSize);
 
     // Check if the impact point itself is in the crust
     const dxImpact = localX - cx;
@@ -632,7 +632,7 @@ function freezeArea(localX, localY, radius) {
     const cx = PLANET_CANVAS_SIZE / 2;
     const cy = PLANET_CANVAS_SIZE / 2;
     const planetSize = getPlanetSize();
-    const coreRadius = 25 + 0.4 * (planetSize / 2);
+    const coreRadius = getCoreRadius(planetSize);
 
     const startX = Math.max(0, Math.floor(localX - radius));
     const startY = Math.max(0, Math.floor(localY - radius));
@@ -787,7 +787,7 @@ function popConnectedIce(seedX, seedY) {
         const cx = PLANET_CANVAS_SIZE / 2;
         const cy = PLANET_CANVAS_SIZE / 2;
         const planetSize = getPlanetSize();
-        const coreRadius = 25 + 0.4 * (planetSize / 2);
+        const coreRadius = getCoreRadius(planetSize);
 
         // Calculate the bounding box of popped ice in original pixel space
         let minGridX = gridSize, maxGridX = 0;
@@ -946,7 +946,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
 
     let finalRadius = radius;
     if (dist <= coreThreshold) {
-        finalRadius = Math.max(0, radius - 2.75);
+        finalRadius = Math.max(0, radius - 3) * 0.95;
     }
 
     // Erase using centralized core-aware terrain logic
@@ -959,7 +959,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
             if (laserSoundCounter % 2 === 0) {
                 let detune = (Math.random() - 0.5) * 400;
                 let playVol = 1;
-                const coreRadius = 25 + 0.4 * (planetSize / 2);
+                const coreRadius = getCoreRadius(planetSize);
                 if (dist <= coreRadius) {
                     detune -= 200; // lower the pitch by 1000 cents
                     playVol = 0.75;
@@ -1075,6 +1075,9 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     if (weaponType === 'star_nuke') {
         particleCount = Math.floor(particleCount * 0.6);
     }
+    if (weaponType === 'lightning') {
+        particleCount = Math.floor(particleCount * 0.6);
+    }
     const speedScale = getConfigValue(`weapons.${weaponType}.particleSpeedScale`, 1.0);
     const lifeScale = getConfigValue(`weapons.${weaponType}.particleLifeScale`, 1.0);
 
@@ -1179,7 +1182,7 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
 
     let finalRadius = radius;
     if (dist <= coreThreshold) {
-        finalRadius = Math.max(0, radius - 2.75);
+        finalRadius = Math.max(0, radius - 3) * 0.95;
     }
 
     // Erase using centralized core-aware terrain logic
@@ -1245,6 +1248,7 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
 
 // Trigger Victory splash
 function triggerVictory() {
+    const previousBest = bestTimes[currentPlanet];
     victoryTriggered = true;
     soundManager.play('sfx_victory');
     if (window.PlatformBridge) {
@@ -1296,19 +1300,29 @@ function triggerVictory() {
             }
         }
 
-        const previousBest = bestTimes[currentPlanet];
+        // previousBest is defined at function scope
         const bestRow = document.getElementById('stat-best-time-row');
         const bestVal = document.getElementById('stat-best-time-value');
+        const bestBadge = document.getElementById('new-best-badge');
+        if (bestBadge) bestBadge.style.display = 'none';
+
         if (bestRow && bestVal) {
             if (previousBest !== undefined) {
                 bestRow.style.display = 'flex';
-                const seconds = Math.floor(previousBest);
+                // If this run is a new best time, display the current run time in the Best Time slot
+                const isNewBest = (planetTimeSpent < previousBest);
+                const displayTime = isNewBest ? planetTimeSpent : previousBest;
+                const seconds = Math.floor(displayTime);
                 if (seconds < 60) {
                     bestVal.textContent = `${seconds}s`;
                 } else {
                     const m = Math.floor(seconds / 60);
                     const s = seconds % 60;
                     bestVal.textContent = `${m}m ${s}s`;
+                }
+                
+                if (isNewBest && bestBadge) {
+                    bestBadge.style.display = 'inline-block';
                 }
             } else {
                 bestRow.style.display = 'none';
@@ -1355,7 +1369,7 @@ function triggerVictory() {
 
     setTimeout(() => {
         document.getElementById('victory-screen').classList.add('show');
-        
+
         // Update the button to show the next planet
         const restartBtn = document.getElementById('restart-button');
         if (restartBtn) {
@@ -1368,7 +1382,7 @@ function triggerVictory() {
         // Setup the Victory Spinner
         const container = document.getElementById('victory-spinner-container');
         if (container) {
-            const allLockedWeapons = ['kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+            const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
             const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
             if (restartBtn) {
@@ -1378,12 +1392,57 @@ function triggerVictory() {
             }
 
             if (hasLocked) {
-                const spinner = new WeaponSpinner(container, {
-                    onStop: (weaponToUnlock) => {
-                        unlockSpecificWeapon(weaponToUnlock);
-                    }
-                });
-                spinner.start();
+                const isReplay = (previousBest !== undefined);
+                if (isReplay) {
+                    const spinner = new WeaponSpinner(container, {
+                        onStop: (weaponToUnlock) => {
+                            unlockSpecificWeapon(weaponToUnlock);
+                        }
+                    });
+
+                    // Add CLAIMED overlay over the spinner
+                    container.style.position = 'relative';
+                    const overlay = document.createElement('div');
+                    overlay.className = 'spinner-claimed-overlay';
+                    overlay.innerHTML = `
+                        <div class="claimed-text">CLAIMED</div>
+                        <button class="restart-button ad-spin-btn" style="width: auto; height: 50px; font-size: 16px; margin-top: 15px; padding: 0 20px; letter-spacing: 2px;">🎬 WATCH AD TO SPIN</button>
+                    `;
+                    container.appendChild(overlay);
+
+                    const adBtn = overlay.querySelector('.ad-spin-btn');
+                    adBtn.addEventListener('mouseenter', () => {
+                        container.classList.add('primed-pulse');
+                    });
+                    adBtn.addEventListener('mouseleave', () => {
+                        container.classList.remove('primed-pulse');
+                    });
+
+                    adBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        container.classList.remove('primed-pulse');
+                        soundManager.play('sfx_ui_switch');
+                        if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
+                            window.PlatformBridge.showRewardedAd(() => {
+                                startReplaySpinner();
+                            });
+                        } else {
+                            startReplaySpinner();
+                        }
+                    });
+
+                    const startReplaySpinner = () => {
+                        overlay.remove();
+                        spinner.start();
+                    };
+                } else {
+                    const spinner = new WeaponSpinner(container, {
+                        onStop: (weaponToUnlock) => {
+                            unlockSpecificWeapon(weaponToUnlock);
+                        }
+                    });
+                    spinner.start();
+                }
             } else {
                 new WeaponSpinner(container); // Shows "ALL WEAPONS UNLOCKED!"
             }
@@ -1489,6 +1548,8 @@ function resetGame(keepCooldowns = false) {
         isInitialStarCooldown = false;
         cometCooldown = 0;
         isInitialCometCooldown = false;
+        lightningCooldown = 0;
+        isInitialLightningCooldown = false;
 
         const gammaUi = document.getElementById('gamma-cooldown-ui');
         if (gammaUi) {

@@ -198,7 +198,7 @@ html {
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     margin: 0;
     padding: 0;
     background: transparent;
@@ -222,7 +222,7 @@ html {
     font-weight: 700;
     padding: calc(8px * var(--ui-scale));
     width: calc(96px * var(--ui-scale));
-    height: calc(84px * var(--ui-scale));
+    height: calc(76px * var(--ui-scale));
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -996,9 +996,20 @@ html {
     padding: 40px;
 }
 
+@keyframes victoryEntrance {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
 .victory-screen.show {
     display: flex;
-    animation: fadeIn 600ms ease-out forwards;
+    animation: victoryEntrance 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .victory-title {
@@ -1292,7 +1303,7 @@ html {
     .planet-btn {
         font-size: calc(12px * var(--ui-scale));
         width: calc(84px * var(--ui-scale));
-        height: calc(74px * var(--ui-scale));
+        height: calc(66px * var(--ui-scale));
         padding: calc(7px * var(--ui-scale)) calc(10px * var(--ui-scale));
         flex-shrink: 0;
     }
@@ -1480,8 +1491,8 @@ html {
     transition: opacity 0.5s ease-in, transform 0.5s ease-in;
 }
 
-/* Spinner Styles */
 .weapon-spinner-wrapper {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1525,14 +1536,14 @@ html {
 
 .weapon-spinner-stop-btn {
     font-family: 'Orbitron', sans-serif;
-    font-size: 16px;
+    font-size: 22px;
     font-weight: 800;
     letter-spacing: 2px;
     color: #ffe600;
     background: rgba(255, 230, 0, 0.08);
     border: 1.5px solid rgba(255, 230, 0, 0.4);
     border-radius: 4px;
-    padding: 8px 36px;
+    padding: 12px 54px;
     cursor: pointer;
     box-shadow: 0 0 10px rgba(255, 230, 0, 0.1);
     position: relative;
@@ -1548,8 +1559,8 @@ html {
     content: '';
     position: absolute;
     top: 0;
-    left: -150%;
-    width: 60%;
+    left: -200%;
+    width: 120%;
     height: 100%;
     background: linear-gradient(
         90deg,
@@ -1595,10 +1606,10 @@ html {
 
 @keyframes stopBtnShimmer {
     0% {
-        left: -150%;
+        left: -200%;
     }
     30%, 100% {
-        left: 150%;
+        left: 200%;
     }
 }
 
@@ -1632,7 +1643,17 @@ html {
     font-weight: 900;
     letter-spacing: 2px;
     text-align: center;
-    animation: fadeIn 0.4s ease-out;
+    display: inline-block;
+    animation: fadeIn 0.4s ease-out, announcementBounce 1.2s ease-in-out infinite;
+}
+
+@keyframes announcementBounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
 }
 
 .weapon-spinner-preview.celebrate {
@@ -1704,4 +1725,77 @@ html {
     40% { transform: translate(4px, -2px); }
     60% { transform: translate(-3px, -1px); }
     80% { transform: translate(2px, 1px); }
+}
+
+/* Spinner Claimed Overlay */
+.spinner-claimed-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 5, 12, 0.82);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    border-radius: 8px;
+    backdrop-filter: blur(1.5px);
+    -webkit-backdrop-filter: blur(1.5px);
+}
+
+.spinner-claimed-overlay .claimed-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: #ff3366;
+    letter-spacing: 4px;
+    text-shadow: 0 0 15px rgba(255, 51, 102, 0.8);
+    text-transform: uppercase;
+}
+
+/* Primed pulse animation for claimed spinner wrapper */
+@keyframes claimedPrimedPulse {
+    0%, 100% {
+        transform: scale(1) rotate(0deg);
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+        border-color: rgba(255, 230, 0, 0.15);
+    }
+    50% {
+        transform: scale(1.02) rotate(0.1deg);
+        box-shadow: 0 0 25px rgba(255, 230, 0, 0.35), inset 0 0 25px rgba(255, 230, 0, 0.15);
+        border-color: rgba(255, 230, 0, 0.6);
+    }
+}
+
+.weapon-spinner-wrapper.primed-pulse {
+    animation: claimedPrimedPulse 1.2s infinite ease-in-out;
+}
+
+/* New Personal Best Badge */
+.new-best-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: #ffd700;
+    background: rgba(255, 215, 0, 0.15);
+    border: 1px solid rgba(255, 215, 0, 0.6);
+    border-radius: 3px;
+    padding: 2px 6px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.55);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.15);
+    animation: goldPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes goldPulse {
+    0%, 100% {
+        opacity: 0.85;
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.1);
+    }
+    50% {
+        opacity: 1;
+        box-shadow: 0 0 16px rgba(255, 215, 0, 0.35);
+    }
 }

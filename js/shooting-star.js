@@ -7,8 +7,12 @@
 
     window.ShootingStarManager = {
         init: function () {
-            // Pick a random spawn time between 16 and 20 seconds from planet start
-            spawnTime = 16 + Math.random() * 4;
+            // Pick a random spawn time based on the planet
+            if (typeof currentPlanet !== 'undefined' && currentPlanet === 'earth') {
+                spawnTime = 24 + Math.random() * 6; // 24 to 30 seconds
+            } else {
+                spawnTime = 10 + Math.random() * 6; // 10 to 16 seconds
+            }
             spawned = false;
             star = null;
             clickStars = [];
@@ -231,30 +235,30 @@
                 const popup = document.getElementById('ad-spin-popup-overlay');
                 if (popup) {
                     popup.style.display = 'flex';
-                    
+
                     // Reset and initialize the spinner inside the ad popup
                     const container = document.getElementById('star-spinner-container');
                     if (container) {
-                        const allLockedWeapons = ['kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+                        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
                         const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
                         const btnContainer = document.getElementById('ad-spin-buttons-container');
                         const msg = document.getElementById('ad-spin-message');
                         const adSpinYes = document.getElementById('ad-spin-yes');
                         const adSpinNo = document.getElementById('ad-spin-no');
-                        
+
                         if (hasLocked) {
                             if (adSpinYes) adSpinYes.disabled = true;
                             if (adSpinNo) adSpinNo.disabled = true;
                             if (msg) msg.textContent = 'SPIN THE WHEEL TO DISCOVER A WEAPON!';
                             window.starSelectedWeapon = null;
- 
+
                             const spinner = new WeaponSpinner(container, {
                                 onStop: (weaponToUnlock) => {
                                     window.starSelectedWeapon = weaponToUnlock;
                                     if (adSpinYes) adSpinYes.disabled = false;
                                     if (adSpinNo) adSpinNo.disabled = false;
-                                    
+
                                     const btn = document.getElementById(`btn-${weaponToUnlock}`);
                                     const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : weaponToUnlock.toUpperCase();
                                     const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
@@ -268,7 +272,7 @@
                             if (adSpinNo) adSpinNo.disabled = true;
                             if (msg) msg.textContent = 'ALL WEAPONS UNLOCKED!';
                             new WeaponSpinner(container);
-                        } }
+                        }
                     }
                 }
                 return true;

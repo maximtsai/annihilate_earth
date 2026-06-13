@@ -568,7 +568,15 @@ async function run(mode) {
             // Handle Lightning Cooldown UI ticking
             const lightningBtn = _dom.lightningBtn;
             const lightningUi = _dom.lightningUi;
-            if (lightningCooldown > 0) {
+            if (!unlockedWeapons.includes('lightning')) {
+                if (lightningBtn) lightningBtn.classList.add('cooldown-active');
+                if (lightningUi) {
+                    const text = _cdChildren.lightning.text;
+                    const bar = _cdChildren.lightning.bar;
+                    if (text) text.textContent = 'LOCKED';
+                    if (bar) bar.style.height = '100%';
+                }
+            } else if (lightningCooldown > 0) {
                 lightningCooldown -= deltaTime;
                 if (lightningCooldown <= 0) {
                     lightningCooldown = 0;
@@ -576,13 +584,18 @@ async function run(mode) {
                         lightningBtn.classList.add('weapon-ready-glow');
                         setTimeout(() => lightningBtn.classList.remove('weapon-ready-glow'), 600);
                     }
+                    if (isInitialLightningCooldown) {
+                        showUnlockNotification(getUnlockText('lightning'));
+                        isInitialLightningCooldown = false;
+                    }
                 }
                 if (lightningBtn) lightningBtn.classList.add('cooldown-active');
                 if (lightningUi) {
                     const text = _cdChildren.lightning.text;
                     const bar = _cdChildren.lightning.bar;
+                    const maxCd = isInitialLightningCooldown ? 1.25 : MAX_COOLDOWNS.lightning;
                     if (text) text.textContent = `${Math.ceil(lightningCooldown)}s`;
-                    if (bar) bar.style.height = `${(lightningCooldown / MAX_COOLDOWNS.lightning) * 100}%`;
+                    if (bar) bar.style.height = `${(lightningCooldown / maxCd) * 100}%`;
                 }
             } else {
                 if (lightningBtn) lightningBtn.classList.remove('cooldown-active');
@@ -3629,7 +3642,7 @@ async function run(mode) {
             }
 
             // Magma plasma gradient glow
-            const coreRadius = 25 + 0.4 * radius;
+            const coreRadius = getCoreRadius(planetSize);
             const pulseRadius = (coreRadius + 8 + Math.sin(performance.now() * 0.007) * 4) * coreRatio;
             const grad = ctx.createRadialGradient(dxLocal, dyLocal, 2, dxLocal, dyLocal, pulseRadius);
             if (currentPlanet === 'sun') {
@@ -5183,7 +5196,7 @@ async function run(mode) {
             unlockedPlanets = ['earth'];
             initiallyUnlockedPlanets = new Set(['earth']);
             bestTimes = {};
-            weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+            weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
             unlockedWeapons = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole'];
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
             saveWeaponOrder();

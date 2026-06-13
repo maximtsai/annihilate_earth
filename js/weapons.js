@@ -313,7 +313,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             return;
         }
         executeSpawn('nuke', clickX, clickY);
-        nukeCooldown = 0.4;
+        nukeCooldown = 0.45;
         return;
     }
 

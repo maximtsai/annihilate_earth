@@ -7,6 +7,7 @@ class WeaponSpinner {
 
         // Locked weapons configuration
         this.weaponsConfig = {
+            'lightning': { icon: '🌩️', name: 'Lightning', color: '#ffd700' }, // Gold
             'kraken': { icon: '🐙', name: 'Cthulhu', color: '#a855f7' }, // Purple
             'worm': { icon: '🪱', name: 'Worm', color: '#10b981' },     // Green
             'fist': { icon: '✊', name: 'Fist', color: '#f59e0b' },     // Amber
@@ -16,8 +17,8 @@ class WeaponSpinner {
         };
 
         // Determine currently locked weapons
-        const allLockedWeapons = ['kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
-        const currentUnlocked = window.unlockedWeapons || [];
+        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+        const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
         this.lockedWeapons = allLockedWeapons.filter(wid => !currentUnlocked.includes(wid));
 
         this.canvas = null;
@@ -317,8 +318,10 @@ class WeaponSpinner {
                     this.pointerWobbleVelocity = 0;
 
                     if (typeof soundManager !== 'undefined') {
-                        // Quick high-pitched tick sound
-                        soundManager.play('sfx_ui_switch', false, 0.3, 1000);
+                        // Dynamically detune tick pitch based on spin speed
+                        const speedRatio = Math.max(0, Math.min(1, this.spinSpeed / 5));
+                        const detune = -800 + speedRatio * 1800; // Pitch detunes from 1000 down to -800
+                        soundManager.play('sfx_ui_switch', false, 0.3, detune);
                     }
                 }
             }
