@@ -5109,6 +5109,14 @@ async function run(mode) {
     document.getElementById('restart-button').addEventListener('click', (e) => {
         e.stopPropagation();
 
+        const nextPlanetVal = getNextPlanet(currentPlanet);
+        const isNextPlanet = nextPlanetVal !== 'earth';
+        const victoryScreenVisible = document.getElementById('victory-screen').classList.contains('show');
+        if (victoryScreenVisible && isNextPlanet && !victoryBeaconSent) {
+            victoryBeaconSent = true;
+            navigator.sendBeacon('https://leveldata.poki.io/data', '5da267b2-074f-4740-b6a4-f487c29bc3d3');
+        }
+
         const proceedRestart = () => {
             const next = getNextPlanet(currentPlanet);
             const nextBtn = document.getElementById(`btn-planet-${next}`);
@@ -5615,11 +5623,13 @@ async function run(mode) {
     if (planetSelector) planetSelector.style.opacity = '0';
 
     // Dismiss loading screen after a brief delay
+    if (window.PlatformBridge && typeof window.PlatformBridge.gameLoadingFinished === 'function') {
+        window.PlatformBridge.gameLoadingFinished();
+    }
+    navigator.sendBeacon('https://leveldata.poki.io/data', '5da267b2-074f-4740-b6a4-f487c29bc3d3');
+
     setTimeout(() => {
         setLoadingProgress(100, getTranslation('ready'));
-        if (window.PlatformBridge && typeof window.PlatformBridge.gameLoadingFinished === 'function') {
-            window.PlatformBridge.gameLoadingFinished();
-        }
         setTimeout(() => {
             if (loadingAnimId) cancelAnimationFrame(loadingAnimId);
             window.removeEventListener('resize', resizeLoadingCanvas);
@@ -5627,14 +5637,14 @@ async function run(mode) {
             loadingScreen.classList.add('fade-out');
             setTimeout(() => {
                 loadingScreen.style.display = 'none';
-            }, 800);
+            }, 600);
 
             // Staggered flicker-in: weapons first (fast), then header, then planet selector
             flickerIn(weaponBarWrapper, 300, 200);
             flickerIn(hudHeaderWrapper, 500, 750);
             flickerIn(planetSelector, 500, 450);
         }, 400);
-    }, 800);
+    }, 600);
 
     // Setup Loop
     let lastTime = performance.now();

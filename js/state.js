@@ -85,7 +85,7 @@ class ParticlePool {
     }
 }
 
-let particles = new ParticlePool(150);
+let particles = new ParticlePool(200);
 let shockwaves = []; // (User feature 7: Shockwave rings)
 let holyRays = []; // Holy rays effect for Excalibur
 let totalShotsFired = 0; // (User feature 4: Stats tracking)
@@ -96,6 +96,7 @@ let gameplayStarted = false;
 let planetRotation = 0;
 let planetScale = 1.0;
 let isPlanetSwitching = false;
+let victoryBeaconSent = false;
 let zoomProgress = 1.0;
 const ZOOM_DURATION = 1; // seconds
 
@@ -236,7 +237,7 @@ function unlockSpecificWeapon(wid) {
         saveUnlockedWeapons();
         updateWeaponOrderOnUnlock();
         refreshWeaponLocks();
-        
+
         const btn = document.getElementById(`btn-${wid}`);
         const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : wid.toUpperCase();
         const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
@@ -306,7 +307,7 @@ async function loadUnlockedPlanets() {
                             state.lightning_migrated = true;
                             state.unlockedWeapons = unlockedWeapons;
                             await saveGameState(state);
-                        } catch (e) {}
+                        } catch (e) { }
                     })();
                 }
                 initiallyUnlockedWeapons = new Set(unlockedWeapons);

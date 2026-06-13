@@ -11,6 +11,17 @@ class SoundManager {
                 this.bgmGain.connect(this.masterGain);
                 this.isInitialized = false;
                 this.muted = false;
+
+                const resumeAudio = () => {
+                    if (this.context && this.context.state === 'suspended') {
+                        this.context.resume().then(() => {
+                            document.removeEventListener('click', resumeAudio);
+                            document.removeEventListener('touchstart', resumeAudio);
+                        });
+                    }
+                };
+                document.addEventListener('click', resumeAudio);
+                document.addEventListener('touchstart', resumeAudio);
             }
 
             setSfxVolume(v) {
