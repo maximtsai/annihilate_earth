@@ -241,7 +241,9 @@ function unlockSpecificWeapon(wid) {
         const btn = document.getElementById(`btn-${wid}`);
         const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : wid.toUpperCase();
         const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
-        showUnlockNotification(`${icon} ${name} UNLOCKED!`);
+        const t = translations[currentLanguage] || translations['en'];
+        const unlockMsg = (t.weaponUnlocked || '{icon} {name} UNLOCKED!').replace('{icon}', icon).replace('{name}', name);
+        showUnlockNotification(unlockMsg);
         return true;
     }
     return false;

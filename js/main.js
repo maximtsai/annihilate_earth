@@ -120,7 +120,7 @@ function setLoadingProgress(pct, status) {
     if (loadingStatus) loadingStatus.textContent = status;
 }
 
-setLoadingProgress(10, 'Initializing audio system...');
+setLoadingProgress(10, (translations[currentLanguage] || translations['en']).loadingAudio || 'Initializing audio system...');
 soundManager = new SoundManager();
 const soundIds = [
     'sfx_launch_heavy',
@@ -138,7 +138,7 @@ const soundIds = [
 ];
 soundIds.forEach(id => soundManager.load(id));
 
-setLoadingProgress(40, 'Loading weapon assets...');
+setLoadingProgress(40, (translations[currentLanguage] || translations['en']).loadingWeaponAssets || 'Loading weapon assets...');
 
 fistImage = new Image();
 const fistAsset = getAsset('fist_punch_up');
@@ -174,7 +174,7 @@ spriteSmokeMissile = new Image();
 const smokeMslAsset = getAsset('sprite_smoke_missile');
 if (smokeMslAsset) spriteSmokeMissile.src = smokeMslAsset.url;
 
-setLoadingProgress(60, 'Generating planet terrain...');
+setLoadingProgress(60, (translations[currentLanguage] || translations['en']).loadingPlanet || 'Generating planet terrain...');
 
 // Cache for radial gradient canvases (pre-rendered for circular_flash performance)
 const gradientCanvasCache = {};
@@ -302,6 +302,12 @@ async function run(mode) {
     }
     window.addEventListener('resize', resizeBackground);
     resizeBackground();
+
+    // Translate loading screen
+    const loadingTitleEl = document.querySelector('.loading-title');
+    const loadingSubtitleEl = document.querySelector('.loading-subtitle');
+    if (loadingTitleEl) loadingTitleEl.innerHTML = getTranslation('loadingTitle').replace(' ', '<br>');
+    if (loadingSubtitleEl) loadingSubtitleEl.textContent = getTranslation('loadingWeapons');
 
     // Hidden canvas is fixed (holds static pixel data)
     PLANET_CANVAS_SIZE = 460;
@@ -574,10 +580,11 @@ async function run(mode) {
                 if (lightningUi) {
                     const text = _cdChildren.lightning.text;
                     const bar = _cdChildren.lightning.bar;
-                    if (text) text.textContent = 'LOCKED';
+                                        if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
-            } else if (lightningCooldown > 0) {
+            }
+         else if (lightningCooldown > 0) {
                 lightningCooldown -= deltaTime;
                 if (lightningCooldown <= 0) {
                     lightningCooldown = 0;
@@ -694,10 +701,11 @@ async function run(mode) {
                 if (bowlingUi) {
                     const text = _cdChildren.bowling.text;
                     const bar = _cdChildren.bowling.bar;
-                    if (text) text.textContent = 'LOCKED';
+                                        if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
-            } else if (bowlingCooldown > 0) {
+            }
+         else if (bowlingCooldown > 0) {
                 bowlingCooldown -= deltaTime;
                 if (bowlingCooldown <= 0) {
                     bowlingCooldown = 0;
@@ -736,10 +744,11 @@ async function run(mode) {
                 if (krakenUi) {
                     const text = _cdChildren.kraken.text;
                     const bar = _cdChildren.kraken.bar;
-                    if (text) text.textContent = 'LOCKED';
+                                        if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
-            } else if (krakenCooldown > 0) {
+            }
+         else if (krakenCooldown > 0) {
                 krakenCooldown -= deltaTime;
                 if (krakenCooldown <= 0) {
                     krakenCooldown = 0;
@@ -778,10 +787,11 @@ async function run(mode) {
                 if (wormUi) {
                     const text = _cdChildren.worm.text;
                     const bar = _cdChildren.worm.bar;
-                    if (text) text.textContent = 'LOCKED';
+                                        if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
-            } else if (wormCooldown > 0) {
+            }
+         else if (wormCooldown > 0) {
                 wormCooldown -= deltaTime;
                 if (wormCooldown <= 0) {
                     wormCooldown = 0;
@@ -854,10 +864,11 @@ async function run(mode) {
                 if (fistUi) {
                     const text = _cdChildren.fist.text;
                     const bar = _cdChildren.fist.bar;
-                    if (text) text.textContent = 'LOCKED';
+                                        if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
-            } else if (fistCooldown > 0) {
+            }
+         else if (fistCooldown > 0) {
                 fistCooldown -= deltaTime;
                 if (fistCooldown <= 0) {
                     fistCooldown = 0;
@@ -929,10 +940,11 @@ async function run(mode) {
                 if (starUi) {
                     const text = _cdChildren.star.text;
                     const bar = _cdChildren.star.bar;
-                    if (text) text.textContent = 'LOCKED';
+                                        if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
-            } else if (starCooldown > 0) {
+            }
+         else if (starCooldown > 0) {
                 starCooldown -= deltaTime;
                 if (starCooldown <= 0) {
                     starCooldown = 0;
@@ -971,10 +983,11 @@ async function run(mode) {
                 if (cometUi) {
                     const text = _cdChildren.comet.text;
                     const bar = _cdChildren.comet.bar;
-                    if (text) text.textContent = 'LOCKED';
+                                        if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
-            } else if (cometCooldown > 0) {
+            }
+         else if (cometCooldown > 0) {
                 cometCooldown -= deltaTime;
                 if (cometCooldown <= 0) {
                     cometCooldown = 0;
@@ -4796,7 +4809,7 @@ async function run(mode) {
             if (lightningCooldown <= 0) {
                 const boltCount = Math.min(7, Math.max(lightningLastChargedCount, Math.floor(lightningHoldTime / 0.3)));
                 if (boltCount < 1) {
-                    addFloatingText(pointerX, pointerY - 40, "HOLD LONGER", 'rgba(0, 240, 255,', 1.5, 15);
+                    addFloatingText(pointerX, pointerY - 40, getTranslation('holdLonger'), 'rgba(0, 240, 255,', 1.5, 15);
                 } else {
                     lightningCooldown = 1.0;
                     for (let i = 0; i < boltCount; i++) {
@@ -5180,6 +5193,22 @@ async function run(mode) {
             }
         }
 
+        // Ad spin popup
+        const adSpinTitle = document.querySelector('#ad-spin-popup-overlay .options-popup-title');
+        const adSpinClose = document.getElementById('ad-spin-close');
+        const adSpinMsg = document.getElementById('ad-spin-message');
+        const adSpinNo = document.getElementById('ad-spin-no');
+        const adSpinYes = document.getElementById('ad-spin-yes');
+        if (adSpinTitle) adSpinTitle.textContent = t.specialSpin || 'SPECIAL SPIN!';
+        if (adSpinClose) adSpinClose.textContent = t.close || 'X';
+        if (adSpinMsg) adSpinMsg.textContent = t.spinToDiscover || 'SPIN TO DISCOVER A WEAPON!';
+        if (adSpinNo) adSpinNo.textContent = t.nevermind || 'NEVERMIND';
+        if (adSpinYes) adSpinYes.textContent = t.watch || 'WATCH!';
+
+        // New best badge
+        const bestBadge = document.getElementById('new-best-badge');
+        if (bestBadge) bestBadge.innerHTML = `🏆 ${t.newBest || 'NEW BEST!'}`;
+
         // Game title
         updateGameTitle();
     }
@@ -5467,7 +5496,7 @@ async function run(mode) {
         resetGame(true);
     });
 
-    setLoadingProgress(90, 'Calibrating orbital systems...');
+    setLoadingProgress(90, getTranslation('loadingCalibrate'));
 
     // Staggered flickering in animation for UI elements
     function flickerIn(element, duration, delay) {
@@ -5504,7 +5533,7 @@ async function run(mode) {
 
     // Dismiss loading screen after a brief delay
     setTimeout(() => {
-        setLoadingProgress(100, 'READY');
+        setLoadingProgress(100, getTranslation('ready'));
         if (window.PlatformBridge && typeof window.PlatformBridge.gameLoadingFinished === 'function') {
             window.PlatformBridge.gameLoadingFinished();
         }

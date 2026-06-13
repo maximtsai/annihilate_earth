@@ -85,7 +85,7 @@ class WeaponSpinner {
 
         this.stopButton = document.createElement('button');
         this.stopButton.className = 'weapon-spinner-stop-btn';
-        this.stopButton.textContent = 'STOP';
+        this.stopButton.textContent = (translations[currentLanguage] || translations['en']).stop || 'STOP';
         this.actionArea.appendChild(this.stopButton);
 
         this.announcement = document.createElement('div');
@@ -105,6 +105,12 @@ class WeaponSpinner {
 
         if (this.lockedWeapons.length === 0) {
             this.setDisabledState();
+        } else {
+            const numSectors = 16;
+            const anglePerSector = (Math.PI * 2) / numSectors;
+            const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+            const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
+            this.updatePreviews(sectorIndex);
         }
     }
 
@@ -121,6 +127,24 @@ class WeaponSpinner {
     setClickable(clickable) {
         if (this.canvas) {
             this.canvas.classList.toggle('clickable', clickable);
+        }
+    }
+
+    updatePreviews(sectorIndex) {
+        if (this.lockedWeapons.length === 0) return;
+        const currentWeaponId = this.lockedWeapons[sectorIndex % this.lockedWeapons.length];
+        const currentMeta = this.weaponsConfig[currentWeaponId];
+        if (currentMeta) {
+            if (this.leftPreview) {
+                this.leftPreview.textContent = currentMeta.icon;
+                this.leftPreview.style.borderColor = currentMeta.color;
+                this.leftPreview.style.boxShadow = `0 0 15px ${currentMeta.color}`;
+            }
+            if (this.rightPreview) {
+                this.rightPreview.textContent = currentMeta.icon;
+                this.rightPreview.style.borderColor = currentMeta.color;
+                this.rightPreview.style.boxShadow = `0 0 15px ${currentMeta.color}`;
+            }
         }
     }
 
@@ -166,7 +190,12 @@ class WeaponSpinner {
         this.stopButton.classList.add('disabled');
 
         this.rotation = Math.random() * Math.PI * 2;
-        this.lastTickIndex = -1;
+        const numSectors = 16;
+        const anglePerSector = (Math.PI * 2) / numSectors;
+        const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
+        this.updatePreviews(sectorIndex);
+        this.lastTickIndex = sectorIndex;
         this.onStart();
     }
 
@@ -332,6 +361,7 @@ class WeaponSpinner {
 
             if (currentIdx !== this.lastTickIndex) {
                 this.lastTickIndex = currentIdx;
+                this.updatePreviews(currentIdx);
 
                 // Elastic wobble only if not in windup
                 if (this.spinPhase !== 'windup') {
@@ -369,7 +399,8 @@ class WeaponSpinner {
         // Hide stop button, show announcement text
         if (this.stopButton) this.stopButton.style.display = 'none';
         if (this.announcement && meta) {
-            const suffix = this.isStar ? ' AVAILABLE!' : ' UNLOCKED!';
+            const t = translations[currentLanguage] || translations['en'];
+            const suffix = this.isStar ? (' ' + (t.available || 'AVAILABLE!')) : (' ' + (t.unlocked || 'UNLOCKED!'));
             this.announcement.textContent = `${meta.name.toUpperCase()}${suffix}`;
             this.announcement.style.color = meta.color;
             this.announcement.style.textShadow = `0 0 12px ${meta.color}`;
@@ -441,12 +472,14 @@ class WeaponSpinner {
             ctx.lineWidth = 2;
             ctx.strokeRect(5, 5, w - 10, h - 10);
 
+            const t_all = translations[currentLanguage] || translations['en'];
+            const allWepLines = (t_all.allWeaponsUnlocked || 'ALL WEAPONS\nUNLOCKED!').split('\n');
             ctx.font = 'bold 26px Orbitron, sans-serif';
             ctx.fillStyle = '#00ffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('ALL WEAPONS', w / 2, h / 2 - 16);
-            ctx.fillText('UNLOCKED!', w / 2, h / 2 + 16);
+            ctx.fillText(allWepLines[0], w / 2, h / 2 - 16);
+            ctx.fillText(allWepLines[1], w / 2, h / 2 + 16);
             ctx.restore();
             return;
         }
@@ -558,25 +591,7 @@ class WeaponSpinner {
         ctx.stroke();
         ctx.restore();
 
-        // Update left and right active weapon preview DOM elements
-        if (this.lockedWeapons.length > 0) {
-            const norm = ((-Math.PI / 2 - this.rotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-            const sectorIndex = Math.floor(norm / anglePerSector) % numSectors;
-            const currentWeaponId = this.lockedWeapons[sectorIndex % this.lockedWeapons.length];
-            const currentMeta = this.weaponsConfig[currentWeaponId];
-            if (currentMeta) {
-                if (this.leftPreview) {
-                    this.leftPreview.textContent = currentMeta.icon;
-                    this.leftPreview.style.borderColor = currentMeta.color;
-                    this.leftPreview.style.boxShadow = `0 0 15px ${currentMeta.color}`;
-                }
-                if (this.rightPreview) {
-                    this.rightPreview.textContent = currentMeta.icon;
-                    this.rightPreview.style.borderColor = currentMeta.color;
-                    this.rightPreview.style.boxShadow = `0 0 15px ${currentMeta.color}`;
-                }
-            }
-        }
+
 
         // Draw mechanical brake sparks
         if (this.stopSparks && this.stopSparks.length > 0) {

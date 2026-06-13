@@ -24,7 +24,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
         if (type !== 'nuke' && type !== 'missile' && type !== 'lightning') {
             if (cd > 0.4) {
-                addFloatingText(clickX, clickY, "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, 18);
+                addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, 18);
                 const btn = document.getElementById('btn-' + type);
                 if (btn) {
                     btn.classList.remove('cooldown-alert');
@@ -120,7 +120,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'kraken') {
         if (!isWeaponUnlocked('kraken')) {
-            addFloatingText(clickX, clickY, "LOCKED");
+            addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).locked || "LOCKED");
             return;
         }
         if (krakenCooldown > 0) {
@@ -151,7 +151,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'bowling') {
         if (!isWeaponUnlocked('bowling')) {
-            addFloatingText(clickX, clickY, "LOCKED");
+            addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).locked || "LOCKED");
             return;
         }
         if (bowlingCooldown > 0) {
@@ -183,7 +183,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'fist') {
         if (!isWeaponUnlocked('fist')) {
-            addFloatingText(clickX, clickY, "LOCKED");
+            addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).locked || "LOCKED");
             return;
         }
         if (fistCooldown > 0) {
@@ -216,7 +216,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'star') {
         if (!isWeaponUnlocked('star')) {
-            addFloatingText(clickX, clickY, "LOCKED");
+            addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).locked || "LOCKED");
             return;
         }
         if (starCooldown > 0) {
@@ -245,7 +245,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'comet') {
         if (!isWeaponUnlocked('comet')) {
-            addFloatingText(clickX, clickY, "LOCKED");
+            addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).locked || "LOCKED");
             return;
         }
         if (cometCooldown > 0) {
@@ -262,7 +262,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'worm') {
         if (!isWeaponUnlocked('worm')) {
-            addFloatingText(clickX, clickY, "LOCKED");
+            addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).locked || "LOCKED");
             return;
         }
         if (wormCooldown > 0) {
