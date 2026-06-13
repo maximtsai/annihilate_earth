@@ -73,8 +73,8 @@ window.PlatformBridge = {
                 #ad-transition-overlay {
                     position: fixed;
                     top: 0;
-                    left: -30vw;
-                    width: 160vw;
+                    left: -40vw;
+                    width: 180vw;
                     height: 100vh;
                     background: #000000;
                     z-index: 999999;

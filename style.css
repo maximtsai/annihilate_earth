@@ -1554,6 +1554,10 @@ html {
     .weapon-spinner-row {
         gap: 0;
     }
+
+    #weapon-unlock-notification {
+        bottom: calc(118px * var(--ui-scale) + 12vh);
+    }
 }
 
 @media (max-width: 660px) {
