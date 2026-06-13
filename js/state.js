@@ -16,7 +16,7 @@ let currentPlanet = 'earth';
 let seedX = 0;
 let seedY = 0;
 let laserSoundCounter = 0;
-const PLANET_ORDER = ['earth', 'mars', 'neptune', 'jupiter', 'sun'];
+const PLANET_ORDER = ['earth', 'mars', 'neptune', 'jupiter', 'sun', 'neutron_star'];
 let unlockedPlanets = ['earth'];
 let weapons = [];
 
@@ -107,7 +107,7 @@ function cubicEaseIn(t) {
     return t * t * t;
 }
 
-function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5, maxOffset = 50) {
+function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5, maxOffset = 50, fontSize = 28) {
     floatingTexts.push({
         x: x,
         y: y,
@@ -116,7 +116,8 @@ function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5
         color: color,
         life: duration,
         maxLife: duration,
-        maxOffset: maxOffset
+        maxOffset: maxOffset,
+        fontSize: fontSize
     });
 }
 
@@ -186,9 +187,21 @@ async function saveOptions(options) {
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
-let weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
-let unlockedWeapons = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole'];
+let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
+let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
+let claimedPlanetSpinners = [];
+
+async function saveClaimedPlanetSpinners() {
+    try {
+        const current = await getGameState();
+        const state = (current && current.state) ? current.state : {};
+        state.claimedPlanetSpinners = claimedPlanetSpinners;
+        await saveGameState(state);
+    } catch (error) {
+        console.warn('Failed to save claimed planet spinners:', error.message);
+    }
+}
 
 function isWeaponUnlocked(wid) {
     return unlockedWeapons.includes(wid);
@@ -311,6 +324,9 @@ async function loadUnlockedPlanets() {
             if (response.state.bestTimes) {
                 bestTimes = response.state.bestTimes;
             }
+            if (response.state.claimedPlanetSpinners) {
+                claimedPlanetSpinners = response.state.claimedPlanetSpinners;
+            }
         }
         updateWeaponOrderOnUnlock();
     } catch (error) {
@@ -365,6 +381,7 @@ function refreshWeaponLocks() {
 }
 
 function getPlanetSize() {
+    if (currentPlanet === 'neutron_star') return 175;
     if (currentPlanet === 'mars') return 195;
     if (currentPlanet === 'neptune') return 340;
     if (currentPlanet === 'jupiter') return 380;
@@ -373,6 +390,7 @@ function getPlanetSize() {
 }
 
 function getCoreRadius(planetSize, planetName = currentPlanet) {
+    if (planetName === 'neutron_star') return 0;
     let radius = 25 + 0.4 * (planetSize / 2);
     if (planetName === 'mars') {
         radius += 20;
@@ -404,12 +422,12 @@ let pointerX = CENTER_X;
 let pointerY = 340;
 let showPointer = false;
 // Weapon states
-let asteroidCooldown = 11.0;
+let asteroidCooldown = 4.0;
 let moonCooldown = 160.0;
 let nukeCooldown = 0;
 let missileCooldown = 0;
 let gammaBurstCooldown = 40.0;
-let laserCooldown = 4.0;
+let laserCooldown = 11.0;
 let swordCooldown = 80.0;
 let bowlingCooldown = 0;
 let krakenCooldown = 0;

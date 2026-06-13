@@ -5,12 +5,6 @@
     --ui-scale: 1;
 }
 
-@media (max-width: 1024px) {
-    :root {
-        --ui-scale: calc(100vw / 1024px);
-    }
-}
-
 @media (orientation: portrait) {
     :root {
         --ui-scale: calc(100vh / 1024px);
@@ -868,6 +862,29 @@ html {
     opacity: 1;
 }
 
+.weapon-button.cooldown-alert {
+    animation: buttonShake 0.4s ease-in-out, buttonFlashRed 0.4s ease-in-out;
+}
+
+@keyframes buttonShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+}
+
+@keyframes buttonFlashRed {
+    0%, 100% {
+        background: rgba(0, 217, 255, 0.05);
+        border-color: rgba(0, 217, 255, 0.25);
+        box-shadow: none;
+    }
+    50% {
+        background: rgba(255, 30, 80, 0.3) !important;
+        border-color: rgba(255, 30, 80, 0.95) !important;
+        box-shadow: 0 0 15px rgba(255, 30, 80, 0.6) !important;
+    }
+}
+
 .weapon-button:hover {
     background: rgba(0, 217, 255, 0.12);
     border-color: rgba(0, 217, 255, 0.65);
@@ -1532,6 +1549,11 @@ html {
     border-radius: 6px;
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
     display: block;
+    cursor: default;
+}
+
+.weapon-spinner-canvas.clickable {
+    cursor: pointer;
 }
 
 .weapon-spinner-stop-btn {
@@ -1797,5 +1819,42 @@ html {
     50% {
         opacity: 1;
         box-shadow: 0 0 16px rgba(255, 215, 0, 0.35);
+    }
+}
+
+/* Shooting Star watch button glow and shine when active */
+.options-reset-button.glow-shine:not(:disabled) {
+    animation: watchBtnGlow 1.8s infinite ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.options-reset-button.glow-shine:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -200%;
+    width: 120%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: skewX(-25deg);
+    animation: stopBtnShimmer 3.0s infinite ease-in-out;
+}
+
+@keyframes watchBtnGlow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 230, 0, 0.25);
+        border-color: rgba(255, 230, 0, 0.4);
+        background: rgba(255, 230, 0, 0.08);
+    }
+    50% {
+        box-shadow: 0 0 22px rgba(255, 230, 0, 0.65), inset 0 0 8px rgba(255, 230, 0, 0.25);
+        border-color: rgba(255, 230, 0, 0.85);
+        background: rgba(255, 230, 0, 0.16);
     }
 }

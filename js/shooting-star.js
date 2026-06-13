@@ -4,6 +4,7 @@
     let spawnTime = 0;
     let spawned = false;
     let clickStars = [];
+    let lastSpawnTimestamp = 0;
 
     window.ShootingStarManager = {
         init: function () {
@@ -11,7 +12,7 @@
             if (typeof currentPlanet !== 'undefined' && currentPlanet === 'earth') {
                 spawnTime = 24 + Math.random() * 6; // 24 to 30 seconds
             } else {
-                spawnTime = 10 + Math.random() * 6; // 10 to 16 seconds
+                spawnTime = 14 + Math.random() * 6; // 14 to 20 seconds
             }
             spawned = false;
             star = null;
@@ -25,8 +26,20 @@
                 return;
             }
 
+            // If all weapons are unlocked, don't make shooting stars appear
+            const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+            const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
+            const hasLocked = allLockedWeapons.some(wid => !currentUnlocked.includes(wid));
+            if (!hasLocked) {
+                if (star) star = null;
+                return;
+            }
+
             if (!spawned && planetTimeSpent >= spawnTime) {
-                this.spawn();
+                const now = Date.now();
+                if (now - lastSpawnTimestamp >= 75000) {
+                    this.spawn();
+                }
             }
 
             if (star) {
@@ -107,6 +120,7 @@
                 size: 28
             };
             spawned = true;
+            lastSpawnTimestamp = Date.now();
             console.log("[ShootingStar] Spawned at (" + spawnX.toFixed(0) + ", " + spawnY.toFixed(0) + ") closest approach: 275px");
 
             // Play spawn sound 1 second after spawn
@@ -248,15 +262,22 @@
                         const adSpinNo = document.getElementById('ad-spin-no');
 
                         if (hasLocked) {
-                            if (adSpinYes) adSpinYes.disabled = true;
+                            if (adSpinYes) {
+                                adSpinYes.disabled = true;
+                                adSpinYes.classList.remove('glow-shine');
+                            }
                             if (adSpinNo) adSpinNo.disabled = true;
                             if (msg) msg.textContent = 'SPIN THE WHEEL TO DISCOVER A WEAPON!';
                             window.starSelectedWeapon = null;
 
                             const spinner = new WeaponSpinner(container, {
+                                isStar: true,
                                 onStop: (weaponToUnlock) => {
                                     window.starSelectedWeapon = weaponToUnlock;
-                                    if (adSpinYes) adSpinYes.disabled = false;
+                                    if (adSpinYes) {
+                                        adSpinYes.disabled = false;
+                                        adSpinYes.classList.add('glow-shine');
+                                    }
                                     if (adSpinNo) adSpinNo.disabled = false;
 
                                     const btn = document.getElementById(`btn-${weaponToUnlock}`);
@@ -270,7 +291,7 @@
                             // Show disabled greyed out spinner, disable watch/cancel buttons
                             if (adSpinYes) adSpinYes.disabled = true;
                             if (adSpinNo) adSpinNo.disabled = true;
-                            if (msg) msg.textContent = 'ALL WEAPONS UNLOCKED!';
+                            if (msg) msg.innerHTML = 'ALL WEAPONS<br>UNLOCKED!';
                             new WeaponSpinner(container);
                         }
                     }

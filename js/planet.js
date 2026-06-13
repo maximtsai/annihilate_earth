@@ -256,6 +256,29 @@ function initializePlanet() {
                         g = Math.floor(g * (1 - flareOpacity) + 245 * flareOpacity);
                         b = Math.floor(b * (1 - flareOpacity) + 180 * flareOpacity);
                     }
+                } else if (currentPlanet === 'neutron_star') {
+                    // White surface with blue-tinted structure
+                    if (noiseVal < 0.38) {
+                        r = 230; g = 240; b = 255; // Light blue-white
+                    } else if (noiseVal < 0.65) {
+                        const t = (noiseVal - 0.38) / 0.27;
+                        r = Math.floor(230 + t * 25);
+                        g = Math.floor(240 + t * 15);
+                        b = 255;
+                    } else {
+                        r = 255; g = 255; b = 255; // Pure white
+                    }
+
+                    // Intense electromagnetic current swirl overlay (bright cyan/blue)
+                    const stormX = nx * 5.5 + cloudSeedX;
+                    const stormY = ny * 5.5 + cloudSeedY;
+                    const stormVal = fbm(stormX, stormY, 4);
+                    if (stormVal > 0.55) {
+                        const stormOpacity = Math.min((stormVal - 0.55) / 0.20, 0.65);
+                        r = Math.floor(r * (1 - stormOpacity) + 120 * stormOpacity);
+                        g = Math.floor(g * (1 - stormOpacity) + 190 * stormOpacity);
+                        b = 255;
+                    }
                 }
 
                 data[idx] = r;
@@ -948,6 +971,9 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     if (dist <= coreThreshold) {
         finalRadius = Math.max(0, radius - 3) * 0.95;
     }
+    if (currentPlanet === 'neutron_star') {
+        finalRadius *= 0.25;
+    }
 
     // Erase using centralized core-aware terrain logic
     eraseTerrain(localX, localY, finalRadius, isCollision, weaponType);
@@ -1184,6 +1210,9 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
     if (dist <= coreThreshold) {
         finalRadius = Math.max(0, radius - 3) * 0.95;
     }
+    if (currentPlanet === 'neutron_star') {
+        finalRadius *= 0.25;
+    }
 
     // Erase using centralized core-aware terrain logic
     eraseTerrain(localX, localY, finalRadius, false, weaponType);
@@ -1348,6 +1377,9 @@ function triggerVictory() {
             } else if (currentPlanet === 'sun') {
                 vicTitle.textContent = t.sunAnnihilated;
                 vicSubtitle.textContent = t.sunSubtitle;
+            } else if (currentPlanet === 'neutron_star') {
+                vicTitle.textContent = t.neutron_starAnnihilated || 'NEUTRON STAR ANNIHILATED';
+                vicSubtitle.textContent = t.neutron_starSubtitle || 'You annihilated the Neutron Star! Its superdense degenerate matter has dispersed.';
             } else {
                 vicTitle.textContent = t.earthAnnihilated;
                 vicSubtitle.textContent = t.earthSubtitle;
@@ -1392,11 +1424,15 @@ function triggerVictory() {
             }
 
             if (hasLocked) {
-                const isReplay = (previousBest !== undefined);
-                if (isReplay) {
+                const isClaimed = claimedPlanetSpinners.includes(currentPlanet);
+                if (isClaimed) {
                     const spinner = new WeaponSpinner(container, {
                         onStop: (weaponToUnlock) => {
                             unlockSpecificWeapon(weaponToUnlock);
+                            if (!claimedPlanetSpinners.includes(currentPlanet)) {
+                                claimedPlanetSpinners.push(currentPlanet);
+                                saveClaimedPlanetSpinners();
+                            }
                         }
                     });
 
@@ -1439,6 +1475,10 @@ function triggerVictory() {
                     const spinner = new WeaponSpinner(container, {
                         onStop: (weaponToUnlock) => {
                             unlockSpecificWeapon(weaponToUnlock);
+                            if (!claimedPlanetSpinners.includes(currentPlanet)) {
+                                claimedPlanetSpinners.push(currentPlanet);
+                                saveClaimedPlanetSpinners();
+                            }
                         }
                     });
                     spinner.start();
@@ -1491,6 +1531,9 @@ function updatePlanetButtons() {
 
 // Reset Game values
 function resetGame(keepCooldowns = false) {
+    if (window.activeWeaponSpinner) {
+        window.activeWeaponSpinner.destroy();
+    }
     soundManager.stopLoop('sfx_laser_fire');
     soundManager.stopLoop('sfx_laser_hum');
     soundManager.stopLoop('sfx_gamma_beam');
@@ -1526,8 +1569,8 @@ function resetGame(keepCooldowns = false) {
 
     if (!keepCooldowns) {
         gammaBurstCooldown = 40.0;
-        laserCooldown = 11.0;
-        asteroidCooldown = 4.0;
+        laserCooldown = 4.0;
+        asteroidCooldown = 11.0;
         swordCooldown = 75.0;
         moonCooldown = 150.0;
         isInitialAsteroidCooldown = true;

@@ -298,6 +298,7 @@ async function run(mode) {
             uiContainer.style.height = '100%';
             uiContainer.style.transform = 'none';
         }
+        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1024));
     }
     window.addEventListener('resize', resizeBackground);
     resizeBackground();
@@ -1014,6 +1015,66 @@ async function run(mode) {
                 const q = weaponQueues['missile'];
                 delete weaponQueues['missile'];
                 spawnWeapon(q.x, q.y, 'missile');
+            }
+            if (laserCooldown <= 0 && weaponQueues['laser']) {
+                const q = weaponQueues['laser'];
+                delete weaponQueues['laser'];
+                spawnWeapon(q.x, q.y, 'laser');
+            }
+            if (asteroidCooldown <= 0 && weaponQueues['asteroid']) {
+                const q = weaponQueues['asteroid'];
+                delete weaponQueues['asteroid'];
+                spawnWeapon(q.x, q.y, 'asteroid');
+            }
+            if (moonCooldown <= 0 && weaponQueues['moon']) {
+                const q = weaponQueues['moon'];
+                delete weaponQueues['moon'];
+                spawnWeapon(q.x, q.y, 'moon');
+            }
+            if (swordCooldown <= 0 && weaponQueues['sword']) {
+                const q = weaponQueues['sword'];
+                delete weaponQueues['sword'];
+                spawnWeapon(q.x, q.y, 'sword');
+            }
+            if (krakenCooldown <= 0 && weaponQueues['kraken']) {
+                const q = weaponQueues['kraken'];
+                delete weaponQueues['kraken'];
+                spawnWeapon(q.x, q.y, 'kraken');
+            }
+            if (bowlingCooldown <= 0 && weaponQueues['bowling']) {
+                const q = weaponQueues['bowling'];
+                delete weaponQueues['bowling'];
+                spawnWeapon(q.x, q.y, 'bowling');
+            }
+            if (fistCooldown <= 0 && weaponQueues['fist']) {
+                const q = weaponQueues['fist'];
+                delete weaponQueues['fist'];
+                spawnWeapon(q.x, q.y, 'fist');
+            }
+            if (starCooldown <= 0 && weaponQueues['star']) {
+                const q = weaponQueues['star'];
+                delete weaponQueues['star'];
+                spawnWeapon(q.x, q.y, 'star');
+            }
+            if (cometCooldown <= 0 && weaponQueues['comet']) {
+                const q = weaponQueues['comet'];
+                delete weaponQueues['comet'];
+                spawnWeapon(q.x, q.y, 'comet');
+            }
+            if (wormCooldown <= 0 && weaponQueues['worm']) {
+                const q = weaponQueues['worm'];
+                delete weaponQueues['worm'];
+                spawnWeapon(q.x, q.y, 'worm');
+            }
+            if (blackholeCooldown <= 0 && weaponQueues['blackhole']) {
+                const q = weaponQueues['blackhole'];
+                delete weaponQueues['blackhole'];
+                spawnWeapon(q.x, q.y, 'blackhole');
+            }
+            if (gammaBurstCooldown <= 0 && weaponQueues['gamma']) {
+                const q = weaponQueues['gamma'];
+                delete weaponQueues['gamma'];
+                spawnWeapon(q.x, q.y, 'gamma');
             }
 
             // Handle Lightning hold time increment
@@ -3610,7 +3671,7 @@ async function run(mode) {
             }
 
             ctx.save();
-            ctx.font = 'bold 28px Orbitron, sans-serif';
+            ctx.font = `bold ${ft.fontSize || 28}px Orbitron, sans-serif`;
             ctx.fillStyle = ft.color.endsWith(',') ? `${ft.color}${alpha})` : ft.color;
             ctx.textAlign = 'center';
             ctx.shadowBlur = 10;
@@ -3727,7 +3788,8 @@ async function run(mode) {
                 : currentPlanet === 'mars' ? '255,110,50'
                     : currentPlanet === 'neptune' ? '50,140,255'
                         : currentPlanet === 'jupiter' ? '255,165,90'
-                            : '255,215,80';
+                            : currentPlanet === 'neutron_star' ? '0,150,255'
+                                : '255,215,80';
             const aGrad = ctx.createRadialGradient(0, 0, atmosInner, 0, 0, atmosOuter);
             aGrad.addColorStop(0, `rgba(${ac}, ${0.20 * intRatio})`);
             aGrad.addColorStop(1, `rgba(${ac}, 0)`);
@@ -4992,9 +5054,23 @@ async function run(mode) {
             if (nextBtn) {
                 nextBtn.click();
             } else {
-                // Fallback: just reset on same planet
-                gameplayStarted = true;
-                resetGame();
+                if (next === 'neutron_star') {
+                    isPlanetSwitching = true;
+                    setTimeout(() => {
+                        currentPlanet = 'neutron_star';
+                        document.querySelectorAll('.planet-btn').forEach(b => b.classList.remove('selected'));
+                        updateGameTitle();
+                        planetTimeSpent = 0;
+                        gameplayStarted = true;
+                        resetGame(true);
+                        isPlanetSwitching = false;
+                        zoomProgress = 0;
+                        planetScale = 0.7;
+                    }, 300);
+                } else {
+                    gameplayStarted = true;
+                    resetGame();
+                }
             }
         };
 
@@ -5116,14 +5192,14 @@ async function run(mode) {
             titleEl.textContent = `${t.annihilateThe} ${currentLanguage === 'en' ? 'SUN' : (currentLanguage === 'ja' ? '太陽' : currentLanguage === 'zh-CN' ? '太阳' : currentLanguage === 'zh-TW' ? '太陽' : currentLanguage === 'es' ? 'EL SOL' : currentLanguage === 'fr' ? 'LE SOLEIL' : currentLanguage === 'ru' ? 'СОЛНЦЕ' : currentLanguage === 'ar' ? 'الشمس' : 'SUN')}`;
         } else {
             const planetNames = {
-                en: { earth: 'EARTH', mars: 'MARS', neptune: 'NEPTUNE', jupiter: 'JUPITER' },
-                'zh-CN': { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星' },
-                'zh-TW': { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星' },
-                es: { earth: 'LA TIERRA', mars: 'MARTE', neptune: 'NEPTUNO', jupiter: 'JÚPITER' },
-                fr: { earth: 'LA TERRE', mars: 'MARS', neptune: 'NEPTUNE', jupiter: 'JUPITER' },
-                ru: { earth: 'ЗЕМЛЮ', mars: 'МАРС', neptune: 'НЕПТУН', jupiter: 'ЮПИТЕР' },
-                ja: { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星' },
-                ar: { earth: 'الأرض', mars: 'المريخ', neptune: 'نبتون', jupiter: 'المشتري' }
+                en: { earth: 'EARTH', mars: 'MARS', neptune: 'NEPTUNE', jupiter: 'JUPITER', neutron_star: 'NEUTRON STAR' },
+                'zh-CN': { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星', neutron_star: '中子星' },
+                'zh-TW': { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星', neutron_star: '中子星' },
+                es: { earth: 'LA TIERRA', mars: 'MARTE', neptune: 'NEPTUNO', jupiter: 'JÚPITER', neutron_star: 'ESTRELLA DE NEUTRONES' },
+                fr: { earth: 'LA TERRE', mars: 'MARS', neptune: 'NEPTUNE', jupiter: 'JUPITER', neutron_star: 'ÉTOILE À NEUTRONS' },
+                ru: { earth: 'ЗЕМЛЮ', mars: 'МАРС', neptune: 'НЕПТУН', jupiter: 'ЮПИТЕР', neutron_star: 'НЕЙТРОННУЮ ЗВЕЗДУ' },
+                ja: { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星', neutron_star: '中子星' },
+                ar: { earth: 'الأرض', mars: 'المريخ', neptune: 'نبتون', jupiter: 'المشتري', neutron_star: 'النجم النيوتروني' }
             };
             const names = planetNames[currentLanguage] || planetNames['en'];
             titleEl.textContent = `${t.annihilate} ${names[currentPlanet] || currentPlanet.toUpperCase()}`;
@@ -5196,8 +5272,9 @@ async function run(mode) {
             unlockedPlanets = ['earth'];
             initiallyUnlockedPlanets = new Set(['earth']);
             bestTimes = {};
-            weaponOrder = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
-            unlockedWeapons = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'blackhole'];
+            claimedPlanetSpinners = [];
+            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
+            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole'];
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
             saveWeaponOrder();
             saveUnlockedWeapons();
@@ -5234,6 +5311,7 @@ async function run(mode) {
         adSpinYes.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
+            adSpinYes.classList.remove('glow-shine');
 
             // Trigger the ad break
             if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
@@ -5260,6 +5338,10 @@ async function run(mode) {
         adSpinNo.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
+            if (adSpinYes) adSpinYes.classList.remove('glow-shine');
+            if (window.activeWeaponSpinner) {
+                window.activeWeaponSpinner.destroy();
+            }
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
         });
     }
@@ -5268,6 +5350,10 @@ async function run(mode) {
         adSpinClose.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
+            if (adSpinYes) adSpinYes.classList.remove('glow-shine');
+            if (window.activeWeaponSpinner) {
+                window.activeWeaponSpinner.destroy();
+            }
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
         });
     }
@@ -5362,6 +5448,9 @@ async function run(mode) {
                 furthestPlanet = PLANET_ORDER[i];
                 break;
             }
+        }
+        if (furthestPlanet === 'neutron_star') {
+            furthestPlanet = 'sun';
         }
         if (currentPlanet !== furthestPlanet) {
             currentPlanet = furthestPlanet;

@@ -3,6 +3,45 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     if (victoryTriggered) return;
 
     const type = typeOverride || selectedWeapon;
+
+    if (!typeOverride) {
+        let cd = 0;
+        if (type === 'laser') cd = laserCooldown;
+        else if (type === 'asteroid') cd = asteroidCooldown;
+        else if (type === 'moon') cd = moonCooldown;
+        else if (type === 'nuke') cd = nukeCooldown;
+        else if (type === 'missile') cd = missileCooldown;
+        else if (type === 'sword') cd = swordCooldown;
+        else if (type === 'kraken') cd = krakenCooldown;
+        else if (type === 'bowling') cd = bowlingCooldown;
+        else if (type === 'fist') cd = fistCooldown;
+        else if (type === 'star') cd = starCooldown;
+        else if (type === 'comet') cd = cometCooldown;
+        else if (type === 'worm') cd = wormCooldown;
+        else if (type === 'blackhole') cd = blackholeCooldown;
+        else if (type === 'gamma') cd = gammaBurstCooldown;
+        else if (type === 'lightning') cd = lightningCooldown;
+
+        if (type !== 'nuke' && type !== 'missile' && type !== 'lightning') {
+            if (cd > 0.4) {
+                addFloatingText(clickX, clickY, "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, 18);
+                const btn = document.getElementById('btn-' + type);
+                if (btn) {
+                    btn.classList.remove('cooldown-alert');
+                    void btn.offsetWidth; // Force reflow
+                    btn.classList.add('cooldown-alert');
+                    setTimeout(() => {
+                        btn.classList.remove('cooldown-alert');
+                    }, 400);
+                }
+                return;
+            } else if (cd > 0) {
+                weaponQueues[type] = { x: clickX, y: clickY };
+                return;
+            }
+        }
+    }
+
     if (type === 'lightning') return;
 
     totalShotsFired++;

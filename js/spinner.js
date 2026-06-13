@@ -1,9 +1,15 @@
 // Weapon Unlock Spinner Device Component
 class WeaponSpinner {
     constructor(container, options = {}) {
+        if (window.activeWeaponSpinner) {
+            window.activeWeaponSpinner.destroy();
+        }
+        window.activeWeaponSpinner = this;
+
         this.container = container;
         this.onStop = options.onStop || (() => { });
         this.onStart = options.onStart || (() => { });
+        this.isStar = options.isStar || false;
 
         // Locked weapons configuration
         this.weaponsConfig = {
@@ -39,6 +45,7 @@ class WeaponSpinner {
         this.winningSectorIdx = -1;
         this.flashAlpha = 0;
         this.stopSparks = [];
+        this.isDestroyed = false;
 
         this.initDOM();
         this.startLoop();
@@ -91,6 +98,11 @@ class WeaponSpinner {
             this.stop();
         });
 
+        this.canvas.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.stop();
+        });
+
         if (this.lockedWeapons.length === 0) {
             this.setDisabledState();
         }
@@ -103,12 +115,20 @@ class WeaponSpinner {
         if (this.leftPreview) this.leftPreview.style.display = 'none';
         if (this.rightPreview) this.rightPreview.style.display = 'none';
         if (this.announcement) this.announcement.style.display = 'none';
+        this.setClickable(false);
+    }
+
+    setClickable(clickable) {
+        if (this.canvas) {
+            this.canvas.classList.toggle('clickable', clickable);
+        }
     }
 
     start() {
         if (this.lockedWeapons.length === 0) return;
         this.isSpinning = true;
         this.isStopping = false;
+        this.setClickable(false);
 
         // Reset celebration/announcement state
         if (this.stopButton) {
@@ -155,6 +175,7 @@ class WeaponSpinner {
         this.isStopping = true;
         this.stopButton.disabled = true;
         this.stopButton.classList.add('disabled');
+        this.setClickable(false);
 
         // 1. Trigger CSS shake on container wrapper
         this.container.classList.remove('stop-shake');
@@ -256,6 +277,7 @@ class WeaponSpinner {
                 this.spinPhase = 'running';
                 this.stopButton.disabled = false;
                 this.stopButton.classList.remove('disabled');
+                this.setClickable(true);
             }
         } else if (this.isStopping) {
             // Decelerate if stopping
@@ -347,7 +369,8 @@ class WeaponSpinner {
         // Hide stop button, show announcement text
         if (this.stopButton) this.stopButton.style.display = 'none';
         if (this.announcement && meta) {
-            this.announcement.textContent = `${meta.name.toUpperCase()} UNLOCKED!`;
+            const suffix = this.isStar ? ' AVAILABLE!' : ' UNLOCKED!';
+            this.announcement.textContent = `${meta.name.toUpperCase()}${suffix}`;
             this.announcement.style.color = meta.color;
             this.announcement.style.textShadow = `0 0 12px ${meta.color}`;
             this.announcement.style.display = 'block';
@@ -367,6 +390,7 @@ class WeaponSpinner {
     }
 
     spawnCelebrationParticles(element, color) {
+        if (!element || !element.offsetParent) return;
         const rect = element.getBoundingClientRect();
         const parentRect = element.offsetParent.getBoundingClientRect();
         const centerX = rect.left - parentRect.left + rect.width / 2;
@@ -385,7 +409,9 @@ class WeaponSpinner {
             const tx = Math.cos(angle) * speed;
             const ty = Math.sin(angle) * speed;
 
-            element.offsetParent.appendChild(p);
+            if (element.offsetParent) {
+                element.offsetParent.appendChild(p);
+            }
 
             requestAnimationFrame(() => {
                 p.style.transform = `translate(${tx}px, ${ty}px) scale(0)`;
@@ -415,11 +441,12 @@ class WeaponSpinner {
             ctx.lineWidth = 2;
             ctx.strokeRect(5, 5, w - 10, h - 10);
 
-            ctx.font = 'bold 30px Orbitron, sans-serif';
+            ctx.font = 'bold 26px Orbitron, sans-serif';
             ctx.fillStyle = '#00ffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('ALL WEAPONS UNLOCKED!', w / 2, h / 2);
+            ctx.fillText('ALL WEAPONS', w / 2, h / 2 - 16);
+            ctx.fillText('UNLOCKED!', w / 2, h / 2 + 16);
             ctx.restore();
             return;
         }
@@ -575,8 +602,18 @@ class WeaponSpinner {
         }
     }
 
+    destroy() {
+        this.isDestroyed = true;
+        this.isSpinning = false;
+        this.isStopping = false;
+        if (window.activeWeaponSpinner === this) {
+            window.activeWeaponSpinner = null;
+        }
+    }
+
     startLoop() {
         const loop = (timestamp) => {
+            if (this.isDestroyed) return;
             if (!this.lastTime) this.lastTime = timestamp;
             const dt = Math.min(0.033, (timestamp - this.lastTime) / 1000); // Clamp dt to max 30fps equivalence
             this.lastTime = timestamp;
