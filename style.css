@@ -464,7 +464,8 @@ html {
     animation: fadeIn 200ms ease-out;
 }
 
-.options-popup, .ad-spin-popup {
+.options-popup,
+.ad-spin-popup {
     max-width: 420px;
     background: rgba(12, 12, 32, 0.97);
     border: 1.5px solid rgba(0, 217, 255, 0.6);
@@ -1093,7 +1094,6 @@ html {
     align-items: center;
     justify-content: center;
     gap: 20px;
-    width: 600px;
     height: 720px;
     transform: scale(var(--victory-scale, 1));
     transform-origin: center center;
@@ -1507,11 +1507,13 @@ html {
 
 
     /* Scaling Options popup */
-    .options-popup, .ad-spin-popup {
+    .options-popup,
+    .ad-spin-popup {
         padding: 18px 16px;
         gap: 14px;
         transform: scale(calc(0.5 + 0.5 * var(--ui-scale)));
     }
+
     .options-popup {
         width: 95%;
     }
