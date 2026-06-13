@@ -1401,12 +1401,12 @@ function triggerVictory() {
 
     setTimeout(() => {
         document.getElementById('victory-screen').classList.add('show');
+        const t = translations[currentLanguage] || translations['en'];
 
         // Update the button to show the next planet
         const restartBtn = document.getElementById('restart-button');
         if (restartBtn) {
             const next = getNextPlanet(currentPlanet);
-            const t = translations[currentLanguage] || translations['en'];
             const label = next === 'earth' ? t.restartSim : `${t.next}: ${(t.planets[next] || next).toUpperCase()}`;
             restartBtn.textContent = label;
         }

@@ -4,7 +4,7 @@ window.gameConfig = {
         "missile": {
             "speed": 5,
             "size": 6,
-            "explosionRadius": 16,
+            "explosionRadius": 15.5,
             "shakeIntensity": 6.3,
             "particleCount": 14,
             "particleSpeedScale": 0.75,
@@ -13,7 +13,7 @@ window.gameConfig = {
         "nuke": {
             "speed": 3,
             "size": 10,
-            "explosionRadius": 28,
+            "explosionRadius": 27,
             "shakeIntensity": 18,
             "particleCount": 27,
             "particleSpeedScale": 0.7,

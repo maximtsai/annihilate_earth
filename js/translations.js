@@ -30,7 +30,7 @@ const translations = {
         bestTime: 'BEST TIME',
         resetProgress: 'RESET PROGRESS',
         resetProgressConfirm: 'RESET PROGRESS?',
-        resetWarnMessage: 'THIS WILL ERASE ALL COMPLETED PLANETS AND RESTORE SIMULATION LOCKS. ARE YOU ABSOLUTELY SURE?',
+        resetWarnMessage: 'ARE YOU SURE YOU WANT TO RESET ALL PLANET AND WEAPON PROGRESS?',
         yesReset: 'YES, RESET',
         cancel: 'CANCEL',
         stop: 'STOP',
@@ -58,7 +58,11 @@ const translations = {
         available: 'AVAILABLE!',
         shootingStarMessage: 'SPIN THE WHEEL TO DISCOVER A WEAPON!',
         weaponUnlocked: '{icon} {name} UNLOCKED!',
-        close: 'X'
+        close: 'X',
+        screenShake: 'SCREEN SHAKE',
+        none: 'NONE',
+        half: 'HALF',
+        full: 'FULL'
     },
     'zh-CN': {
         options: '设置',
@@ -91,7 +95,7 @@ const translations = {
         bestTime: '最佳时间',
         resetProgress: '重置进度',
         resetProgressConfirm: '重置进度？',
-        resetWarnMessage: '这将清除所有已通关星球并恢复模拟锁定。您绝对确定吗？',
+        resetWarnMessage: '确定要重置所有星球和武器进度吗？',
         yesReset: '是的，重置',
         cancel: '取消',
         stop: '停止',
@@ -119,7 +123,11 @@ const translations = {
         available: '可获得！',
         shootingStarMessage: '转轮盘发现新武器！',
         weaponUnlocked: '{icon} {name} 已解锁！',
-        close: 'X'
+        close: 'X',
+        screenShake: '屏幕抖动',
+        none: '无',
+        half: '一半',
+        full: '全'
     },
     'zh-TW': {
         options: '設定',
@@ -152,7 +160,7 @@ const translations = {
         bestTime: '最佳時間',
         resetProgress: '重置進度',
         resetProgressConfirm: '重置進度？',
-        resetWarnMessage: '這將清除所有已通關星球並恢復模擬鎖定。您絕對確定嗎？',
+        resetWarnMessage: '確定要重置所有星球和武器進度嗎？',
         yesReset: '是的，重置',
         cancel: '取消',
         stop: '停止',
@@ -180,7 +188,11 @@ const translations = {
         available: '可獲得！',
         shootingStarMessage: '轉輪盤發現新武器！',
         weaponUnlocked: '{icon} {name} 已解鎖！',
-        close: 'X'
+        close: 'X',
+        screenShake: '螢幕抖動',
+        none: '無',
+        half: '一半',
+        full: '全'
     },
     es: {
         options: 'OPCIONES',
@@ -213,7 +225,7 @@ const translations = {
         bestTime: 'MEJOR TIEMPO',
         resetProgress: 'REINICIAR PROGRESO',
         resetProgressConfirm: '¿REINICIAR PROGRESO?',
-        resetWarnMessage: 'ESTO BORRARÁ TODOS LOS PLANETAS COMPLETADOS Y RESTAURARÁ LOS BLOQUEOS DE SIMULACIÓN. ¿ESTÁS COMPLETAMENTE SEGURO?',
+        resetWarnMessage: '¿SEGURO QUE QUIERES REINICIAR TODO EL PROGRESO DE PLANETAS Y ARMAS?',
         yesReset: 'SÍ, REINICIAR',
         cancel: 'CANCELAR',
         stop: 'PARAR',
@@ -241,7 +253,11 @@ const translations = {
         available: '¡DISPONIBLE!',
         shootingStarMessage: '¡GIRA LA RUEDA PARA DESCUBRIR UN ARMA!',
         weaponUnlocked: '{icon} {name} DESBLOQUEADO!',
-        close: 'X'
+        close: 'X',
+        screenShake: 'VIBRACIÓN',
+        none: 'NINGUNO',
+        half: 'MITAD',
+        full: 'COMPLETO'
     },
     fr: {
         options: 'OPTIONS',
@@ -274,7 +290,7 @@ const translations = {
         bestTime: 'MEILLEUR TEMPS',
         resetProgress: 'RÉINITIALISER LA PROGRESSION',
         resetProgressConfirm: 'RÉINITIALISER LA PROGRESSION ?',
-        resetWarnMessage: 'CELA EFFACERA TOUTES LES PLANÈTES COMPLÈTES ET RESTAURERA LES VERROUS DE SIMULATION. ÊTES-VOUS ABSOLUMENT SÛR ?',
+        resetWarnMessage: 'VOULEZ-VOUS VRAIMENT RÉINITIALISER TOUS LES PROGRÈS DES PLANÈTES ET ARMES ?',
         yesReset: 'OUI, RÉINITIALISER',
         cancel: 'ANNULER',
         stop: 'STOP',
@@ -302,7 +318,11 @@ const translations = {
         available: 'DISPONIBLE !',
         shootingStarMessage: 'TOURNEZ LA ROUE POUR DÉCOUVRIR UNE ARME !',
         weaponUnlocked: '{icon} {name} DÉBLOQUÉ !',
-        close: 'X'
+        close: 'X',
+        screenShake: 'SECOUSSE',
+        none: 'SANS',
+        half: 'MOITIÉ',
+        full: 'PLEIN'
     },
     ru: {
         options: 'НАСТРОЙКИ',
@@ -335,7 +355,7 @@ const translations = {
         bestTime: 'ЛУЧШЕЕ ВРЕМЯ',
         resetProgress: 'СБРОСИТЬ ПРОГРЕСС',
         resetProgressConfirm: 'СБРОСИТЬ ПРОГРЕСС?',
-        resetWarnMessage: 'ЭТО СОТРЁТ ВЕСЬ ПРОГРЕСС И ВОССТАНОВИТ БЛОКИРОВКИ СИМУЛЯЦИИ. ВЫ АБСОЛЮТНО УВЕРЕНЫ?',
+        resetWarnMessage: 'ВЫ УВЕРЕНЫ, ЧТО ХОТИТЕ СБРОСИТЬ ВЕСЬ ПРОГРЕСС ПЛАНЕТ И ОРУЖИЯ?',
         yesReset: 'ДА, СБРОСИТЬ',
         cancel: 'ОТМЕНА',
         stop: 'СТОП',
@@ -363,7 +383,11 @@ const translations = {
         available: 'ДОСТУПНО!',
         shootingStarMessage: 'ВРАЩАЙТЕ КОЛЕСО, ЧТОБЫ ОТКРЫТЬ ОРУЖИЕ!',
         weaponUnlocked: '{icon} {name} РАЗБЛОКИРОВАНО!',
-        close: 'Х'
+        close: 'Х',
+        screenShake: 'ВИБРАЦИЯ',
+        none: 'НЕТ',
+        half: '50%',
+        full: 'ПОЛНОЕ'
     },
     ja: {
         options: 'オプション',
@@ -396,7 +420,7 @@ const translations = {
         bestTime: '自己ベスト',
         resetProgress: '進捗をリセット',
         resetProgressConfirm: '進捗をリセットしますか？',
-        resetWarnMessage: 'これまでのゲーム進捗がすべて消去され、惑星のロック状態が初期化されます。本当によろしいですか？',
+        resetWarnMessage: 'すべての惑星と武器の進捗をリセットしてもよろしいですか？',
         yesReset: 'はい、リセットします',
         cancel: 'キャンセル',
         stop: 'ストップ',
@@ -424,7 +448,11 @@ const translations = {
         available: '入手可能！',
         shootingStarMessage: 'ルーレットを回して武器を発見！',
         weaponUnlocked: '{icon} {name} アンロック！',
-        close: 'X'
+        close: 'X',
+        screenShake: '画面の揺れ',
+        none: 'なし',
+        half: '半分',
+        full: '全'
     },
     ar: {
         options: 'الخيارات',
@@ -457,7 +485,7 @@ const translations = {
         bestTime: 'أفضل وقت',
         resetProgress: 'إعادة تعيين التقدم',
         resetProgressConfirm: 'إعادة تعيين التقدم؟',
-        resetWarnMessage: 'سيؤدي هذا إلى مسح جميع الكواكب المكتملة واستعادة أقفال المحاكاة. هل أنت متأكد تمامًا؟',
+        resetWarnMessage: 'هل أنت متأكد من إعادة تعيين تقدم جميع الكواكب والأسلحة؟',
         yesReset: 'نعم، إعادة تعيين',
         cancel: 'إلغاء',
         stop: 'توقف',
@@ -485,6 +513,10 @@ const translations = {
         available: 'متاح!',
         shootingStarMessage: 'دور العجلة لاستكشاف سلاح!',
         weaponUnlocked: '{icon} {name} تم الفتح!',
-        close: 'X'
+        close: 'X',
+        screenShake: 'اهتزاز الشاشة',
+        none: 'بدون',
+        half: 'نصف',
+        full: 'كامل'
     }
 };

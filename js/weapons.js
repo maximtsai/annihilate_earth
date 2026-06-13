@@ -1,4 +1,6 @@
 // Weapons Physics & Interaction Logic
+let lastCooldownTextTime = 0;
+
 function spawnWeapon(clickX, clickY, typeOverride = null) {
     if (victoryTriggered) return;
 
@@ -24,15 +26,24 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
         if (type !== 'nuke' && type !== 'missile' && type !== 'lightning') {
             if (cd > 0.4) {
-                addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, 18);
-                const btn = document.getElementById('btn-' + type);
-                if (btn) {
-                    btn.classList.remove('cooldown-alert');
-                    void btn.offsetWidth; // Force reflow
-                    btn.classList.add('cooldown-alert');
-                    setTimeout(() => {
+                const defaultCd = (MAX_COOLDOWNS && MAX_COOLDOWNS[type] !== undefined) ? MAX_COOLDOWNS[type] : 0;
+                if (defaultCd > 2.5) {
+                    const now = Date.now();
+                    if (now - lastCooldownTextTime >= 4000) {
+                        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, 18);
+                        lastCooldownTextTime = now;
+                    }
+                }
+                if (cd >= 1.5) {
+                    const btn = document.getElementById('btn-' + type);
+                    if (btn) {
                         btn.classList.remove('cooldown-alert');
-                    }, 400);
+                        void btn.offsetWidth; // Force reflow
+                        btn.classList.add('cooldown-alert');
+                        setTimeout(() => {
+                            btn.classList.remove('cooldown-alert');
+                        }, 400);
+                    }
                 }
                 return;
             } else if (cd > 0) {
@@ -381,7 +392,7 @@ function executeSpawn(type, clickX, clickY) {
 
     const speed = getConfigValue(`weapons.${type}.speed`, type === 'missile' ? 7 : (type === 'nuke' || type === 'asteroid' || type === 'comet') ? 4 : type === 'moon' ? 1.8 : 2);
     const size = getConfigValue(`weapons.${type}.size`, type === 'missile' ? 5 : type === 'nuke' ? 9 : type === 'moon' ? 25 : type === 'comet' ? 20 : 15);
-    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 13 : type === 'nuke' ? 21 : type === 'sword' ? 24 : type === 'moon' ? 102 : type === 'comet' ? 92 : 41);
+    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 12.0 : type === 'nuke' ? 20 : type === 'sword' ? 24 : type === 'moon' ? 102 : type === 'comet' ? 92 : 41);
     const shakeIntensity = getConfigValue(`weapons.${type}.shakeIntensity`, type === 'missile' ? 4.5 : type === 'nuke' ? 12 : type === 'moon' ? 32 : type === 'comet' ? 8 : 22);
 
     let vx = (dirX / dist) * speed;

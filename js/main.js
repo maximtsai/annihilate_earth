@@ -9,9 +9,14 @@ const lsCtx = loadingStarsCanvas.getContext('2d');
 loadingStarsCanvas.width = window.innerWidth;
 loadingStarsCanvas.height = window.innerHeight;
 
+let loadingScreenWidth = loadingScreen.offsetWidth || window.innerWidth;
+let loadingScreenHeight = loadingScreen.offsetHeight || window.innerHeight;
+
 function resizeLoadingCanvas() {
     loadingStarsCanvas.width = window.innerWidth;
     loadingStarsCanvas.height = window.innerHeight;
+    loadingScreenWidth = loadingScreen.offsetWidth || window.innerWidth;
+    loadingScreenHeight = loadingScreen.offsetHeight || window.innerHeight;
 }
 window.addEventListener('resize', resizeLoadingCanvas);
 
@@ -53,8 +58,8 @@ function animateMissile(timestamp) {
     if (missileT >= 1.0) missileT = 0.0; // loop
 
     const t = missileT;
-    const screenH = loadingScreen.offsetHeight || window.innerHeight;
-    const screenW = loadingScreen.offsetWidth || window.innerWidth;
+    const screenH = loadingScreenHeight;
+    const screenW = loadingScreenWidth;
 
     // x advances linearly across screen width
     const mx = missileStartX + t * (missileEndX - missileStartX);
@@ -299,6 +304,13 @@ async function run(mode) {
             uiContainer.style.transform = 'none';
         }
         document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1024));
+
+        const scaleHeight = (window.innerHeight * 0.88) / 720;
+        const isLandscape = window.innerWidth >= window.innerHeight;
+        const baseWidth = isLandscape ? window.innerWidth * 1.6 : 600;
+        const scaleWidth = (window.innerWidth * 0.94) / baseWidth;
+        const victoryScale = Math.min(scaleWidth, scaleHeight);
+        document.documentElement.style.setProperty('--victory-scale', victoryScale);
     }
     window.addEventListener('resize', resizeBackground);
     resizeBackground();
@@ -363,7 +375,8 @@ async function run(mode) {
         uiOverlay: document.querySelector('.ui-overlay'),
         massText: document.getElementById('mass-text'),
         massBar: document.getElementById('mass-bar'),
-        statusLed: document.getElementById('hud-status-led')
+        statusLed: document.getElementById('hud-status-led'),
+        flashOverlay: document.getElementById('screen-flash-overlay')
     };
     // Pre-resolve child elements for cooldown UIs
     const _cdChildren = {};
@@ -580,11 +593,11 @@ async function run(mode) {
                 if (lightningUi) {
                     const text = _cdChildren.lightning.text;
                     const bar = _cdChildren.lightning.bar;
-                                        if (text) text.textContent = getTranslation('locked');
+                    if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
             }
-         else if (lightningCooldown > 0) {
+            else if (lightningCooldown > 0) {
                 lightningCooldown -= deltaTime;
                 if (lightningCooldown <= 0) {
                     lightningCooldown = 0;
@@ -701,11 +714,11 @@ async function run(mode) {
                 if (bowlingUi) {
                     const text = _cdChildren.bowling.text;
                     const bar = _cdChildren.bowling.bar;
-                                        if (text) text.textContent = getTranslation('locked');
+                    if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
             }
-         else if (bowlingCooldown > 0) {
+            else if (bowlingCooldown > 0) {
                 bowlingCooldown -= deltaTime;
                 if (bowlingCooldown <= 0) {
                     bowlingCooldown = 0;
@@ -744,11 +757,11 @@ async function run(mode) {
                 if (krakenUi) {
                     const text = _cdChildren.kraken.text;
                     const bar = _cdChildren.kraken.bar;
-                                        if (text) text.textContent = getTranslation('locked');
+                    if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
             }
-         else if (krakenCooldown > 0) {
+            else if (krakenCooldown > 0) {
                 krakenCooldown -= deltaTime;
                 if (krakenCooldown <= 0) {
                     krakenCooldown = 0;
@@ -787,11 +800,11 @@ async function run(mode) {
                 if (wormUi) {
                     const text = _cdChildren.worm.text;
                     const bar = _cdChildren.worm.bar;
-                                        if (text) text.textContent = getTranslation('locked');
+                    if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
             }
-         else if (wormCooldown > 0) {
+            else if (wormCooldown > 0) {
                 wormCooldown -= deltaTime;
                 if (wormCooldown <= 0) {
                     wormCooldown = 0;
@@ -864,11 +877,11 @@ async function run(mode) {
                 if (fistUi) {
                     const text = _cdChildren.fist.text;
                     const bar = _cdChildren.fist.bar;
-                                        if (text) text.textContent = getTranslation('locked');
+                    if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
             }
-         else if (fistCooldown > 0) {
+            else if (fistCooldown > 0) {
                 fistCooldown -= deltaTime;
                 if (fistCooldown <= 0) {
                     fistCooldown = 0;
@@ -940,11 +953,11 @@ async function run(mode) {
                 if (starUi) {
                     const text = _cdChildren.star.text;
                     const bar = _cdChildren.star.bar;
-                                        if (text) text.textContent = getTranslation('locked');
+                    if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
             }
-         else if (starCooldown > 0) {
+            else if (starCooldown > 0) {
                 starCooldown -= deltaTime;
                 if (starCooldown <= 0) {
                     starCooldown = 0;
@@ -983,11 +996,11 @@ async function run(mode) {
                 if (cometUi) {
                     const text = _cdChildren.comet.text;
                     const bar = _cdChildren.comet.bar;
-                                        if (text) text.textContent = getTranslation('locked');
+                    if (text) text.textContent = getTranslation('locked');
                     if (bar) bar.style.height = '100%';
                 }
             }
-         else if (cometCooldown > 0) {
+            else if (cometCooldown > 0) {
                 cometCooldown -= deltaTime;
                 if (cometCooldown <= 0) {
                     cometCooldown = 0;
@@ -2704,8 +2717,14 @@ async function run(mode) {
             let isShaking = false;
             if (screenShake.duration > 0) {
                 screenShake.duration -= deltaTime * 1000;
-                screenShake.x = (Math.random() - 0.5) * screenShake.intensity;
-                screenShake.y = (Math.random() - 0.5) * screenShake.intensity;
+                let mult = 1.0;
+                if (currentScreenShakeSetting === 'none') {
+                    mult = 0.0;
+                } else if (currentScreenShakeSetting === 'half') {
+                    mult = 0.5;
+                }
+                screenShake.x = (Math.random() - 0.5) * screenShake.intensity * mult;
+                screenShake.y = (Math.random() - 0.5) * screenShake.intensity * mult;
                 isShaking = true;
 
                 if (screenShake.duration <= 0) {
@@ -2775,12 +2794,12 @@ async function run(mode) {
 
                         // Angle facing towards planet with a wider spread (slightly increased to 0.90 radians)
                         const projAngle = w.angle + (Math.random() - 0.5) * 0.95;
-                        const speed = 225 + Math.random() * 100; // 25% faster
+                        const speed = 280 + Math.random() * 125; // 25% faster
 
                         const isSpecial = Math.random() < 0.15; // 15% chance
                         const color = isSpecial ? '#66b2ff' : (Math.random() < 0.5 ? '#00f0ff' : '#ff00ff');
                         const baseSize = isSpecial ? 16 : 8; // 8 is slightly smaller than 12
-                        const explosionRadius = isSpecial ? 29 : 19; // slightly increased from 24 and 16
+                        const explosionRadius = isSpecial ? 31 : 21; // 2 units bigger
                         const shakeIntensity = isSpecial ? 8 : 5;
 
                         activeStarProjectiles.push({
@@ -2936,8 +2955,8 @@ async function run(mode) {
                     ctx.shadowColor = 'rgba(0,0,0,1)';
                     ctx.fillStyle = '#000000';
                 } else {
-                    ctx.shadowColor = 'rgba(255,255,255,1)';
-                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = 'rgba(255,255,255,0.8)';
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
                 }
                 ctx.beginPath();
                 ctx.arc(0, 0, w.explosionRadius * 0.85, 0, Math.PI * 2);
@@ -4684,13 +4703,15 @@ async function run(mode) {
             window.ShootingStarManager.draw(ctx);
         }
 
-        // Screen flash overlay (big impacts only, fades quickly - excludes black flash)
-        if (screenFlash.alpha > 0 && !(screenFlash.r === 0 && screenFlash.g === 0 && screenFlash.b === 0)) {
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.fillStyle = `rgba(${screenFlash.r}, ${screenFlash.g}, ${screenFlash.b}, ${screenFlash.alpha})`;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.restore();
+        // Screen flash overlay (covers full screen including UI / letterboxing)
+        const flashOverlay = _dom.flashOverlay;
+        if (flashOverlay) {
+            if (screenFlash.alpha > 0) {
+                flashOverlay.style.backgroundColor = `rgb(${screenFlash.r}, ${screenFlash.g}, ${screenFlash.b})`;
+                flashOverlay.style.opacity = screenFlash.alpha;
+            } else {
+                flashOverlay.style.opacity = 0;
+            }
         }
 
         ctx.restore(); // Revert screen shake translation
@@ -5124,6 +5145,16 @@ async function run(mode) {
         if (optSound) optSound.textContent = t.soundEffects;
         if (optMusic) optMusic.textContent = t.music;
         if (optLang) optLang.textContent = t.language;
+
+        const optShake = document.getElementById('options-shake-label');
+        const btnNone = document.getElementById('shake-btn-none');
+        const btnHalf = document.getElementById('shake-btn-half');
+        const btnFull = document.getElementById('shake-btn-full');
+        if (optShake) optShake.textContent = t.screenShake || 'SCREEN SHAKE';
+        if (btnNone) btnNone.textContent = t.none || 'NONE';
+        if (btnHalf) btnHalf.textContent = t.half || 'HALF';
+        if (btnFull) btnFull.textContent = t.full || 'FULL';
+
         if (optReset) optReset.textContent = t.resetProgress || 'RESET PROGRESS';
 
         // Reset Confirmation Popup translations
@@ -5440,6 +5471,27 @@ async function run(mode) {
         customLangBtn.classList.remove('open');
     });
 
+    function updateScreenShakeUI() {
+        const buttons = document.querySelectorAll('.shake-option-btn');
+        buttons.forEach(btn => {
+            if (btn.dataset.value === currentScreenShakeSetting) {
+                btn.classList.add('selected');
+            } else {
+                btn.classList.remove('selected');
+            }
+        });
+    }
+
+    document.querySelectorAll('.shake-option-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const val = btn.dataset.value;
+            currentScreenShakeSetting = val;
+            updateScreenShakeUI();
+            saveOptions({ screenShake: val });
+            soundManager.play('sfx_ui_switch');
+        });
+    });
+
     // Setup scene
     updatePlanetButtons();
 
@@ -5468,6 +5520,10 @@ async function run(mode) {
                 musicSlider.value = state.musicVolume;
                 musicValue.textContent = state.musicVolume + '%';
                 soundManager.setBgmVolume(state.musicVolume / 100);
+            }
+            if (state.screenShake !== undefined) {
+                currentScreenShakeSetting = state.screenShake;
+                updateScreenShakeUI();
             }
         }
 

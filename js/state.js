@@ -150,40 +150,49 @@ function showUnlockNotification(text) {
     }, 2000);
 }
 
+// Serialization queue to prevent race conditions during async state saves
+let isSavingState = false;
+const stateSaveQueue = [];
+
+async function queueSaveState(updater) {
+    stateSaveQueue.push(updater);
+    if (isSavingState) return;
+
+    isSavingState = true;
+    while (stateSaveQueue.length > 0) {
+        const currentUpdater = stateSaveQueue.shift();
+        try {
+            const current = await getGameState();
+            const state = (current && current.state) ? current.state : {};
+            currentUpdater(state);
+            await saveGameState(state);
+        } catch (error) {
+            console.warn('Failed to save state:', error.message);
+        }
+    }
+    isSavingState = false;
+}
+
 // Persistence functions for saving/loading unlocked planets
-async function saveUnlockedPlanets() {
-    try {
-        const current = await getGameState();
-        const state = (current && current.state) ? current.state : {};
+function saveUnlockedPlanets() {
+    queueSaveState(state => {
         state.unlockedPlanets = unlockedPlanets;
-        await saveGameState(state);
-    } catch (error) {
-        console.warn('Failed to save unlocked planets:', error.message);
-    }
+    });
 }
 
-async function saveBestTimes() {
-    try {
-        const current = await getGameState();
-        const state = (current && current.state) ? current.state : {};
+function saveBestTimes() {
+    queueSaveState(state => {
         state.bestTimes = bestTimes;
-        await saveGameState(state);
-    } catch (error) {
-        console.warn('Failed to save best times:', error.message);
-    }
+    });
 }
 
-async function saveOptions(options) {
-    try {
-        const current = await getGameState();
-        const state = (current && current.state) ? current.state : {};
+function saveOptions(options) {
+    queueSaveState(state => {
         if (options.sfxVolume !== undefined) state.sfxVolume = options.sfxVolume;
         if (options.musicVolume !== undefined) state.musicVolume = options.musicVolume;
         if (options.language !== undefined) state.language = options.language;
-        await saveGameState(state);
-    } catch (error) {
-        console.warn('Failed to save options:', error.message);
-    }
+        if (options.screenShake !== undefined) state.screenShake = options.screenShake;
+    });
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
@@ -192,30 +201,20 @@ let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword',
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 let claimedPlanetSpinners = [];
 
-async function saveClaimedPlanetSpinners() {
-    try {
-        const current = await getGameState();
-        const state = (current && current.state) ? current.state : {};
+function saveClaimedPlanetSpinners() {
+    queueSaveState(state => {
         state.claimedPlanetSpinners = claimedPlanetSpinners;
-        await saveGameState(state);
-    } catch (error) {
-        console.warn('Failed to save claimed planet spinners:', error.message);
-    }
+    });
 }
 
 function isWeaponUnlocked(wid) {
     return unlockedWeapons.includes(wid);
 }
 
-async function saveUnlockedWeapons() {
-    try {
-        const current = await getGameState();
-        const state = (current && current.state) ? current.state : {};
+function saveUnlockedWeapons() {
+    queueSaveState(state => {
         state.unlockedWeapons = unlockedWeapons;
-        await saveGameState(state);
-    } catch (error) {
-        console.warn('Failed to save unlocked weapons:', error.message);
-    }
+    });
 }
 
 function unlockRandomWeapon() {
@@ -249,15 +248,10 @@ function unlockSpecificWeapon(wid) {
     return false;
 }
 
-async function saveWeaponOrder() {
-    try {
-        const current = await getGameState();
-        const state = (current && current.state) ? current.state : {};
+function saveWeaponOrder() {
+    queueSaveState(state => {
         state.weaponOrder = weaponOrder;
-        await saveGameState(state);
-    } catch (error) {
-        console.warn('Failed to save weapon order:', error.message);
-    }
+    });
 }
 
 function applyWeaponOrderToDOM() {
@@ -424,12 +418,12 @@ let pointerX = CENTER_X;
 let pointerY = 340;
 let showPointer = false;
 // Weapon states
-let asteroidCooldown = 4.0;
+let asteroidCooldown = 11.0;
 let moonCooldown = 160.0;
 let nukeCooldown = 0;
 let missileCooldown = 0;
 let gammaBurstCooldown = 40.0;
-let laserCooldown = 11.0;
+let laserCooldown = 4.0;
 let swordCooldown = 80.0;
 let bowlingCooldown = 0;
 let krakenCooldown = 0;
@@ -530,3 +524,4 @@ function fbm(x, y, octaves = 5) {
 // Translations system (loaded from js/translations.js)
 
 let currentLanguage = 'en';
+let currentScreenShakeSetting = 'full';

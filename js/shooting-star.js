@@ -5,6 +5,8 @@
     let spawned = false;
     let clickStars = [];
     let lastSpawnTimestamp = 0;
+    let lastUnlockedCount = -1;
+    let hasLockedWeapons = true;
 
     window.ShootingStarManager = {
         init: function () {
@@ -17,6 +19,7 @@
             spawned = false;
             star = null;
             clickStars = [];
+            lastUnlockedCount = -1;
             console.log("[ShootingStar] Initialized. Spawn scheduled at " + spawnTime.toFixed(2) + "s");
         },
 
@@ -26,11 +29,14 @@
                 return;
             }
 
-            // If all weapons are unlocked, don't make shooting stars appear
-            const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+            // If all weapons are unlocked, don't make shooting stars appear (optimized with caching)
             const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
-            const hasLocked = allLockedWeapons.some(wid => !currentUnlocked.includes(wid));
-            if (!hasLocked) {
+            if (currentUnlocked.length !== lastUnlockedCount) {
+                lastUnlockedCount = currentUnlocked.length;
+                const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+                hasLockedWeapons = allLockedWeapons.some(wid => !currentUnlocked.includes(wid));
+            }
+            if (!hasLockedWeapons) {
                 if (star) star = null;
                 return;
             }
@@ -46,6 +52,7 @@
                 star.x += star.vx * deltaTime;
                 star.y += star.vy * deltaTime;
                 star.angle += star.spinSpeed * deltaTime;
+                star.age += deltaTime;
 
                 // Check distance from planet center (CENTER_X, CENTER_Y)
                 const dist = Math.sqrt((star.x - CENTER_X) ** 2 + (star.y - CENTER_Y) ** 2);
@@ -86,8 +93,10 @@
                 cs.angle += cs.spinSpeed * deltaTime;
                 cs.life -= deltaTime / cs.maxLife;
                 cs.opacity = Math.max(0, cs.life);
+                if (cs.life <= 0) {
+                    clickStars.splice(i, 1);
+                }
             }
-            clickStars = clickStars.filter(cs => cs.life > 0);
         },
 
         spawn: function () {
@@ -106,9 +115,9 @@
             const dy = targetY - spawnY;
             const len = Math.sqrt(dx * dx + dy * dy);
 
-            // Speed: 100px/s
-            const vx = (dx / len) * 80;
-            const vy = (dy / len) * 80;
+            // Speed: 72px/s (10% slower than 80px/s)
+            const vx = (dx / len) * 72;
+            const vy = (dy / len) * 72;
 
             star = {
                 x: spawnX,
@@ -117,7 +126,8 @@
                 vy: vy,
                 angle: Math.random() * Math.PI * 2,
                 spinSpeed: (0.8 + Math.random() * 1.2) * 1.25,
-                size: 28
+                size: 28,
+                age: 0
             };
             spawned = true;
             lastSpawnTimestamp = Date.now();
@@ -156,6 +166,39 @@
                 this.drawStarShape(ctx, 5, star.size, star.size * 0.4, '#ffe600', '#ffa500');
 
                 ctx.restore();
+
+                // Draw indicator if age is between 12 and 16 seconds
+                if (star.age >= 12 && star.age < 16) {
+                    ctx.save();
+                    ctx.translate(star.x, star.y);
+
+                    // Setup yellow text saying "NEW WEAPON"
+                    ctx.font = "bold 12px 'Orbitron', sans-serif";
+                    ctx.fillStyle = "#ffe600";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    
+                    // Shadow glow
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = "rgba(255, 230, 0, 0.7)";
+
+                    // Bobbing/floating animation
+                    const bobY = Math.sin(star.age * 8) * 4;
+                    const indicatorY = -star.size - 18 + bobY;
+
+                    ctx.fillText("NEW WEAPON", 0, indicatorY - 14);
+
+                    // Draw downward pointer indicator (triangle)
+                    ctx.beginPath();
+                    ctx.moveTo(-6, indicatorY - 4);
+                    ctx.lineTo(6, indicatorY - 4);
+                    ctx.lineTo(0, indicatorY + 4);
+                    ctx.closePath();
+                    ctx.fillStyle = "#ffe600";
+                    ctx.fill();
+
+                    ctx.restore();
+                }
             }
 
             // Draw click explosion stars

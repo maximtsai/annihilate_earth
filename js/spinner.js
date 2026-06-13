@@ -268,13 +268,16 @@ class WeaponSpinner {
 
         // Update mechanical brake sparks
         if (this.stopSparks) {
-            this.stopSparks.forEach(s => {
+            for (let i = this.stopSparks.length - 1; i >= 0; i--) {
+                const s = this.stopSparks[i];
                 s.x += s.vx * dt;
                 s.y += s.vy * dt;
                 s.rotation += s.rotSpeed * dt;
                 s.life -= dt;
-            });
-            this.stopSparks = this.stopSparks.filter(s => s.life > 0);
+                if (s.life <= 0) {
+                    this.stopSparks.splice(i, 1);
+                }
+            }
         }
 
         if (!this.isSpinning) {

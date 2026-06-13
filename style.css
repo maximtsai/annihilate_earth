@@ -214,9 +214,9 @@ html {
     font-family: 'Orbitron', sans-serif;
     font-size: calc(14px * var(--ui-scale));
     font-weight: 700;
-    padding: calc(8px * var(--ui-scale));
-    width: calc(96px * var(--ui-scale));
-    height: calc(76px * var(--ui-scale));
+    padding: calc(11px * var(--ui-scale)) calc(9px * var(--ui-scale)) calc(8px * var(--ui-scale)) calc(9px * var(--ui-scale));
+    width: calc(98px * var(--ui-scale));
+    height: calc(79px * var(--ui-scale));
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -464,25 +464,28 @@ html {
     animation: fadeIn 200ms ease-out;
 }
 
-.options-popup {
-    width: 85%;
+.options-popup, .ad-spin-popup {
     max-width: 420px;
     background: rgba(12, 12, 32, 0.97);
     border: 1.5px solid rgba(0, 217, 255, 0.6);
     border-radius: 8px;
-    padding: 28px 24px;
+    padding: 20px 24px;
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 15px;
     box-shadow: 0 0 40px rgba(0, 217, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5);
     position: relative;
     transform: scale(var(--ui-scale));
     transform-origin: center center;
 }
 
+.options-popup {
+    width: 85%;
+}
+
 .options-popup-title {
     font-family: 'Orbitron', sans-serif;
-    font-size: 30px;
+    font-size: 28px;
     font-weight: 700;
     color: #ffffff;
     text-align: center;
@@ -492,14 +495,14 @@ html {
 
 .options-popup-close {
     position: absolute;
-    top: 12px;
-    right: 14px;
+    top: 10px;
+    right: 12px;
     background: none;
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: #ffffff;
-    font-size: 26px;
-    width: 44px;
-    height: 44px;
+    font-size: 24px;
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -517,12 +520,12 @@ html {
 .options-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
 .options-label {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 24px;
+    font-size: 20px;
     color: rgba(0, 217, 255, 0.85);
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -538,7 +541,7 @@ html {
     flex: 1;
     -webkit-appearance: none;
     appearance: none;
-    height: 10px;
+    height: 8px;
     background: rgba(0, 217, 255, 0.2);
     border-radius: 3px;
     outline: none;
@@ -548,8 +551,8 @@ html {
 .options-slider-row input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     background: #00d9ff;
     border-radius: 50%;
     cursor: pointer;
@@ -557,8 +560,8 @@ html {
 }
 
 .options-slider-row input[type="range"]::-moz-range-thumb {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     background: #00d9ff;
     border-radius: 50%;
     cursor: pointer;
@@ -568,7 +571,7 @@ html {
 
 .options-slider-value {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 24px;
+    font-size: 20px;
     color: #ffffff;
     min-width: 50px;
     text-align: right;
@@ -649,6 +652,42 @@ html {
 .custom-select-option.selected {
     background: rgba(0, 217, 255, 0.22);
     color: #00d9ff;
+}
+
+/* Screen Shake Options Row */
+.shake-options-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.shake-option-btn {
+    flex: 1;
+    padding: 8px 0;
+    background: rgba(0, 217, 255, 0.08);
+    border: 1px solid rgba(0, 217, 255, 0.4);
+    border-radius: 4px;
+    color: #ffffff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 200ms ease;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.shake-option-btn:hover {
+    border-color: #00d9ff;
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+    background: rgba(0, 217, 255, 0.15);
+}
+
+.shake-option-btn.selected {
+    background: rgba(0, 217, 255, 0.22);
+    border: 1.5px solid #00d9ff;
+    color: #00d9ff;
+    box-shadow: 0 0 12px rgba(0, 217, 255, 0.4);
+    font-weight: bold;
 }
 
 .mass-display {
@@ -867,21 +906,57 @@ html {
 }
 
 @keyframes buttonShake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-4px); }
-    40%, 80% { transform: translateX(4px); }
+
+    0%,
+    100% {
+        transform: translateX(0) rotate(0deg);
+    }
+
+    15%,
+    55%,
+    85% {
+        transform: translateX(-7px) rotate(-0.5deg);
+    }
+
+    35%,
+    75% {
+        transform: translateX(7px) rotate(0.5deg);
+    }
+}
+
+@keyframes buttonShakeVertical {
+
+    0%,
+    100% {
+        transform: translateX(0) rotate(0deg);
+    }
+
+    15%,
+    55%,
+    85% {
+        transform: translateX(-4px) rotate(-0.5deg);
+    }
+
+    35%,
+    75% {
+        transform: translateX(4px) rotate(0.5deg);
+    }
 }
 
 @keyframes buttonFlashRed {
-    0%, 100% {
+
+    0%,
+    100% {
         background: rgba(0, 217, 255, 0.05);
         border-color: rgba(0, 217, 255, 0.25);
         box-shadow: none;
     }
-    50% {
-        background: rgba(255, 30, 80, 0.3) !important;
-        border-color: rgba(255, 30, 80, 0.95) !important;
-        box-shadow: 0 0 15px rgba(255, 30, 80, 0.6) !important;
+
+    15%,
+    85% {
+        background: rgba(255, 0, 60, 0.55) !important;
+        border-color: #ff003c !important;
+        box-shadow: 0 0 25px rgba(255, 0, 60, 0.95), inset 0 0 10px rgba(255, 0, 60, 0.5) !important;
     }
 }
 
@@ -912,7 +987,7 @@ html {
 
 .weapon-button.selected {
     background: rgba(0, 217, 255, 0.2);
-    border-color: #00d9ff;
+    border: 2px solid #00d9ff;
     color: #ffffff;
     transform: translateY(-2px);
     box-shadow: 0 0 20px rgba(0, 217, 255, 0.45);
@@ -1008,9 +1083,27 @@ html {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 30px;
     z-index: 100;
-    padding: 40px;
+    padding: 20px;
+}
+
+.victory-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 600px;
+    height: 720px;
+    transform: scale(var(--victory-scale, 1));
+    transform-origin: center center;
+    flex-shrink: 0;
+}
+
+@media (orientation: landscape) {
+    .victory-content {
+        width: 160%;
+    }
 }
 
 @keyframes victoryEntrance {
@@ -1018,6 +1111,7 @@ html {
         opacity: 0;
         transform: scale(0.92) translateY(20px);
     }
+
     100% {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -1089,6 +1183,7 @@ html {
     box-shadow: 0 0 20px rgba(0, 217, 255, 0.25);
     letter-spacing: 3px;
     outline: none;
+    padding: 18px;
 }
 
 .restart-button:hover {
@@ -1409,37 +1504,16 @@ html {
         max-width: calc(101px * var(--ui-scale));
     }
 
-    /* Scaling overlay elements */
-    .victory-title {
-        font-size: 36px;
-    }
 
-    .victory-subtitle {
-        font-size: 14px;
-        max-width: 95%;
-    }
-
-    .victory-stats {
-        width: 280px;
-        padding: 15px;
-        gap: 10px;
-    }
-
-    .stat-row {
-        font-size: 16px;
-    }
-
-    .restart-button {
-        width: 280px;
-        height: 60px;
-        font-size: 18px;
-    }
 
     /* Scaling Options popup */
-    .options-popup {
-        width: 95%;
+    .options-popup, .ad-spin-popup {
         padding: 18px 16px;
         gap: 14px;
+        transform: scale(calc(0.5 + 0.5 * var(--ui-scale)));
+    }
+    .options-popup {
+        width: 95%;
     }
 
     .options-popup-title {
@@ -1462,6 +1536,14 @@ html {
     .custom-select-option {
         font-size: 16px;
         padding: 6px 14px;
+    }
+
+    .weapon-button.cooldown-alert {
+        animation: buttonShakeVertical 0.4s ease-in-out, buttonFlashRed 0.4s ease-in-out;
+    }
+
+    .weapon-spinner-row {
+        gap: 0;
     }
 }
 
@@ -1550,6 +1632,7 @@ html {
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
     display: block;
     cursor: default;
+    transform: scale(calc(0.5 + 0.5 * var(--ui-scale)));
 }
 
 .weapon-spinner-canvas.clickable {
@@ -1584,12 +1667,10 @@ html {
     left: -200%;
     width: 120%;
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.35) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.35) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: skewX(-25deg);
     animation: stopBtnShimmer 3.5s infinite ease-in-out;
 }
@@ -1599,7 +1680,8 @@ html {
     border-color: rgba(255, 230, 0, 0.9);
     box-shadow: 0 0 25px rgba(255, 230, 0, 0.55), inset 0 0 5px rgba(255, 230, 0, 0.2);
     transform: scale(1.08);
-    animation: none; /* stop pulse during direct hover to allow clean hover scale */
+    animation: none;
+    /* stop pulse during direct hover to allow clean hover scale */
 }
 
 .weapon-spinner-stop-btn:active:not(:disabled) {
@@ -1615,10 +1697,13 @@ html {
 }
 
 @keyframes stopBtnPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
         box-shadow: 0 0 10px rgba(255, 230, 0, 0.15);
     }
+
     50% {
         transform: scale(1.05);
         box-shadow: 0 0 20px rgba(255, 230, 0, 0.45), inset 0 0 6px rgba(255, 230, 0, 0.15);
@@ -1630,23 +1715,36 @@ html {
     0% {
         left: -200%;
     }
-    30%, 100% {
+
+    30%,
+    100% {
         left: 200%;
     }
 }
 
 /* Close Button Styling */
 .close-x {
-    transition: color 0.2s, transform 0.2s;
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    font-size: 26px;
+    padding: 12px 18px;
+    color: #ffe600;
+    font-family: 'Orbitron', sans-serif;
+    cursor: pointer;
+    text-shadow: 0 0 5px rgba(255, 230, 0, 0.4);
+    transition: color 0.2s, transform 0.2s, text-shadow 0.2s;
+    user-select: none;
 }
 
 .close-x:hover {
     color: #ff3e6c !important;
+    text-shadow: 0 0 8px rgba(255, 62, 108, 0.6);
     transform: scale(1.15);
 }
 
 /* Ad Spin Popup Width Override for Large Spinner */
-#ad-spin-popup-overlay .options-popup {
+#ad-spin-popup-overlay .ad-spin-popup {
     max-width: 630px;
 }
 
@@ -1661,7 +1759,7 @@ html {
 
 .weapon-spinner-announcement {
     font-family: 'Orbitron', sans-serif;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 900;
     letter-spacing: 2px;
     text-align: center;
@@ -1670,9 +1768,12 @@ html {
 }
 
 @keyframes announcementBounce {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-8px);
     }
@@ -1686,9 +1787,11 @@ html {
     0% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.4);
     }
+
     100% {
         transform: scale(1.25);
     }
@@ -1742,11 +1845,27 @@ html {
 }
 
 @keyframes stopImpactShake {
-    0%, 100% { transform: translate(0, 0); }
-    20% { transform: translate(-4px, 2px); }
-    40% { transform: translate(4px, -2px); }
-    60% { transform: translate(-3px, -1px); }
-    80% { transform: translate(2px, 1px); }
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    20% {
+        transform: translate(-4px, 2px);
+    }
+
+    40% {
+        transform: translate(4px, -2px);
+    }
+
+    60% {
+        transform: translate(-3px, -1px);
+    }
+
+    80% {
+        transform: translate(2px, 1px);
+    }
 }
 
 /* Spinner Claimed Overlay */
@@ -1779,11 +1898,14 @@ html {
 
 /* Primed pulse animation for claimed spinner wrapper */
 @keyframes claimedPrimedPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1) rotate(0deg);
         box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
         border-color: rgba(255, 230, 0, 0.15);
     }
+
     50% {
         transform: scale(1.02) rotate(0.1deg);
         box-shadow: 0 0 25px rgba(255, 230, 0, 0.35), inset 0 0 25px rgba(255, 230, 0, 0.15);
@@ -1812,10 +1934,13 @@ html {
 }
 
 @keyframes goldPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 0.85;
         box-shadow: 0 0 8px rgba(255, 215, 0, 0.1);
     }
+
     50% {
         opacity: 1;
         box-shadow: 0 0 16px rgba(255, 215, 0, 0.35);
@@ -1836,22 +1961,23 @@ html {
     left: -200%;
     width: 120%;
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.4) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: skewX(-25deg);
     animation: stopBtnShimmer 3.0s infinite ease-in-out;
 }
 
 @keyframes watchBtnGlow {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 0 10px rgba(255, 230, 0, 0.25);
         border-color: rgba(255, 230, 0, 0.4);
         background: rgba(255, 230, 0, 0.08);
     }
+
     50% {
         box-shadow: 0 0 22px rgba(255, 230, 0, 0.65), inset 0 0 8px rgba(255, 230, 0, 0.25);
         border-color: rgba(255, 230, 0, 0.85);
