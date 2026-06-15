@@ -1098,10 +1098,8 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
 
     // Blast glowing particles radiating from hit zone in screen space
     let particleCount = getConfigValue(`weapons.${weaponType}.particleCount`, 20 + Math.floor(radius / 2.5));
-    if (weaponType === 'star_nuke') {
-        particleCount = Math.floor(particleCount * 0.6);
-    }
-    if (weaponType === 'lightning') {
+
+    if (weaponType === 'lightning' || weaponType === 'star_nuke') {
         particleCount = Math.floor(particleCount * 0.4);
     }
     const speedScale = getConfigValue(`weapons.${weaponType}.particleSpeedScale`, 1.0);

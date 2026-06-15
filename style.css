@@ -897,7 +897,7 @@ html {
     align-items: center;
     justify-content: center;
     font-family: 'Share Tech Mono', monospace;
-    font-size: calc(26px * var(--ui-scale));
+    font-size: calc(28px * var(--ui-scale));
     color: #ffd200;
     font-weight: 700;
     opacity: 0;
@@ -928,7 +928,7 @@ html {
 }
 
 .weapon-button.cooldown-alert {
-    animation: buttonShake 0.4s ease-in-out, buttonFlashRed 0.4s ease-in-out;
+    animation: buttonShake 0.65s ease-in-out, buttonFlashRed 0.65s ease-in-out;
 }
 
 @keyframes buttonShake {
@@ -1097,7 +1097,7 @@ html {
     background: rgba(12, 12, 28, 0.8);
     color: #ff0055;
     font-family: 'Orbitron', sans-serif;
-    font-size: calc(18px * var(--ui-scale));
+    font-size: calc(20px * var(--ui-scale));
     font-weight: 900;
     display: none;
     align-items: center;
@@ -2109,5 +2109,4 @@ html.no-glows *::after {
     box-shadow: none !important;
     text-shadow: none !important;
     filter: none !important;
-    animation-name: none !important; /* Disable animations relying on heavy glowing shadow keyframes */
 }

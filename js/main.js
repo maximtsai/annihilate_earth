@@ -195,42 +195,93 @@ const soundIds = [
 ];
 soundIds.forEach(id => soundManager.load(id));
 
-setLoadingProgress(40, (translations[currentLanguage] || translations['en']).loadingWeaponAssets || 'Loading weapon assets...');
+// Spritesheet Atlas Loading & Extraction Logic
+const atlasImage = new Image();
+let atlasData = null;
 
-fistImage = new Image();
-const fistAsset = getAsset('fist_punch_up');
-if (fistAsset) {
-    fistImage.src = fistAsset.url;
+function extractSprite(frameName) {
+    if (!atlasData || !atlasImage.complete) {
+        return document.createElement('canvas');
+    }
+    const spriteInfo = atlasData.frames[frameName];
+    if (!spriteInfo) return document.createElement('canvas');
+
+    const f = spriteInfo.frame;
+    const canvas = document.createElement('canvas');
+    canvas.width = spriteInfo.sourceSize.w;
+    canvas.height = spriteInfo.sourceSize.h;
+    const ctx = canvas.getContext('2d');
+
+    const sx = f.x;
+    const sy = f.y;
+    const sw = f.w;
+    const sh = f.h;
+
+    const dx = spriteInfo.spriteSourceSize ? spriteInfo.spriteSourceSize.x : 0;
+    const dy = spriteInfo.spriteSourceSize ? spriteInfo.spriteSourceSize.y : 0;
+    const dw = sw;
+    const dh = sh;
+
+    ctx.drawImage(atlasImage, sx, sy, sw, sh, dx, dy, dw, dh);
+    return canvas;
 }
 
-spriteOrange = new Image();
-const orangeAsset = getAsset('sprite_orange');
-if (orangeAsset) spriteOrange.src = orangeAsset.url;
+function loadSpritesAtlas() {
+    return new Promise((resolve) => {
+        let jsonLoaded = false;
+        let imgLoaded = false;
 
-spriteVermillionRed = new Image();
-const redAsset = getAsset('sprite_vermillion_red');
-if (redAsset) spriteVermillionRed.src = redAsset.url;
+        const checkResolve = () => {
+            if (jsonLoaded && imgLoaded) {
+                fistImage = extractSprite('fist_punch_up.webp');
+                spriteOrange = extractSprite('orange.webp');
+                spriteVermillionRed = extractSprite('vermillion_red.webp');
+                spriteLightOrange = extractSprite('light_orange.webp');
+                spriteWhiteGold = extractSprite('white_gold.webp');
+                spriteBrightYellow = extractSprite('bright_yellow.webp');
+                spriteSmokeStandard = extractSprite('smoke_standard.webp');
+                spriteSmokeMissile = extractSprite('smoke_missile.webp');
 
-spriteLightOrange = new Image();
-const lightOrangeAsset = getAsset('sprite_light_orange');
-if (lightOrangeAsset) spriteLightOrange.src = lightOrangeAsset.url;
+                // Planet and core glows
+                earthGlow = extractSprite('earth-glow.png');
+                marsGlow = extractSprite('mars-glow.png');
+                neptuneGlow = extractSprite('neptune-glow.png');
+                jupiterGlow = extractSprite('jupiter-glow.png');
+                neutronStarGlow = extractSprite('neutron-star-glow.png');
+                sunCorona = extractSprite('sun-corona.png');
+                sunCoreGlow = extractSprite('sun-core-glow.png');
+                magmaCoreGlow = extractSprite('magma-core-glow.png');
 
-spriteWhiteGold = new Image();
-const whiteGoldAsset = getAsset('sprite_white_gold');
-if (whiteGoldAsset) spriteWhiteGold.src = whiteGoldAsset.url;
+                resolve();
+            }
+        };
 
-spriteBrightYellow = new Image();
-const yellowAsset = getAsset('sprite_bright_yellow');
-if (yellowAsset) spriteBrightYellow.src = yellowAsset.url;
+        atlasImage.onload = () => {
+            imgLoaded = true;
+            checkResolve();
+        };
+        atlasImage.onerror = () => {
+            console.error("Failed to load sprites.png");
+            resolve();
+        };
 
-spriteSmokeStandard = new Image();
-const smokeStdAsset = getAsset('sprite_smoke_standard');
-if (smokeStdAsset) spriteSmokeStandard.src = smokeStdAsset.url;
+        atlasImage.src = './assets/sprites.png';
 
-spriteSmokeMissile = new Image();
-const smokeMslAsset = getAsset('sprite_smoke_missile');
-if (smokeMslAsset) spriteSmokeMissile.src = smokeMslAsset.url;
+        fetch('./assets/sprites.json')
+            .then(res => res.json())
+            .then(data => {
+                atlasData = data;
+                jsonLoaded = true;
+                checkResolve();
+            })
+            .catch(err => {
+                console.error("Failed to load sprites.json:", err);
+                resolve();
+            });
+    });
+}
 
+setLoadingProgress(40, (translations[currentLanguage] || translations['en']).loadingWeaponAssets || 'Loading weapon assets...');
 setLoadingProgress(60, (translations[currentLanguage] || translations['en']).loadingPlanet || 'Generating planet terrain...');
 
 // Cache for radial gradient canvases (pre-rendered for circular_flash performance)
@@ -287,6 +338,9 @@ function getGradientCanvas(color) {
 let gamePausedForAd = false;
 
 async function run(mode) {
+    // Load spritesheet atlas assets first
+    await loadSpritesAtlas();
+
     // Initialize the platform bridge interface
     if (window.PlatformBridge) {
         await window.PlatformBridge.init();
@@ -2847,9 +2901,9 @@ async function run(mode) {
                     w.opacity = 1.0;
                     w.projectileTimer += deltaTime;
 
-                    // Spew a projectile every 0.1154s (+30% frequency)
-                    while (w.projectileTimer >= 0.1154) {
-                        w.projectileTimer -= 0.1154;
+                    // Spew a projectile every 0.105s
+                    while (w.projectileTimer >= 0.105) {
+                        w.projectileTimer -= 0.105;
 
                         // Angle facing towards planet with spread reduced by 60% (0.95 * 0.40 = 0.38)
                         const projAngle = w.angle + (Math.random() - 0.5) * 0.38;
@@ -3625,7 +3679,7 @@ async function run(mode) {
 
     // Draws the giant human fist sprite
     function drawFist(w) {
-        if (!fistImage.complete || !fistImage.src) return;
+        if (!fistImage) return;
 
         ctx.save();
         ctx.translate(w.x, w.y);
@@ -3754,34 +3808,22 @@ async function run(mode) {
             const dyLocal = (PLANET_CANVAS_SIZE / 2) - planetCenterY;
             const coreRatio = initialCorePixelCount > 0 ? (currentCorePixelCount / initialCorePixelCount) : 1.0;
 
-            // Neon pulsing outer glow and inner hot-white core, scaled by coreRatio
-            ctx.shadowBlur = (30 + Math.sin(performance.now() * 0.007) * 10) * coreRatio;
+            let coreImg = null;
             if (currentPlanet === 'sun') {
-                ctx.shadowColor = '#ffd200';
-            } else {
-                ctx.shadowColor = '#ff3300';
+                coreImg = sunCoreGlow;
+            } else if (currentPlanet !== 'neutron_star') {
+                coreImg = magmaCoreGlow;
             }
 
-            // Magma plasma gradient glow
-            const coreRadius = getCoreRadius(planetSize);
-            const pulseRadius = (coreRadius + 8 + Math.sin(performance.now() * 0.007) * 4) * coreRatio;
-            const grad = ctx.createRadialGradient(dxLocal, dyLocal, 2, dxLocal, dyLocal, pulseRadius);
-            if (currentPlanet === 'sun') {
-                grad.addColorStop(0, '#ffffff');      // Blinding white center
-                grad.addColorStop(0.2, '#ffff77');    // Bright pale yellow
-                grad.addColorStop(0.6, '#ffd200');    // Intense golden yellow
-                grad.addColorStop(1, 'rgba(255, 210, 0, 0)'); // Fade to transparent yellow
-            } else {
-                grad.addColorStop(0, '#ffffff');      // Hot white center
-                grad.addColorStop(0.2, '#ffaa00');    // Warm orange-yellow
-                grad.addColorStop(0.6, '#ff2200');    // Hot red-orange
-                grad.addColorStop(1, 'rgba(255, 34, 0, 0)');
+            if (coreImg) {
+                const pulse = 1.0 + Math.sin(performance.now() * 0.007) * 0.04;
+                ctx.save();
+                ctx.translate(dxLocal, dyLocal);
+                const scaleFactor = coreRatio * pulse;
+                ctx.scale(scaleFactor, scaleFactor);
+                ctx.drawImage(coreImg, -coreImg.width / 2, -coreImg.height / 2);
+                ctx.restore();
             }
-
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(dxLocal, dyLocal, pulseRadius, 0, Math.PI * 2);
-            ctx.fill();
 
             ctx.restore();
         }
@@ -3835,30 +3877,23 @@ async function run(mode) {
         });
 
         // Planet atmospheric glow (drawn behind silhouette, fades with mass)
-        if (currentPixelCount > 0 && !victoryTriggered && supportsGlow) {
-            ctx.save();
-            ctx.translate(CENTER_X, CENTER_Y);
-            ctx.scale(planetScale, planetScale);
+        if (currentPixelCount > 0 && !victoryTriggered) {
+            let glowImg = null;
+            if (currentPlanet === 'earth') glowImg = earthGlow;
+            else if (currentPlanet === 'mars') glowImg = marsGlow;
+            else if (currentPlanet === 'neptune') glowImg = neptuneGlow;
+            else if (currentPlanet === 'jupiter') glowImg = jupiterGlow;
+            else if (currentPlanet === 'neutron_star') glowImg = neutronStarGlow;
 
-            const pSize = getPlanetSize();
-            const atmosInner = pSize * 0.44;
-            const atmosOuter = pSize * 0.70;
-            const intRatio = Math.min(1, currentPixelCount / Math.max(1, initialPixelCount));
-            const ac = currentPlanet === 'earth' ? '80,180,255'
-                : currentPlanet === 'mars' ? '255,110,50'
-                    : currentPlanet === 'neptune' ? '50,140,255'
-                        : currentPlanet === 'jupiter' ? '255,165,90'
-                            : currentPlanet === 'neutron_star' ? '0,150,255'
-                                : '255,215,80';
-            const aGrad = ctx.createRadialGradient(0, 0, atmosInner, 0, 0, atmosOuter);
-            aGrad.addColorStop(0, `rgba(${ac}, ${0.20 * intRatio})`);
-            aGrad.addColorStop(1, `rgba(${ac}, 0)`);
-            ctx.fillStyle = aGrad;
-            ctx.beginPath();
-            ctx.arc(0, 0, atmosOuter, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.restore();
+            if (glowImg) {
+                const intRatio = Math.min(1, currentPixelCount / Math.max(1, initialPixelCount));
+                ctx.save();
+                ctx.translate(CENTER_X, CENTER_Y);
+                ctx.scale(planetScale, planetScale);
+                ctx.globalAlpha = intRatio;
+                ctx.drawImage(glowImg, -glowImg.width / 2, -glowImg.height / 2);
+                ctx.restore();
+            }
         }
 
         // Draw Planet Silhouette
@@ -3869,34 +3904,16 @@ async function run(mode) {
             ctx.rotate(planetRotation);
 
             // Draw dynamic pulsing warm solar corona/glow behind the Sun silhouette
-            if (currentPlanet === 'sun' && supportsGlow) {
+            if (currentPlanet === 'sun' && sunCorona) {
                 const integrityRatio = initialPixelCount > 0 ? (currentPixelCount / initialPixelCount) : 1.0;
-                const pulse = 1.0 + Math.sin(performance.now() * 0.0045) * 0.04; // Gentle warm pulsation
-                const baseRadius = planetSize / 2;
-
-                // Glow extends up to 25% larger than nominal size, scaling with integrity and pulse
-                const glowRadius = baseRadius * 1.25 * integrityRatio * pulse;
-                const innerRadius = baseRadius * 0.85 * integrityRatio;
+                const pulse = 1.0 + Math.sin(performance.now() * 0.0045) * 0.04;
 
                 ctx.save();
                 const glowX = (PLANET_CANVAS_SIZE / 2) - planetCenterX;
                 const glowY = (PLANET_CANVAS_SIZE / 2) - planetCenterY;
-
-                const glowGrad = ctx.createRadialGradient(
-                    glowX, glowY, innerRadius,
-                    glowX, glowY, glowRadius
-                );
-
-                // Multi-layered warm solar gradient
-                glowGrad.addColorStop(0, 'rgba(255, 235, 180, 0.95)'); // Bright white-yellow at crust edge
-                glowGrad.addColorStop(0.25, 'rgba(255, 160, 0, 0.7)'); // Hot golden gold
-                glowGrad.addColorStop(0.65, 'rgba(255, 50, 0, 0.35)'); // Fiery orange halo
-                glowGrad.addColorStop(1, 'rgba(100, 0, 0, 0)');        // Fade to translucent deep red
-
-                ctx.fillStyle = glowGrad;
-                ctx.beginPath();
-                ctx.arc(glowX, glowY, glowRadius, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.translate(glowX, glowY);
+                ctx.scale(integrityRatio * pulse, integrityRatio * pulse);
+                ctx.drawImage(sunCorona, -sunCorona.width / 2, -sunCorona.height / 2);
                 ctx.restore();
             }
 
@@ -4688,7 +4705,7 @@ async function run(mode) {
                         }
                     }
 
-                    if (img && img.complete) {
+                    if (img) {
                         ctx.drawImage(img, p.x - p.size, p.y - p.size, drawSize, drawSize);
                     } else {
                         ctx.beginPath();
@@ -4710,7 +4727,7 @@ async function run(mode) {
             } else { // smoke
                 const isMissile = p.color && p.color.includes('180, 190, 200');
                 const img = isMissile ? spriteSmokeMissile : spriteSmokeStandard;
-                if (img && img.complete) {
+                if (img) {
                     const factor = isMissile ? 1.0 : 1.4;
                     const drawSize = p.size * 2 * factor;
                     ctx.globalAlpha = p.life * (isMissile ? 0.58 : 0.42);

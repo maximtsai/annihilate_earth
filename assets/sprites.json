@@ -1,0 +1,140 @@
+{"frames": {
+
+"bright_yellow.webp":
+{
+	"frame": {"x":845,"y":572,"w":300,"h":300},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":300,"h":300},
+	"sourceSize": {"w":300,"h":300}
+},
+"earth-glow.png":
+{
+	"frame": {"x":521,"y":572,"w":322,"h":322},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":322,"h":322},
+	"sourceSize": {"w":322,"h":322}
+},
+"fist_punch_up.webp":
+{
+	"frame": {"x":1,"y":1,"w":518,"h":939},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":34,"y":21,"w":518,"h":939},
+	"sourceSize": {"w":601,"h":994}
+},
+"jupiter-glow.png":
+{
+	"frame": {"x":1092,"y":1,"w":532,"h":532},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":532,"h":532},
+	"sourceSize": {"w":532,"h":532}
+},
+"light_orange.webp":
+{
+	"frame": {"x":1061,"y":874,"w":300,"h":300},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":300,"h":300},
+	"sourceSize": {"w":300,"h":300}
+},
+"magma-core-glow.png":
+{
+	"frame": {"x":248,"y":942,"w":226,"h":226},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":226,"h":226},
+	"sourceSize": {"w":226,"h":226}
+},
+"mars-glow.png":
+{
+	"frame": {"x":528,"y":896,"w":273,"h":273},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":273,"h":273},
+	"sourceSize": {"w":273,"h":273}
+},
+"neptune-glow.png":
+{
+	"frame": {"x":1449,"y":605,"w":476,"h":476},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":476,"h":476},
+	"sourceSize": {"w":476,"h":476}
+},
+"neutron-star-glow.png":
+{
+	"frame": {"x":1,"y":942,"w":245,"h":245},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":245,"h":245},
+	"sourceSize": {"w":245,"h":245}
+},
+"orange.webp":
+{
+	"frame": {"x":1626,"y":1,"w":300,"h":300},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":300,"h":300},
+	"sourceSize": {"w":300,"h":300}
+},
+"smoke_missile.webp":
+{
+	"frame": {"x":476,"y":942,"w":50,"h":50},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
+	"sourceSize": {"w":50,"h":50}
+},
+"smoke_standard.webp":
+{
+	"frame": {"x":476,"y":994,"w":50,"h":50},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
+	"sourceSize": {"w":50,"h":50}
+},
+"sun-core-glow.png":
+{
+	"frame": {"x":803,"y":896,"w":256,"h":256},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":256,"h":256},
+	"sourceSize": {"w":256,"h":256}
+},
+"sun-corona.png":
+{
+	"frame": {"x":521,"y":1,"w":569,"h":569},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":569,"h":569},
+	"sourceSize": {"w":569,"h":569}
+},
+"vermillion_red.webp":
+{
+	"frame": {"x":1626,"y":303,"w":300,"h":300},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":300,"h":300},
+	"sourceSize": {"w":300,"h":300}
+},
+"white_gold.webp":
+{
+	"frame": {"x":1147,"y":535,"w":300,"h":300},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":300,"h":300},
+	"sourceSize": {"w":300,"h":300}
+}},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "sprites.png",
+	"format": "RGBA8888",
+	"size": {"w":1927,"h":1188},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:c554f4f6f1a34d1f30b5a988fdc18274:1ad6d7635aeefa0954cf63989a0fe845:1eabdf11f75e3a4fe3147baf7b5be24b$"
+}
+}

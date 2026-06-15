@@ -6,6 +6,11 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     const type = typeOverride || selectedWeapon;
 
+    if (!isWeaponUnlocked(type)) {
+        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).locked || "LOCKED");
+        return;
+    }
+
     if (typeof weaponAmmo !== 'undefined' && weaponAmmo[type] !== undefined) {
         if (weaponAmmo[type] <= 0) {
             const now = Date.now();
@@ -21,7 +26,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
                 btn.classList.add('cooldown-alert');
                 setTimeout(() => {
                     btn.classList.remove('cooldown-alert');
-                }, 400);
+                }, 650);
             }
             // Clear queue for this weapon
             delete weaponQueues[type];
@@ -65,7 +70,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
                         btn.classList.add('cooldown-alert');
                         setTimeout(() => {
                             btn.classList.remove('cooldown-alert');
-                        }, 400);
+                        }, 650);
                     }
                 }
                 return;
