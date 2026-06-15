@@ -1,5 +1,6 @@
 var canvas, ctx, hiddenCanvas, hiddenCtx, bgCanvas, bgCtx, soundManager, fistImage;
 var spriteOrange, spriteBrightYellow, spriteSmokeStandard, spriteSmokeMissile, spriteVermillionRed, spriteLightOrange, spriteWhiteGold;
+var supportsGlow = true;
 var SCREEN_W = 1600;
 var SCREEN_H = 900;
 const PLANET_OFFSET_Y = 44;

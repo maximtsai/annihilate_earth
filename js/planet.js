@@ -1530,7 +1530,7 @@ function updatePlanetButtons() {
 }
 
 // Reset Game values
-function resetGame(keepCooldowns = false) {
+function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     if (typeof weaponAmmo !== 'undefined') {
         weaponAmmo.missile = 30;
         weaponAmmo.nuke = 18;
@@ -1717,7 +1717,7 @@ function resetGame(keepCooldowns = false) {
     document.getElementById('victory-screen').classList.remove('show');
     initializePlanet();
     generateStars();
-    if (window.PlatformBridge && gameplayStarted) {
+    if (window.PlatformBridge && gameplayStarted && !isPlanetSwitch) {
         window.PlatformBridge.gameplayStart();
     }
     if (window.ShootingStarManager) {

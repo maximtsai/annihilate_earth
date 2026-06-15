@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spinner Wheel Exporter</title>
+    <title>Planet Glow Exporter</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Roboto:wght@400;700&display=swap');
 
@@ -39,28 +39,70 @@
             color: #00d9ff;
             text-shadow: 0 0 10px rgba(0, 217, 255, 0.4);
             letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            margin: 0;
+            color: #ffe600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .canvas-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 600px;
+            height: 600px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            overflow: auto;
         }
 
         canvas {
             background: transparent;
-            border-radius: 50%;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
             display: block;
         }
 
-        .download-btn {
+        .controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
             font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 800;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
+            border-radius: 6px;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .next-btn {
+            color: #00d9ff;
+            background: rgba(0, 217, 255, 0.08);
+            border: 1.5px solid rgba(0, 217, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.15);
+        }
+
+        .next-btn:hover {
+            background: rgba(0, 217, 255, 0.16);
+            border-color: rgba(0, 217, 255, 0.7);
+            box-shadow: 0 0 25px rgba(0, 217, 255, 0.35);
+            transform: scale(1.05);
+        }
+
+        .download-btn {
             color: #ffe600;
             background: rgba(255, 230, 0, 0.08);
             border: 1.5px solid rgba(255, 230, 0, 0.4);
-            border-radius: 6px;
-            padding: 12px 36px;
-            cursor: pointer;
             box-shadow: 0 0 15px rgba(255, 230, 0, 0.15);
-            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .download-btn:hover {
@@ -70,90 +112,220 @@
             transform: scale(1.05);
         }
 
-        .download-btn:active {
+        .btn:active {
             transform: scale(0.95);
+        }
+
+        .dimension-info {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: -15px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>SPINNER WHEEL EXPORTER</h1>
-    <canvas id="wheelCanvas" width="800" height="800"></canvas>
-    <button class="download-btn" id="downloadBtn">DOWNLOAD PNG</button>
+    <h1>PLANET GLOW EXPORTER</h1>
+    <h2 id="glowName">EARTH ATMOSPHERE GLOW</h2>
+    <div class="canvas-container">
+        <canvas id="glowCanvas"></canvas>
+    </div>
+    <div class="dimension-info" id="dimensionInfo">Size: 0 x 0</div>
+    <div class="controls">
+        <button class="btn next-btn" id="nextBtn">NEXT GLOW</button>
+        <button class="btn download-btn" id="downloadBtn">DOWNLOAD PNG</button>
+    </div>
 </div>
 
 <script>
-    const canvas = document.getElementById('wheelCanvas');
+    const canvas = document.getElementById('glowCanvas');
     const ctx = canvas.getContext('2d');
+    const glowNameEl = document.getElementById('glowName');
+    const dimensionInfoEl = document.getElementById('dimensionInfo');
+    const nextBtn = document.getElementById('nextBtn');
     const downloadBtn = document.getElementById('downloadBtn');
 
-    // Colors mapping from Weapons Config cyclic colors
-    const colors = [
-        '#a855f7', // Purple (Kraken)
-        '#10b981', // Green (Worm)
-        '#f59e0b', // Amber (Fist)
-        '#ef4444', // Red (Bowling)
-        '#3b82f6', // Blue (Star)
-        '#06b6d4'  // Cyan (Comet)
+    // Define all glows with exact game colors and sizes
+    const glows = [
+        {
+            name: "Earth Atmosphere Glow",
+            filename: "earth-glow.png",
+            radius: 230 * 0.70, // 161
+            draw: (ctx, cx, cy) => {
+                const pSize = 230;
+                const atmosInner = pSize * 0.44;
+                const atmosOuter = pSize * 0.70;
+                const grad = ctx.createRadialGradient(cx, cy, atmosInner, cx, cy, atmosOuter);
+                grad.addColorStop(0, "rgba(80, 180, 255, 0.20)");
+                grad.addColorStop(1, "rgba(80, 180, 255, 0)");
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, atmosOuter, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        {
+            name: "Mars Atmosphere Glow",
+            filename: "mars-glow.png",
+            radius: 195 * 0.70, // 136.5
+            draw: (ctx, cx, cy) => {
+                const pSize = 195;
+                const atmosInner = pSize * 0.44;
+                const atmosOuter = pSize * 0.70;
+                const grad = ctx.createRadialGradient(cx, cy, atmosInner, cx, cy, atmosOuter);
+                grad.addColorStop(0, "rgba(255, 110, 50, 0.20)");
+                grad.addColorStop(1, "rgba(255, 110, 50, 0)");
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, atmosOuter, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        {
+            name: "Neptune Atmosphere Glow",
+            filename: "neptune-glow.png",
+            radius: 340 * 0.70, // 238
+            draw: (ctx, cx, cy) => {
+                const pSize = 340;
+                const atmosInner = pSize * 0.44;
+                const atmosOuter = pSize * 0.70;
+                const grad = ctx.createRadialGradient(cx, cy, atmosInner, cx, cy, atmosOuter);
+                grad.addColorStop(0, "rgba(50, 140, 255, 0.20)");
+                grad.addColorStop(1, "rgba(50, 140, 255, 0)");
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, atmosOuter, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        {
+            name: "Jupiter Atmosphere Glow",
+            filename: "jupiter-glow.png",
+            radius: 380 * 0.70, // 266
+            draw: (ctx, cx, cy) => {
+                const pSize = 380;
+                const atmosInner = pSize * 0.44;
+                const atmosOuter = pSize * 0.70;
+                const grad = ctx.createRadialGradient(cx, cy, atmosInner, cx, cy, atmosOuter);
+                grad.addColorStop(0, "rgba(255, 165, 90, 0.20)");
+                grad.addColorStop(1, "rgba(255, 165, 90, 0)");
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, atmosOuter, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        {
+            name: "Neutron Star Atmosphere Glow",
+            filename: "neutron-star-glow.png",
+            radius: 175 * 0.70, // 122.5
+            draw: (ctx, cx, cy) => {
+                const pSize = 175;
+                const atmosInner = pSize * 0.44;
+                const atmosOuter = pSize * 0.70;
+                const grad = ctx.createRadialGradient(cx, cy, atmosInner, cx, cy, atmosOuter);
+                grad.addColorStop(0, "rgba(0, 150, 255, 0.20)");
+                grad.addColorStop(1, "rgba(0, 150, 255, 0)");
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, atmosOuter, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        {
+            name: "Sun Corona Glow",
+            filename: "sun-corona.png",
+            radius: (455 / 2) * 1.25, // 284.375
+            draw: (ctx, cx, cy) => {
+                const planetSize = 455;
+                const baseRadius = planetSize / 2;
+                const glowRadius = baseRadius * 1.25;
+                const innerRadius = baseRadius * 0.85;
+                const grad = ctx.createRadialGradient(cx, cy, innerRadius, cx, cy, glowRadius);
+                grad.addColorStop(0, 'rgba(255, 235, 180, 0.95)');
+                grad.addColorStop(0.25, 'rgba(255, 160, 0, 0.7)');
+                grad.addColorStop(0.65, 'rgba(255, 50, 0, 0.35)');
+                grad.addColorStop(1, 'rgba(100, 0, 0, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        {
+            name: "Sun Inner Core Glow",
+            filename: "sun-core-glow.png",
+            radius: (25 + 0.4 * (455 / 2)) + 12, // 128 (Atmos outer / max pulse size)
+            draw: (ctx, cx, cy) => {
+                const r = (25 + 0.4 * (455 / 2)) + 12;
+                const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
+                grad.addColorStop(0, '#ffffff');      // Blinding white center
+                grad.addColorStop(0.2, '#ffff77');    // Bright pale yellow
+                grad.addColorStop(0.6, '#ffd200');    // Intense golden yellow
+                grad.addColorStop(1, 'rgba(255, 210, 0, 0)'); // Fade to transparent yellow
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        },
+        {
+            name: "Magma Inner Core Glow",
+            filename: "magma-core-glow.png",
+            radius: 113, // Max core pulse size (Jupiter) to preserve resolution
+            draw: (ctx, cx, cy) => {
+                const r = 113;
+                const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
+                grad.addColorStop(0, '#ffffff');      // Hot white center
+                grad.addColorStop(0.2, '#ffaa00');    // Warm orange-yellow
+                grad.addColorStop(0.6, '#ff2200');    // Hot red-orange
+                grad.addColorStop(1, 'rgba(255, 34, 0, 0)'); // Fade to transparent red
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
     ];
 
-    const numSectors = 16;
-    const radius = 360;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const anglePerSector = (Math.PI * 2) / numSectors;
+    let currentGlowIndex = 0;
 
-    function drawWheel() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function renderGlow() {
+        const currentGlow = glows[currentGlowIndex];
+        
+        // Exact diameter based on visible limit (rounded up to avoid clipping)
+        const diameter = Math.ceil(currentGlow.radius * 2);
+        
+        canvas.width = diameter;
+        canvas.height = diameter;
 
-        // 1. Draw sectors
-        for (let i = 0; i < numSectors; i++) {
-            const startAng = i * anglePerSector;
-            const endAng = (i + 1) * anglePerSector;
+        const cx = diameter / 2;
+        const cy = diameter / 2;
 
-            // Cyclic fill colors
-            const color = colors[i % colors.length];
-
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius, startAng, endAng);
-            ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.fill();
-
-            // Draw divider lines
-            ctx.strokeStyle = '#111116';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-        }
-
-
-
-        // 3. Draw Divider Pins
-        ctx.fillStyle = '#000000';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < numSectors; i++) {
-            const pinAng = i * anglePerSector;
-            const px = centerX + Math.cos(pinAng) * (radius - 4);
-            const py = centerY + Math.sin(pinAng) * (radius - 4);
-
-            ctx.beginPath();
-            ctx.arc(px, py, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-        }
+        glowNameEl.textContent = currentGlow.name;
+        dimensionInfoEl.textContent = `Dimensions: ${diameter}px x ${diameter}px`;
+        
+        ctx.clearRect(0, 0, diameter, diameter);
+        currentGlow.draw(ctx, cx, cy);
     }
 
     // Initialize draw
-    drawWheel();
+    renderGlow();
+
+    // Setup Next Click Handler
+    nextBtn.addEventListener('click', () => {
+        currentGlowIndex = (currentGlowIndex + 1) % glows.length;
+        renderGlow();
+    });
 
     // Setup Download Click Handler
     downloadBtn.addEventListener('click', () => {
+        const currentGlow = glows[currentGlowIndex];
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = 'weapon-spinner-wheel.png';
+        link.download = currentGlow.filename;
         link.href = dataUrl;
         document.body.appendChild(link);
         link.click();

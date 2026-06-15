@@ -125,7 +125,7 @@ html {
 /* Header HUD */
 .hud-header-wrapper {
     position: relative;
-    width: 90%;
+    width: 88%;
     max-width: 800px;
     margin: 10px auto 0 auto;
     padding: 1.5px;
@@ -246,16 +246,20 @@ html {
 }
 
 @media (orientation: landscape) {
+    .planet-selector {
+        gap: calc(8px * var(--ui-scale));
+    }
+
     .planet-btn {
-        width: calc(83px * var(--ui-scale));
-        height: calc(67px * var(--ui-scale));
-        font-size: calc(11.5px * var(--ui-scale));
+        width: calc(92px * var(--ui-scale));
+        height: calc(74px * var(--ui-scale));
+        font-size: calc(12.5px * var(--ui-scale));
         padding: calc(9px * var(--ui-scale)) calc(7.5px * var(--ui-scale)) calc(6.5px * var(--ui-scale)) calc(7.5px * var(--ui-scale));
         gap: calc(5px * var(--ui-scale));
     }
 
     .planet-btn-icon {
-        font-size: calc(25.5px * var(--ui-scale));
+        font-size: calc(28px * var(--ui-scale));
     }
 }
 
@@ -757,11 +761,11 @@ html {
 .weapon-bar-wrapper {
     position: absolute;
     right: 24px;
-    top: calc(54% + var(--planet-offset-y) * var(--ui-scale));
+    top: calc(54.75% + var(--planet-offset-y) * var(--ui-scale));
     transform: translateY(-50%);
     width: calc(126px * var(--ui-scale));
-    height: 80%;
-    max-height: calc(80% - 50px);
+    height: 83%;
+    max-height: calc(83% - 50px);
     padding: 1.5px;
     background: linear-gradient(90deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
@@ -1497,7 +1501,7 @@ html {
 /* Responsive Adaptive Layouts for Mobile & Portrait Screens */
 @media (max-width: 1024px) or (orientation: portrait) {
     .hud-header-wrapper {
-        max-width: calc(90% - 80px);
+        max-width: calc(88% - 80px);
     }
 }
 
@@ -2094,4 +2098,16 @@ html {
 .scroll-arrow,
 .options-toggle-wrapper {
     touch-action: manipulation;
+}
+
+/* Disabled glows fallback for unsupported devices */
+html.no-glows,
+html.no-glows body,
+html.no-glows *,
+html.no-glows *::before,
+html.no-glows *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    animation-name: none !important; /* Disable animations relying on heavy glowing shadow keyframes */
 }

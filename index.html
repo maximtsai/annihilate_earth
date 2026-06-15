@@ -5,13 +5,13 @@
     <title>Annihilate Earth</title>
     <link rel="stylesheet" href="style.css">
     <script>
-        (function() {
+        (function () {
             function updateScales() {
                 var w = window.innerWidth;
                 var h = window.innerHeight;
-                var uiScale = Math.min(1, w / 1024);
+                var uiScale = Math.min(1, w / 1080);
                 document.documentElement.style.setProperty('--ui-scale', uiScale);
-                
+
                 var scaleHeight = (h * 0.88) / 720;
                 var isLandscape = w >= h;
                 var baseWidth = isLandscape ? w * 1.15 : 600;
@@ -27,7 +27,9 @@
 
 <body>
     <div id="game-world">
-        <div id="screen-flash-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; opacity: 0; background-color: transparent; display: none;"></div>
+        <div id="screen-flash-overlay"
+            style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; opacity: 0; background-color: transparent; display: none;">
+        </div>
         <div class="loading-screen" id="loading-screen">
             <canvas id="loading-stars-canvas"></canvas>
             <div class="loading-content">
@@ -107,17 +109,17 @@
                         <div class="weapon-scroll-wrapper" id="weapon-scroll-wrapper">
                             <div class="weapon-panel-inner" id="weapon-panel-inner">
                                 <button class="weapon-button selected" data-weapon="missile" id="btn-missile">
-                                     <div class="weapon-icon">🚀</div>
-                                     <div class="weapon-name">Missile</div>
-                                     <div class="weapon-ammo" id="ammo-missile">30</div>
-                                     <div class="no-ammo-overlay">NO AMMO</div>
-                                 </button>
-                                 <button class="weapon-button" data-weapon="nuke" id="btn-nuke">
-                                     <div class="weapon-icon">💣</div>
-                                     <div class="weapon-name">Nuke</div>
-                                     <div class="weapon-ammo" id="ammo-nuke">18</div>
-                                     <div class="no-ammo-overlay">NO AMMO</div>
-                                 </button>
+                                    <div class="weapon-icon">🚀</div>
+                                    <div class="weapon-name">Missile</div>
+                                    <div class="weapon-ammo" id="ammo-missile">30</div>
+                                    <div class="no-ammo-overlay">NO AMMO</div>
+                                </button>
+                                <button class="weapon-button" data-weapon="nuke" id="btn-nuke">
+                                    <div class="weapon-icon">💣</div>
+                                    <div class="weapon-name">Nuke</div>
+                                    <div class="weapon-ammo" id="ammo-nuke">18</div>
+                                    <div class="no-ammo-overlay">NO AMMO</div>
+                                </button>
                                 <button class="weapon-button" data-weapon="laser" id="btn-laser">
                                     <div class="weapon-icon">⚡</div>
                                     <div class="weapon-name">Laser</div>
@@ -198,13 +200,13 @@
                                         <span class="cooldown-text"></span>
                                     </div>
                                 </button>
-                                 <button class="weapon-button" data-weapon="bowling" id="btn-bowling">
-                                     <div class="weapon-icon">🎳</div>
-                                     <div class="weapon-name">Bowling</div>
-                                     <div class="weapon-ammo" id="ammo-bowling">15</div>
-                                     <div class="no-ammo-overlay">NO AMMO</div>
-                                     <div class="locked-overlay">LOCKED</div>
-                                 </button>
+                                <button class="weapon-button" data-weapon="bowling" id="btn-bowling">
+                                    <div class="weapon-icon">🎳</div>
+                                    <div class="weapon-name">Bowling</div>
+                                    <div class="weapon-ammo" id="ammo-bowling">15</div>
+                                    <div class="no-ammo-overlay">NO AMMO</div>
+                                    <div class="locked-overlay">LOCKED</div>
+                                </button>
                                 <button class="weapon-button" data-weapon="star" id="btn-star">
                                     <div class="weapon-icon">⭐</div>
                                     <div class="weapon-name">Star</div>
@@ -272,7 +274,8 @@
                             <div class="shake-options-row">
                                 <button class="shake-option-btn" data-value="none" id="shake-btn-none">NONE</button>
                                 <button class="shake-option-btn" data-value="half" id="shake-btn-half">HALF</button>
-                                <button class="shake-option-btn selected" data-value="full" id="shake-btn-full">FULL</button>
+                                <button class="shake-option-btn selected" data-value="full"
+                                    id="shake-btn-full">FULL</button>
                             </div>
                         </div>
                         <div class="options-group" style="margin-top: 10px; display: flex; justify-content: center;">
@@ -307,7 +310,8 @@
                         style="border-color: #ffe600; box-shadow: 0 0 40px rgba(255, 230, 0, 0.25); position: relative;">
                         <div class="close-x" id="ad-spin-close">X</div>
                         <div class="options-popup-title"
-                            style="color: #ffe600; font-size: 22px; text-shadow: 0 0 8px rgba(255, 230, 0, 0.4);">SPECIAL
+                            style="color: #ffe600; font-size: 22px; text-shadow: 0 0 8px rgba(255, 230, 0, 0.4);">
+                            SPECIAL
                             SPIN!</div>
                         <div class="confirm-message" id="ad-spin-message"
                             style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 18px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
@@ -329,7 +333,8 @@
             <div class="victory-screen" id="victory-screen">
                 <div class="victory-content">
                     <div class="victory-title">EARTH ANNIHILATED</div>
-                    <div class="victory-subtitle">Humanity has been completely erased. The cosmos is silent once more.</div>
+                    <div class="victory-subtitle">Humanity has been completely erased. The cosmos is silent once more.
+                    </div>
                     <div class="victory-stats">
                         <div class="stat-row">
                             <span id="stat-shots-label">SHOTS FIRED</span>
@@ -342,7 +347,8 @@
                         <div class="stat-row" id="stat-best-time-row" style="display: none;">
                             <span id="stat-best-time-label">BEST TIME</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <span class="new-best-badge" id="new-best-badge" style="display: none;">🏆 NEW BEST!</span>
+                                <span class="new-best-badge" id="new-best-badge" style="display: none;">🏆 NEW
+                                    BEST!</span>
                                 <span class="stat-value" id="stat-best-time-value">0s</span>
                             </div>
                         </div>

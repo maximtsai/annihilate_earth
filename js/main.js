@@ -1,4 +1,56 @@
 // Core Game Engine & Main Loop
+function detectGlowSupport() {
+    return false;
+    const testCanvas = document.createElement('canvas');
+    testCanvas.width = 10;
+    testCanvas.height = 10;
+    const testCtx = testCanvas.getContext('2d');
+    if (!testCtx) return false;
+
+    // Set up a shadow/glow
+    testCtx.shadowColor = 'rgba(255, 0, 0, 1)';
+    testCtx.shadowBlur = 4;
+    testCtx.shadowOffsetX = 10; // Draw offscreen to isolate the shadow
+    testCtx.shadowOffsetY = 0;
+
+    // Draw a 1x1 solid rectangle that casts the shadow onto the visible canvas area
+    testCtx.fillStyle = 'black';
+    testCtx.fillRect(-10, 4, 1, 1);
+
+    try {
+        // Read pixel data from the shadow area (which should have semi-transparent pixels)
+        const imgData = testCtx.getImageData(2, 4, 1, 1).data;
+        const alpha = imgData[3];
+
+        // If alpha is 255 (fully opaque) or 0 (fully transparent), 
+        // the smooth shadow gradient failed to render.
+        return alpha > 0 && alpha < 255;
+    } catch (e) {
+        return false;
+    }
+}
+supportsGlow = detectGlowSupport();
+console.log("[Glow Detection] Smooth gradient support:", supportsGlow);
+
+if (!supportsGlow) {
+    // Intercept Canvas shadowBlur setter to disable it game-wide
+    const descriptor = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'shadowBlur');
+    if (descriptor) {
+        Object.defineProperty(CanvasRenderingContext2D.prototype, 'shadowBlur', {
+            set: function (val) {
+                descriptor.set.call(this, 0); // Force to 0
+            },
+            get: function () {
+                return 0;
+            },
+            configurable: true,
+            enumerable: true
+        });
+    }
+    // Add class to document to disable CSS/HTML glows
+    document.documentElement.classList.add('no-glows');
+}
+
 // ─── Loading Screen Animation ───
 const loadingScreen = document.getElementById('loading-screen');
 const loadingBar = document.getElementById('loading-bar-fill');
@@ -213,9 +265,15 @@ function getGradientCanvas(color) {
 
     const half = size / 2;
     const grad = offCtx.createRadialGradient(half, half, 0, half, half, half);
-    grad.addColorStop(0, `rgba(${rgbKey}, 0.98)`);
-    grad.addColorStop(0.25, `rgba(${rgbKey}, 0.75)`);
-    grad.addColorStop(1, `rgba(${rgbKey}, 0)`);
+    if (!supportsGlow) {
+        grad.addColorStop(0, `rgba(${rgbKey}, 0.98)`);
+        grad.addColorStop(0.5, `rgba(${rgbKey}, 0.98)`);
+        grad.addColorStop(0.52, `rgba(${rgbKey}, 0)`);
+    } else {
+        grad.addColorStop(0, `rgba(${rgbKey}, 0.98)`);
+        grad.addColorStop(0.25, `rgba(${rgbKey}, 0.75)`);
+        grad.addColorStop(1, `rgba(${rgbKey}, 0)`);
+    }
 
     offCtx.fillStyle = grad;
     offCtx.beginPath();
@@ -304,7 +362,7 @@ async function run(mode) {
             uiContainer.style.height = '100%';
             uiContainer.style.transform = 'none';
         }
-        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1024));
+        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1080));
 
         const scaleHeight = (window.innerHeight * 0.88) / 720;
         const isLandscape = window.innerWidth >= window.innerHeight;
@@ -3777,7 +3835,7 @@ async function run(mode) {
         });
 
         // Planet atmospheric glow (drawn behind silhouette, fades with mass)
-        if (currentPixelCount > 0 && !victoryTriggered) {
+        if (currentPixelCount > 0 && !victoryTriggered && supportsGlow) {
             ctx.save();
             ctx.translate(CENTER_X, CENTER_Y);
             ctx.scale(planetScale, planetScale);
@@ -3811,7 +3869,7 @@ async function run(mode) {
             ctx.rotate(planetRotation);
 
             // Draw dynamic pulsing warm solar corona/glow behind the Sun silhouette
-            if (currentPlanet === 'sun') {
+            if (currentPlanet === 'sun' && supportsGlow) {
                 const integrityRatio = initialPixelCount > 0 ? (currentPixelCount / initialPixelCount) : 1.0;
                 const pulse = 1.0 + Math.sin(performance.now() * 0.0045) * 0.04; // Gentle warm pulsation
                 const baseRadius = planetSize / 2;
@@ -4177,16 +4235,16 @@ async function run(mode) {
         });
 
         // Draw faint spawn orbit ring when hovering
-        if (showPointer && !victoryTriggered && mode === 'play') {
+        if (!victoryTriggered && mode === 'play') {
             const orbitRadius = getConfigValue('gameplay.spawnDistance', 300) + 10;
             ctx.save();
-            ctx.strokeStyle = 'rgba(255, 210, 0, 0.10)';
+            ctx.globalAlpha = 0.2;
+            ctx.strokeStyle = '#ffd200';
             ctx.lineWidth = 1;
             ctx.setLineDash([5, 10]);
             ctx.beginPath();
             ctx.arc(CENTER_X, CENTER_Y, orbitRadius, 0, Math.PI * 2);
             ctx.stroke();
-            ctx.setLineDash([]);
             ctx.restore();
         }
 
@@ -4424,7 +4482,8 @@ async function run(mode) {
 
                 // Dotted yellow guide line
                 ctx.save();
-                ctx.strokeStyle = `rgba(255, 210, 0, ${pulseAlpha * 0.75})`;
+                ctx.globalAlpha = pulseAlpha * 0.75;
+                ctx.strokeStyle = '#ffd200';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([8, 6]);
                 ctx.beginPath();
@@ -4733,6 +4792,20 @@ async function run(mode) {
             bgmStarted = true;
         });
     }
+
+    const triggerFirstClickGameplayStart = () => {
+        startBGM();
+        if (!gameplayStarted) {
+            gameplayStarted = true;
+            if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+                window.PlatformBridge.gameplayStart();
+            }
+        }
+        window.removeEventListener('mousedown', triggerFirstClickGameplayStart, true);
+        window.removeEventListener('touchstart', triggerFirstClickGameplayStart, true);
+    };
+    window.addEventListener('mousedown', triggerFirstClickGameplayStart, true);
+    window.addEventListener('touchstart', triggerFirstClickGameplayStart, true);
 
     // Prevent context menu from popping up on the canvas
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -5051,9 +5124,8 @@ async function run(mode) {
                 }
                 if (nextPlanet === currentPlanet || isPlanetSwitching) return;
 
-                if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
-                    window.PlatformBridge.gameplayStop();
-                }
+                const isProgression = window.isNextPlanetProgression;
+                window.isNextPlanetProgression = false;
 
                 try { soundManager.play('sfx_ui_switch'); } catch (sfxErr) { }
 
@@ -5068,7 +5140,7 @@ async function run(mode) {
                     updateGameTitle();
                     planetTimeSpent = 0;
                     gameplayStarted = true;
-                    resetGame(true);
+                    resetGame(true, !isProgression);
 
                     isPlanetSwitching = false;
                     zoomProgress = 0;
@@ -5103,6 +5175,7 @@ async function run(mode) {
         const proceedRestart = () => {
             const next = getNextPlanet(currentPlanet);
             const nextBtn = document.getElementById(`btn-planet-${next}`);
+            window.isNextPlanetProgression = true;
             if (nextBtn) {
                 nextBtn.click();
             } else {
