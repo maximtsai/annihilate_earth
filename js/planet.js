@@ -971,6 +971,12 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     if (dist <= coreThreshold) {
         finalRadius = Math.max(0, radius - 3) * 0.95;
     }
+    if (weaponType === 'laser') {
+        const coreRadius = getCoreRadius(planetSize);
+        if (dist <= coreRadius) {
+            finalRadius *= 0.85;
+        }
+    }
     if (currentPlanet === 'neutron_star') {
         finalRadius *= 0.225;
     }
@@ -1210,6 +1216,12 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
     let finalRadius = radius;
     if (dist <= coreThreshold) {
         finalRadius = Math.max(0, radius - 3) * 0.95;
+    }
+    if (weaponType === 'laser') {
+        const coreRadius = getCoreRadius(planetSize);
+        if (dist <= coreRadius) {
+            finalRadius *= 0.8;
+        }
     }
     if (currentPlanet === 'neutron_star') {
         finalRadius *= 0.225;

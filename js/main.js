@@ -626,8 +626,8 @@ async function run(mode) {
                     lastLaserTier = currentTier;
                 }
 
-                const laserInterval = laserTier3 ? 0.045 : (laserEnhanced ? 0.055 : 0.075);
-                const laserExplosionSize = laserTier3 ? 7 + 4 + 1.5 : (laserEnhanced ? 7 + 4 : 7);
+                const laserInterval = laserTier3 ? 0.05 : (laserEnhanced ? 0.06 : 0.075);
+                const laserExplosionSize = laserTier3 ? 12 + 1.5 : (laserEnhanced ? 12 : 8);
                 const angle = Math.atan2(pointerY - CENTER_Y, pointerX - CENTER_X);
                 const spawnRadius = getConfigValue('gameplay.spawnDistance', 300);
                 const spawnX = CENTER_X + Math.cos(angle) * spawnRadius;

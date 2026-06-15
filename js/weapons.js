@@ -14,7 +14,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
     if (typeof weaponAmmo !== 'undefined' && weaponAmmo[type] !== undefined) {
         if (weaponAmmo[type] <= 0) {
             const now = Date.now();
-            if (now - lastCooldownTextTime >= 1500) {
+            if (now - lastCooldownTextTime >= 1100) {
                 const outOfAmmoText = (translations[currentLanguage] || translations['en']).outOfAmmo || "OUT OF AMMO";
                 addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 30, 80,', 0.8, 45, isMobile ? 26 : 22);
                 lastCooldownTextTime = now;
@@ -57,7 +57,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
                 const defaultCd = (MAX_COOLDOWNS && MAX_COOLDOWNS[type] !== undefined) ? MAX_COOLDOWNS[type] : 0;
                 if (defaultCd > 2.5) {
                     const now = Date.now();
-                    if (now - lastCooldownTextTime >= 1500) {
+                    if (now - lastCooldownTextTime >= 1100) {
                         addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, isMobile ? 26 : 22);
                         lastCooldownTextTime = now;
                     }
