@@ -139,7 +139,7 @@ const soundIds = [
     'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
     'sfx_mystical_moon_explosion', 'sfx_holy_shine',
     'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter'
+    'sfx_freeze', 'sfx_shatter', 'sfx_lightning'
 ];
 soundIds.forEach(id => soundManager.load(id));
 
@@ -1118,6 +1118,12 @@ async function run(mode) {
                     strike.delay -= deltaTime;
                     if (strike.delay <= 0) {
                         fireLightning(pointerX, pointerY, strike.chargeIndex || 1);
+                        if (strike.totalCharges >= 3 && strike.chargeIndex === strike.totalCharges - 2) {
+                            soundManager.play('sfx_lightning');
+                        }
+                        if (strike.totalCharges >= 6 && strike.chargeIndex === strike.totalCharges - 2) {
+                            soundManager.play('sfx_mystical_moon_explosion', false, 0.25);
+                        }
                         lightningQueue.splice(i, 1);
                     }
                 }
@@ -1775,8 +1781,8 @@ async function run(mode) {
 
                     if (w.stuckTimer <= 0) {
                         // Explode!
-                        soundManager.play('sfx_bowling_pins');
-                        createExplosion(w.localX, w.localY, w.explosionRadius + 2, w.shakeIntensity, 'bowling', false, true);
+                        soundManager.play('sfx_bowling_pins', false, 0.6, (Math.random() - 0.5) * 600);
+                        createExplosion(w.localX, w.localY, w.explosionRadius + 4, w.shakeIntensity, 'bowling', false, true);
                         activeBowlingBalls.splice(i, 1);
                     }
                 }
@@ -2283,7 +2289,10 @@ async function run(mode) {
 
                             // Calculate growing explosion scale (start +40% bigger, grow to +170% by end of active phase)
                             const scale = 1.4 + Math.min(1.0, bh.time / 5.0) * 1.3;
-                            const radius = 8 * scale;
+                            let radius = 8 * scale;
+                            if (currentPlanet === 'neutron_star') {
+                                radius *= 0.225;
+                            }
 
                             // Play subtle crackling/crushing impact sound
                             if (Math.random() < 0.25) {
@@ -4837,7 +4846,8 @@ async function run(mode) {
                             x: pointerX,
                             y: pointerY,
                             delay: i * 0.1,
-                            chargeIndex: i + 1
+                            chargeIndex: i + 1,
+                            totalCharges: boltCount
                         });
                     }
                 }

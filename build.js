@@ -11,7 +11,6 @@ const JS_FILES = [
     path.join(__dirname, 'js', 'sound.js'),
     path.join(__dirname, 'js', 'translations.js'),
     path.join(__dirname, 'js', 'state.js'),
-    path.join(__dirname, 'js', 'planet.js'),
     path.join(__dirname, 'js', 'weapons.js'),
     path.join(__dirname, 'js', 'spinner.js'),
     path.join(__dirname, 'js', 'shooting-star.js'),
@@ -53,6 +52,21 @@ async function build() {
     const minifiedKB = (Buffer.byteLength(minified.code, 'utf8') / 1024).toFixed(1);
     console.log(`Successfully created dist/game.js (${originalKB} KB -> ${minifiedKB} KB)`);
 
+    // 2b. Minify and copy planet.js separately
+    console.log("Minifying and copying planet.js separately...");
+    const planetJsContent = fs.readFileSync(path.join(__dirname, 'js', 'planet.js'), 'utf8');
+    const planetMinified = await minify(planetJsContent, {
+        compress: true,
+        mangle: true
+    });
+    if (planetMinified.error) {
+        console.error('Planet minification failed:', planetMinified.error);
+        process.exit(1);
+    }
+    fs.mkdirSync(path.join(DIST_DIR, 'js'), { recursive: true });
+    fs.writeFileSync(path.join(DIST_DIR, 'js', 'planet.js'), planetMinified.code, 'utf8');
+    console.log("Successfully created dist/js/planet.js");
+
     // 3. Copy style.css
     console.log("Copying style.css...");
     fs.copyFileSync(path.join(__dirname, 'style.css'), path.join(DIST_DIR, 'style.css'));
@@ -70,13 +84,13 @@ async function build() {
     console.log("Creating optimized index.html...");
     let htmlContent = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
-    // Replace the block of script tags with a single bundle tag
+    // Replace the block of script tags with planet.js followed by game.js
     const scriptBlockPattern = /<script\s+src=["']js\/platform-bridge\.js["']><\/script>[\s\S]*?<script\s+src=["']js\/main\.js["']><\/script>/i;
     if (scriptBlockPattern.test(htmlContent)) {
-        htmlContent = htmlContent.replace(scriptBlockPattern, '<script src="game.js"></script>');
+        htmlContent = htmlContent.replace(scriptBlockPattern, '<script src="js/planet.js"></script>\n    <script src="game.js"></script>');
     } else {
         // Fallback replacement case by case if block is formatted differently
-        htmlContent = htmlContent.replace(/<script\s+src=["']js\/platform-bridge\.js["']><\/script>/i, '<script src="game.js"></script>');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/platform-bridge\.js["']><\/script>/i, '<script src="js/planet.js"></script>\n    <script src="game.js"></script>');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/config\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/sound\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/translations\.js["']><\/script>\s*/gi, '');

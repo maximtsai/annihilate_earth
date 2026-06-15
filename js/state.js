@@ -306,18 +306,6 @@ async function loadUnlockedPlanets() {
             }
             if (response.state.unlockedWeapons) {
                 unlockedWeapons = response.state.unlockedWeapons;
-                if (!response.state.lightning_migrated && unlockedWeapons.includes('lightning')) {
-                    unlockedWeapons = unlockedWeapons.filter(w => w !== 'lightning');
-                    (async () => {
-                        try {
-                            const current = await getGameState();
-                            const state = (current && current.state) ? current.state : {};
-                            state.lightning_migrated = true;
-                            state.unlockedWeapons = unlockedWeapons;
-                            await saveGameState(state);
-                        } catch (e) { }
-                    })();
-                }
                 initiallyUnlockedWeapons = new Set(unlockedWeapons);
             }
             if (response.state.unlockedPlanets) {

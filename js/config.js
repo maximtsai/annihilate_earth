@@ -209,6 +209,10 @@ const assets = {
         "url": "./assets/sfx_magical_star_shot2.mp3",
         "type": "audio"
     },
+    "sfx_lightning": {
+        "url": "./assets/sfx_lightning.mp3",
+        "type": "audio"
+    },
     "sfx_freeze": {
         "url": "./assets/freeze.mp3",
         "type": "audio"

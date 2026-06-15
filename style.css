@@ -1564,10 +1564,10 @@ html {
     }
 
     .scroll-arrow {
-        flex: 0 0 calc(40px * var(--ui-scale));
-        width: calc(40px * var(--ui-scale));
+        flex: 0 0 calc(48px * var(--ui-scale));
+        width: calc(48px * var(--ui-scale));
         height: calc(133px * var(--ui-scale));
-        font-size: calc(28px * var(--ui-scale));
+        font-size: calc(32px * var(--ui-scale));
     }
 
     #scroll-left-btn .arrow-text {
