@@ -1531,6 +1531,14 @@ function updatePlanetButtons() {
 
 // Reset Game values
 function resetGame(keepCooldowns = false) {
+    if (typeof weaponAmmo !== 'undefined') {
+        weaponAmmo.missile = 30;
+        weaponAmmo.nuke = 18;
+        weaponAmmo.bowling = 15;
+        if (typeof updateAmmoUI === 'function') {
+            updateAmmoUI();
+        }
+    }
     if (window.activeWeaponSpinner) {
         window.activeWeaponSpinner.destroy();
     }
@@ -1659,6 +1667,7 @@ function resetGame(keepCooldowns = false) {
         const bowlingBtn = document.getElementById('btn-bowling');
         if (bowlingBtn) {
             bowlingBtn.classList.remove('cooldown-active');
+            bowlingBtn.classList.remove('locked-active');
         }
         const krakenUi = document.getElementById('kraken-cooldown-ui');
         if (krakenUi) {

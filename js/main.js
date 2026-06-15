@@ -346,7 +346,7 @@ async function run(mode) {
         asteroid: 1.75,
         moon: 14.0,
         sword: 10.0,
-        bowling: 0.75,
+        bowling: 0.35,
         kraken: 8.5,
         worm: 35.0,
         blackhole: 40.0,
@@ -434,9 +434,9 @@ async function run(mode) {
             // Handle continuous missile auto-launch
             if (isHolding && selectedWeapon === 'missile' && !victoryTriggered) {
                 missileLaunchTimer += deltaTime;
-                while (missileLaunchTimer >= 0.21) {
+                while (missileLaunchTimer >= 0.125) {
                     spawnWeapon(pointerX, pointerY);
-                    missileLaunchTimer -= 0.21;
+                    missileLaunchTimer -= 0.125;
                 }
             } else {
                 missileLaunchTimer = 0;
@@ -721,44 +721,13 @@ async function run(mode) {
 
             // Handle Bowling Cooldown UI ticking
             const bowlingBtn = _dom.bowlingBtn;
-            const bowlingUi = _dom.bowlingUi;
             if (!unlockedWeapons.includes('bowling')) {
-                if (bowlingBtn) bowlingBtn.classList.add('cooldown-active');
-                if (bowlingUi) {
-                    const text = _cdChildren.bowling.text;
-                    const bar = _cdChildren.bowling.bar;
-                    if (text) text.textContent = getTranslation('locked');
-                    if (bar) bar.style.height = '100%';
-                }
-            }
-            else if (bowlingCooldown > 0) {
-                bowlingCooldown -= deltaTime;
-                if (bowlingCooldown <= 0) {
-                    bowlingCooldown = 0;
-                    if (bowlingBtn) {
-                        bowlingBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => bowlingBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialBowlingCooldown) {
-                        showUnlockNotification(getUnlockText('bowling'));
-                        isInitialBowlingCooldown = false;
-                    }
-                }
-                if (bowlingBtn) bowlingBtn.classList.add('cooldown-active');
-                if (bowlingUi) {
-                    const text = _cdChildren.bowling.text;
-                    const bar = _cdChildren.bowling.bar;
-                    const maxCd = isInitialBowlingCooldown ? 1.25 : MAX_COOLDOWNS.bowling;
-                    if (text) text.textContent = `${bowlingCooldown.toFixed(1)}s`;
-                    if (bar) bar.style.height = `${(bowlingCooldown / maxCd) * 100}%`;
-                }
+                if (bowlingBtn) bowlingBtn.classList.add('locked-active');
             } else {
-                if (bowlingBtn) bowlingBtn.classList.remove('cooldown-active');
-                if (bowlingUi) {
-                    const text = bowlingUi.querySelector('.cooldown-text');
-                    const bar = bowlingUi.querySelector('.cooldown-bar');
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
+                if (bowlingBtn) bowlingBtn.classList.remove('locked-active');
+                if (bowlingCooldown > 0) {
+                    bowlingCooldown -= deltaTime;
+                    if (bowlingCooldown < 0) bowlingCooldown = 0;
                 }
             }
 
@@ -2811,18 +2780,18 @@ async function run(mode) {
                     w.opacity = 1.0;
                     w.projectileTimer += deltaTime;
 
-                    // Spew a projectile every 0.15s
-                    while (w.projectileTimer >= 0.15) {
-                        w.projectileTimer -= 0.15;
+                    // Spew a projectile every 0.1154s (+30% frequency)
+                    while (w.projectileTimer >= 0.1154) {
+                        w.projectileTimer -= 0.1154;
 
-                        // Angle facing towards planet with a wider spread (slightly increased to 0.90 radians)
-                        const projAngle = w.angle + (Math.random() - 0.5) * 0.95;
-                        const speed = 280 + Math.random() * 125; // 25% faster
+                        // Angle facing towards planet with spread reduced by 60% (0.95 * 0.40 = 0.38)
+                        const projAngle = w.angle + (Math.random() - 0.5) * 0.38;
+                        const speed = (280 + Math.random() * 125) * 1.5; // 50% faster
 
                         const isSpecial = Math.random() < 0.15; // 15% chance
                         const color = isSpecial ? '#66b2ff' : (Math.random() < 0.5 ? '#00f0ff' : '#ff00ff');
                         const baseSize = isSpecial ? 16 : 8; // 8 is slightly smaller than 12
-                        const explosionRadius = isSpecial ? 31 : 21; // 2 units bigger
+                        const explosionRadius = isSpecial ? 27 : 17; // Reduced by 4 units
                         const shakeIntensity = isSpecial ? 8 : 5;
 
                         activeStarProjectiles.push({
@@ -3703,37 +3672,6 @@ async function run(mode) {
             bgCtx.fillRect(renderX - renderSize / 2, renderY - renderSize / 2, renderSize, renderSize);
         });
         bgCtx.restore();
-
-        // Draw floating texts
-        floatingTexts.forEach(ft => {
-            const elapsed = ft.maxLife - ft.life;
-            const floatDuration = Math.min(0.25, ft.maxLife * 0.5);
-            const fadeDuration = ft.maxLife - floatDuration;
-            const maxOffset = ft.maxOffset !== undefined ? ft.maxOffset : 50;
-
-            let yOffset = 0;
-            let alpha = 1;
-
-            if (elapsed < floatDuration) {
-                const t = elapsed / floatDuration;
-                // Quart.easeOut: 1 - (1-t)^4
-                const ease = 1 - Math.pow(1 - t, 4);
-                yOffset = ease * -maxOffset;
-            } else {
-                yOffset = -maxOffset;
-                const tFade = Math.min(1.0, Math.max(0.0, (elapsed - floatDuration) / fadeDuration));
-                alpha = 1 - tFade;
-            }
-
-            ctx.save();
-            ctx.font = `bold ${ft.fontSize || 28}px Orbitron, sans-serif`;
-            ctx.fillStyle = ft.color.endsWith(',') ? `${ft.color}${alpha})` : ft.color;
-            ctx.textAlign = 'center';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = ft.color.endsWith(',') ? `${ft.color}0.5)` : ft.color;
-            ctx.fillText(ft.text, ft.x, ft.startY + yOffset);
-            ctx.restore();
-        });
 
         const planetSize = getPlanetSize();
         const radius = planetSize / 2;
@@ -4719,6 +4657,40 @@ async function run(mode) {
             }
         }
         ctx.globalAlpha = originalMainAlpha;
+
+        // Draw floating texts (above planet and weapons)
+        floatingTexts.forEach(ft => {
+            const elapsed = ft.maxLife - ft.life;
+            const floatDuration = Math.min(0.25, ft.maxLife * 0.5);
+            const fadeDuration = ft.maxLife - floatDuration;
+            const maxOffset = ft.maxOffset !== undefined ? ft.maxOffset : 50;
+
+            let yOffset = 0;
+            let alpha = 1;
+
+            if (elapsed < floatDuration) {
+                const t = elapsed / floatDuration;
+                // Quart.easeOut: 1 - (1-t)^4
+                const ease = 1 - Math.pow(1 - t, 4);
+                yOffset = ease * -maxOffset;
+            } else {
+                yOffset = -maxOffset;
+                const tFade = Math.min(1.0, Math.max(0.0, (elapsed - floatDuration) / fadeDuration));
+                alpha = 1 - tFade;
+            }
+
+            ctx.save();
+            ctx.font = `bold ${ft.fontSize || 28}px Orbitron, sans-serif`;
+            ctx.fillStyle = ft.color.endsWith(',') ? `${ft.color}${alpha})` : ft.color;
+            ctx.textAlign = 'center';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = ft.color.endsWith(',') ? `${ft.color}0.5)` : ft.color;
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.lineWidth = 4.5;
+            ctx.strokeText(ft.text, ft.x, ft.startY + yOffset);
+            ctx.fillText(ft.text, ft.x, ft.startY + yOffset);
+            ctx.restore();
+        });
 
         if (window.ShootingStarManager) {
             window.ShootingStarManager.draw(ctx);

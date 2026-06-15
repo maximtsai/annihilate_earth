@@ -335,7 +335,6 @@ function refreshWeaponLocks() {
     const weaponsInfo = [
         { id: 'lightning', getCd: () => lightningCooldown, setCd: (v) => lightningCooldown = v, getInitCd: () => isInitialLightningCooldown, setInitCd: (v) => isInitialLightningCooldown = v },
         { id: 'kraken', getCd: () => krakenCooldown, setCd: (v) => krakenCooldown = v, getInitCd: () => isInitialKrakenCooldown, setInitCd: (v) => isInitialKrakenCooldown = v },
-        { id: 'bowling', getCd: () => bowlingCooldown, setCd: (v) => bowlingCooldown = v, getInitCd: () => isInitialBowlingCooldown, setInitCd: (v) => isInitialBowlingCooldown = v },
         { id: 'worm', getCd: () => wormCooldown, setCd: (v) => wormCooldown = v, getInitCd: () => isInitialWormCooldown, setInitCd: (v) => isInitialWormCooldown = v },
         { id: 'fist', getCd: () => fistCooldown, setCd: (v) => fistCooldown = v, getInitCd: () => isInitialFistCooldown, setInitCd: (v) => isInitialFistCooldown = v },
         { id: 'star', getCd: () => starCooldown, setCd: (v) => starCooldown = v, getInitCd: () => isInitialStarCooldown, setInitCd: (v) => isInitialStarCooldown = v },
@@ -419,6 +418,33 @@ let pointerX = CENTER_X;
 let pointerY = 340;
 let showPointer = false;
 // Weapon states
+let weaponAmmo = {
+    missile: 30,
+    nuke: 18,
+    bowling: 15
+};
+
+function updateAmmoUI(type) {
+    if (type) {
+        const ammoEl = document.getElementById(`ammo-${type}`);
+        if (ammoEl) {
+            ammoEl.textContent = weaponAmmo[type];
+        }
+        const btn = document.getElementById(`btn-${type}`);
+        if (btn) {
+            if (weaponAmmo[type] <= 0) {
+                btn.classList.add('no-ammo');
+            } else {
+                btn.classList.remove('no-ammo');
+            }
+        }
+    } else {
+        updateAmmoUI('missile');
+        updateAmmoUI('nuke');
+        updateAmmoUI('bowling');
+    }
+}
+
 let asteroidCooldown = 11.0;
 let moonCooldown = 160.0;
 let nukeCooldown = 0;

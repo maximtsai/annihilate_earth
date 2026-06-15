@@ -6,6 +6,29 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     const type = typeOverride || selectedWeapon;
 
+    if (typeof weaponAmmo !== 'undefined' && weaponAmmo[type] !== undefined) {
+        if (weaponAmmo[type] <= 0) {
+            const now = Date.now();
+            if (now - lastCooldownTextTime >= 1500) {
+                const outOfAmmoText = (translations[currentLanguage] || translations['en']).outOfAmmo || "OUT OF AMMO";
+                addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 30, 80,', 0.8, 45, 18);
+                lastCooldownTextTime = now;
+            }
+            const btn = document.getElementById('btn-' + type);
+            if (btn) {
+                btn.classList.remove('cooldown-alert');
+                void btn.offsetWidth; // Force reflow
+                btn.classList.add('cooldown-alert');
+                setTimeout(() => {
+                    btn.classList.remove('cooldown-alert');
+                }, 400);
+            }
+            // Clear queue for this weapon
+            delete weaponQueues[type];
+            return;
+        }
+    }
+
     if (!typeOverride) {
         let cd = 0;
         if (type === 'laser') cd = laserCooldown;
@@ -24,12 +47,12 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
         else if (type === 'gamma') cd = gammaBurstCooldown;
         else if (type === 'lightning') cd = lightningCooldown;
 
-        if (type !== 'nuke' && type !== 'missile' && type !== 'lightning') {
+        if (type !== 'nuke' && type !== 'missile' && type !== 'lightning' && type !== 'bowling') {
             if (cd > 0.4) {
                 const defaultCd = (MAX_COOLDOWNS && MAX_COOLDOWNS[type] !== undefined) ? MAX_COOLDOWNS[type] : 0;
                 if (defaultCd > 2.5) {
                     const now = Date.now();
-                    if (now - lastCooldownTextTime >= 4000) {
+                    if (now - lastCooldownTextTime >= 1500) {
                         addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, 18);
                         lastCooldownTextTime = now;
                     }
@@ -166,6 +189,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             return;
         }
         if (bowlingCooldown > 0) {
+            weaponQueues['bowling'] = { x: clickX, y: clickY };
             return;
         }
 
@@ -188,7 +212,14 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             stuckAngle: 0
         });
 
-        bowlingCooldown = MAX_COOLDOWNS.bowling;
+        if (typeof weaponAmmo !== 'undefined' && weaponAmmo[type] !== undefined) {
+            weaponAmmo[type]--;
+            if (typeof updateAmmoUI === 'function') {
+                updateAmmoUI(type);
+            }
+        }
+
+        bowlingCooldown = 0.35;
         return;
     }
 
@@ -363,7 +394,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             return;
         }
         executeSpawn('nuke', clickX, clickY);
-        nukeCooldown = 0.45;
+        nukeCooldown = 0.36;
         return;
     }
 
@@ -371,6 +402,12 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 }
 
 function executeSpawn(type, clickX, clickY) {
+    if (typeof weaponAmmo !== 'undefined' && weaponAmmo[type] !== undefined) {
+        weaponAmmo[type]--;
+        if (typeof updateAmmoUI === 'function') {
+            updateAmmoUI(type);
+        }
+    }
     const screenCenterX = CENTER_X;
     const screenCenterY = CENTER_Y;
 
@@ -432,7 +469,7 @@ function executeSpawn(type, clickX, clickY) {
         moonCooldown = 15.0;
     }
     if (type === 'missile') {
-        missileCooldown = 0.1025;
+        missileCooldown = 0.07;
     }
 }
 

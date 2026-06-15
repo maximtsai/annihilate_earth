@@ -9,6 +9,14 @@
     :root {
         --ui-scale: calc(100vh / 1024px);
     }
+
+    .options-toggle-wrapper {
+        clip-path: polygon(0 0, calc(100% - 7.5px) 0, 100% 7.5px, 100% 100%, 7.5px 100%, 0 calc(100% - 7.5px));
+    }
+
+    .options-toggle {
+        clip-path: polygon(0 0, calc(100% - 7.1px) 0, 100% 7.1px, 100% 100%, 7.1px 100%, 0 calc(100% - 7.1px));
+    }
 }
 
 @media (orientation: portrait) and (min-height: 1025px) {
@@ -237,6 +245,20 @@ html {
     transition: filter 250ms ease;
 }
 
+@media (orientation: landscape) {
+    .planet-btn {
+        width: calc(83px * var(--ui-scale));
+        height: calc(67px * var(--ui-scale));
+        font-size: calc(11.5px * var(--ui-scale));
+        padding: calc(9px * var(--ui-scale)) calc(7.5px * var(--ui-scale)) calc(6.5px * var(--ui-scale)) calc(7.5px * var(--ui-scale));
+        gap: calc(5px * var(--ui-scale));
+    }
+
+    .planet-btn-icon {
+        font-size: calc(25.5px * var(--ui-scale));
+    }
+}
+
 .planet-btn:hover {
     background: rgba(0, 217, 255, 0.15);
     /* Soft hover backlight */
@@ -395,7 +417,7 @@ html {
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
     box-shadow: 0 5px 25px rgba(0, 217, 255, 0.25);
     z-index: 100;
-    transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 150ms cubic-bezier(0.25, 0.8, 0.25, 1);
     box-sizing: border-box;
 }
 
@@ -980,8 +1002,7 @@ html {
     box-shadow: 0 0 8px #00d9ff;
 }
 
-.weapon-button:active {
-}
+.weapon-button:active {}
 
 .weapon-button.selected {
     background: rgba(0, 217, 255, 0.2);
@@ -1045,6 +1066,71 @@ html {
 .weapon-button.selected .weapon-name {
     color: #ffffff;
     text-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
+}
+
+.weapon-ammo {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: calc(17px * var(--ui-scale));
+    color: #00d9ff;
+    text-shadow: 0 0 5px rgba(0, 217, 255, 0.5);
+    margin-top: calc(2px * var(--ui-scale));
+}
+
+@media (orientation: portrait) {
+    .weapon-ammo {
+        font-size: calc(20px * var(--ui-scale));
+    }
+}
+
+
+.no-ammo-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(12, 12, 28, 0.8);
+    color: #ff0055;
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(18px * var(--ui-scale));
+    font-weight: 900;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    pointer-events: none;
+    letter-spacing: 1px;
+}
+
+.weapon-button.no-ammo .no-ammo-overlay {
+    display: flex;
+}
+
+.locked-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(12, 12, 28, 0.95);
+    color: #ff0055;
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(18px * var(--ui-scale));
+    font-weight: 900;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 998;
+    pointer-events: none;
+    letter-spacing: 1px;
+}
+
+.weapon-button.locked-active .locked-overlay {
+    display: flex;
+}
+
+.weapon-button.locked-active>*:not(.locked-overlay) {
+    filter: brightness(0.3) grayscale(0.6);
 }
 
 /* CJK language overrides: larger text, single line */
@@ -1270,7 +1356,7 @@ html {
 
 .loading-bar-container {
     width: 280px;
-    height: 4px;
+    height: 6px;
     background: rgba(0, 217, 255, 0.15);
     border-radius: 2px;
     overflow: hidden;
@@ -1283,7 +1369,6 @@ html {
     background: linear-gradient(90deg, #00d9ff, #00ffaa);
     border-radius: 2px;
     transition: width 0.3s ease-out;
-    box-shadow: 0 0 10px rgba(0, 217, 255, 0.6);
 }
 
 .loading-status {
@@ -1376,6 +1461,36 @@ html {
     letter-spacing: 2px;
     outline: none;
     margin-top: 5px;
+}
+
+#weapon-unlock-notification {
+    position: absolute;
+    bottom: calc(118px * var(--ui-scale));
+    left: 50%;
+    transform: translate(-50%, calc(15px * var(--ui-scale)));
+    color: #00ffaa;
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(28px * var(--ui-scale));
+    font-weight: 900;
+    text-shadow: 0 0 calc(10px * var(--ui-scale)) rgba(0, 255, 170, 0.6), 0 0 calc(20px * var(--ui-scale)) rgba(0, 255, 170, 0.3);
+    pointer-events: none;
+    opacity: 0;
+    text-transform: uppercase;
+    white-space: nowrap;
+    z-index: 1000;
+    letter-spacing: calc(2px * var(--ui-scale));
+}
+
+#weapon-unlock-notification.show {
+    opacity: 1;
+    transform: translate(-50%, 0px);
+    transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#weapon-unlock-notification.hide {
+    opacity: 0;
+    transform: translate(-50%, calc(-25px * var(--ui-scale)));
+    transition: opacity 0.5s ease-in, transform 0.5s ease-in;
 }
 
 /* Responsive Adaptive Layouts for Mobile & Portrait Screens */
@@ -1557,7 +1672,7 @@ html {
     }
 
     #weapon-unlock-notification {
-        bottom: calc(168px * var(--ui-scale) + 12vh);
+        bottom: calc(108px * var(--ui-scale) + 12vh);
     }
 }
 
@@ -1574,35 +1689,6 @@ html {
     color: #ffffff;
 }
 
-#weapon-unlock-notification {
-    position: absolute;
-    bottom: calc(118px * var(--ui-scale));
-    left: 50%;
-    transform: translate(-50%, calc(15px * var(--ui-scale)));
-    color: #00ffaa;
-    font-family: 'Orbitron', sans-serif;
-    font-size: calc(24px * var(--ui-scale));
-    font-weight: 900;
-    text-shadow: 0 0 calc(10px * var(--ui-scale)) rgba(0, 255, 170, 0.6), 0 0 calc(20px * var(--ui-scale)) rgba(0, 255, 170, 0.3);
-    pointer-events: none;
-    opacity: 0;
-    text-transform: uppercase;
-    white-space: nowrap;
-    z-index: 1000;
-    letter-spacing: calc(2px * var(--ui-scale));
-}
-
-#weapon-unlock-notification.show {
-    opacity: 1;
-    transform: translate(-50%, 0px);
-    transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-#weapon-unlock-notification.hide {
-    opacity: 0;
-    transform: translate(-50%, calc(-25px * var(--ui-scale)));
-    transition: opacity 0.5s ease-in, transform 0.5s ease-in;
-}
 
 .weapon-spinner-wrapper {
     position: relative;

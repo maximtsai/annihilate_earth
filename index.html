@@ -88,13 +88,17 @@
                         <div class="weapon-scroll-wrapper" id="weapon-scroll-wrapper">
                             <div class="weapon-panel-inner" id="weapon-panel-inner">
                                 <button class="weapon-button selected" data-weapon="missile" id="btn-missile">
-                                    <div class="weapon-icon">🚀</div>
-                                    <div class="weapon-name">Missile</div>
-                                </button>
-                                <button class="weapon-button" data-weapon="nuke" id="btn-nuke">
-                                    <div class="weapon-icon">💣</div>
-                                    <div class="weapon-name">Nuke</div>
-                                </button>
+                                     <div class="weapon-icon">🚀</div>
+                                     <div class="weapon-name">Missile</div>
+                                     <div class="weapon-ammo" id="ammo-missile">30</div>
+                                     <div class="no-ammo-overlay">NO AMMO</div>
+                                 </button>
+                                 <button class="weapon-button" data-weapon="nuke" id="btn-nuke">
+                                     <div class="weapon-icon">💣</div>
+                                     <div class="weapon-name">Nuke</div>
+                                     <div class="weapon-ammo" id="ammo-nuke">18</div>
+                                     <div class="no-ammo-overlay">NO AMMO</div>
+                                 </button>
                                 <button class="weapon-button" data-weapon="laser" id="btn-laser">
                                     <div class="weapon-icon">⚡</div>
                                     <div class="weapon-name">Laser</div>
@@ -175,14 +179,13 @@
                                         <span class="cooldown-text"></span>
                                     </div>
                                 </button>
-                                <button class="weapon-button" data-weapon="bowling" id="btn-bowling">
-                                    <div class="weapon-icon">🎳</div>
-                                    <div class="weapon-name">Bowling</div>
-                                    <div class="weapon-cooldown" id="bowling-cooldown-ui">
-                                        <div class="cooldown-bar"></div>
-                                        <span class="cooldown-text"></span>
-                                    </div>
-                                </button>
+                                 <button class="weapon-button" data-weapon="bowling" id="btn-bowling">
+                                     <div class="weapon-icon">🎳</div>
+                                     <div class="weapon-name">Bowling</div>
+                                     <div class="weapon-ammo" id="ammo-bowling">15</div>
+                                     <div class="no-ammo-overlay">NO AMMO</div>
+                                     <div class="locked-overlay">LOCKED</div>
+                                 </button>
                                 <button class="weapon-button" data-weapon="star" id="btn-star">
                                     <div class="weapon-icon">⭐</div>
                                     <div class="weapon-name">Star</div>
