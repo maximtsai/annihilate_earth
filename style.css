@@ -811,9 +811,9 @@ html {
 
 .weapon-button {
     position: relative;
-    flex: 0 0 calc(102px * var(--ui-scale));
+    flex: 0 0 calc(92px * var(--ui-scale));
     width: calc(102px * var(--ui-scale));
-    height: calc(102px * var(--ui-scale));
+    height: calc(92px * var(--ui-scale));
     background: rgba(0, 217, 255, 0.05);
     border: 1px solid rgba(0, 217, 255, 0.25);
     border-radius: 4px;
@@ -849,7 +849,7 @@ html {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 3px;
+    height: calc(3px * var(--ui-scale));
     background: rgba(0, 217, 255, 0.2);
     transition: all 250ms ease;
 }
@@ -1018,7 +1018,7 @@ html {
 .weapon-button.selected::after {
     background: #00ffaa;
     box-shadow: 0 0 10px #00ffaa;
-    height: 4px;
+    height: calc(4px * var(--ui-scale));
     animation: weaponBarPulse 1.6s ease-in-out infinite;
 }
 
@@ -1073,7 +1073,8 @@ html {
     font-size: calc(17px * var(--ui-scale));
     color: #00d9ff;
     text-shadow: 0 0 5px rgba(0, 217, 255, 0.5);
-    margin-top: calc(2px * var(--ui-scale));
+    margin-top: calc(-3px * var(--ui-scale));
+    margin-bottom: 2px;
 }
 
 @media (orientation: portrait) {

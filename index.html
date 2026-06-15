@@ -4,6 +4,25 @@
 <head>
     <title>Annihilate Earth</title>
     <link rel="stylesheet" href="style.css">
+    <script>
+        (function() {
+            function updateScales() {
+                var w = window.innerWidth;
+                var h = window.innerHeight;
+                var uiScale = Math.min(1, w / 1024);
+                document.documentElement.style.setProperty('--ui-scale', uiScale);
+                
+                var scaleHeight = (h * 0.88) / 720;
+                var isLandscape = w >= h;
+                var baseWidth = isLandscape ? w * 1.15 : 600;
+                var scaleWidth = (w * 0.94) / baseWidth;
+                var victoryScale = Math.min(scaleWidth, scaleHeight);
+                document.documentElement.style.setProperty('--victory-scale', victoryScale);
+            }
+            updateScales();
+            window.addEventListener('resize', updateScales);
+        })();
+    </script>
 </head>
 
 <body>
