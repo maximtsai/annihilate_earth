@@ -3819,7 +3819,10 @@ async function run(mode) {
                 const pulse = 1.0 + Math.sin(performance.now() * 0.007) * 0.04;
                 ctx.save();
                 ctx.translate(dxLocal, dyLocal);
-                const scaleFactor = coreRatio * pulse;
+                let scaleFactor = coreRatio * pulse;
+                if (currentPlanet === 'mars') {
+                    scaleFactor *= 0.85;
+                }
                 ctx.scale(scaleFactor, scaleFactor);
                 ctx.drawImage(coreImg, -coreImg.width / 2, -coreImg.height / 2);
                 ctx.restore();
