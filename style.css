@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Roboto:wght@400;700&display=swap');
+@import url('./assets/fonts/local-fonts.css');
 
 :root {
     --planet-offset-y: 30px;
@@ -897,7 +897,7 @@ html {
     align-items: center;
     justify-content: center;
     font-family: 'Share Tech Mono', monospace;
-    font-size: calc(28px * var(--ui-scale));
+    font-size: calc(26px * var(--ui-scale));
     color: #ffd200;
     font-weight: 700;
     opacity: 0;

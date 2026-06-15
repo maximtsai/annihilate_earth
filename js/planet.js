@@ -984,12 +984,15 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
             laserSoundCounter++;
             if (laserSoundCounter % 2 === 0) {
                 let detune = (Math.random() - 0.5) * 400;
-                let playVol = 1;
+                let playVol = 1.0;
                 const coreRadius = getCoreRadius(planetSize);
                 if (dist <= coreRadius) {
                     detune -= 200; // lower the pitch by 1000 cents
                     playVol = 0.75;
                 }
+                const tier = laserTier3 ? 3 : (laserEnhanced ? 2 : 1);
+                const volMultiplier = tier === 1 ? 0.50 : (tier === 2 ? 0.70 : 0.85);
+                playVol *= volMultiplier;
                 soundManager.play('sfx_laser_crack', false, playVol, detune);
             }
         } else if (weaponType === 'missile') {

@@ -190,10 +190,6 @@
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
 
-                    // Shadow glow
-                    ctx.shadowBlur = 8;
-                    ctx.shadowColor = "rgba(255, 230, 0, 0.7)";
-
                     // Bobbing/floating animation
                     const bobY = Math.sin(star.age * 8) * 4;
                     const indicatorY = -star.size - 18 + bobY;
@@ -267,8 +263,8 @@
             if (!star) return false;
 
             const dist = Math.sqrt((star.x - clickX) ** 2 + (star.y - clickY) ** 2);
-            // Clicking radius of 40px
-            if (dist <= 40) {
+            const clickRadius = isMobile ? 52 : 40;
+            if (dist <= clickRadius) {
                 console.log("[ShootingStar] Clicked!");
 
                 // Spawn several smaller click stars that fly out and fade

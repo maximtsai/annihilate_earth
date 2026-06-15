@@ -1,6 +1,15 @@
 // Core Game Engine & Main Loop
 function detectGlowSupport() {
-    return false;
+    // Heuristic for extremely low-end devices: return false early if single-core or RAM < 1GB
+    if (typeof navigator !== 'undefined') {
+        if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 2) {
+            return false;
+        }
+        if (navigator.deviceMemory && navigator.deviceMemory < 1) {
+            return false;
+        }
+    }
+
     const testCanvas = document.createElement('canvas');
     testCanvas.width = 10;
     testCanvas.height = 10;
@@ -340,6 +349,11 @@ let gamePausedForAd = false;
 async function run(mode) {
     // Load spritesheet atlas assets first
     await loadSpritesAtlas();
+
+    // Wait for local fonts to load to prevent canvas text rendering fallback glitches
+    if (document.fonts && typeof document.fonts.ready !== 'undefined') {
+        await document.fonts.ready;
+    }
 
     // Initialize the platform bridge interface
     if (window.PlatformBridge) {
@@ -870,8 +884,8 @@ async function run(mode) {
                 }
                 if (krakenBtn) krakenBtn.classList.add('cooldown-active');
                 if (krakenUi) {
-                    const text = krakenUi.querySelector('.cooldown-text');
-                    const bar = krakenUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.kraken.text;
+                    const bar = _cdChildren.kraken.bar;
                     const maxCd = isInitialKrakenCooldown ? 1.25 : MAX_COOLDOWNS.kraken;
                     if (text) text.textContent = `${Math.ceil(krakenCooldown)}s`;
                     if (bar) bar.style.height = `${(krakenCooldown / maxCd) * 100}%`;
@@ -879,8 +893,8 @@ async function run(mode) {
             } else {
                 if (krakenBtn) krakenBtn.classList.remove('cooldown-active');
                 if (krakenUi) {
-                    const text = krakenUi.querySelector('.cooldown-text');
-                    const bar = krakenUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.kraken.text;
+                    const bar = _cdChildren.kraken.bar;
                     if (text) text.textContent = '';
                     if (bar) bar.style.height = '0%';
                 }
@@ -913,8 +927,8 @@ async function run(mode) {
                 }
                 if (wormBtn) wormBtn.classList.add('cooldown-active');
                 if (wormUi) {
-                    const text = wormUi.querySelector('.cooldown-text');
-                    const bar = wormUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.worm.text;
+                    const bar = _cdChildren.worm.bar;
                     const maxCd = isInitialWormCooldown ? 1.25 : MAX_COOLDOWNS.worm;
                     if (text) text.textContent = `${Math.ceil(wormCooldown)}s`;
                     if (bar) bar.style.height = `${(wormCooldown / maxCd) * 100}%`;
@@ -922,8 +936,8 @@ async function run(mode) {
             } else {
                 if (wormBtn) wormBtn.classList.remove('cooldown-active');
                 if (wormUi) {
-                    const text = wormUi.querySelector('.cooldown-text');
-                    const bar = wormUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.worm.text;
+                    const bar = _cdChildren.worm.bar;
                     if (text) text.textContent = '';
                     if (bar) bar.style.height = '0%';
                 }
@@ -956,8 +970,8 @@ async function run(mode) {
             } else {
                 if (blackholeBtn) blackholeBtn.classList.remove('cooldown-active');
                 if (blackholeUi) {
-                    const text = blackholeUi.querySelector('.cooldown-text');
-                    const bar = blackholeUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.blackhole.text;
+                    const bar = _cdChildren.blackhole.bar;
                     if (text) text.textContent = '';
                     if (bar) bar.style.height = '0%';
                 }
@@ -990,8 +1004,8 @@ async function run(mode) {
                 }
                 if (fistBtn) fistBtn.classList.add('cooldown-active');
                 if (fistUi) {
-                    const text = fistUi.querySelector('.cooldown-text');
-                    const bar = fistUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.fist.text;
+                    const bar = _cdChildren.fist.bar;
                     const maxCd = isInitialFistCooldown ? 1.25 : MAX_COOLDOWNS.fist;
                     if (text) text.textContent = `${Math.ceil(fistCooldown)}s`;
                     if (bar) bar.style.height = `${(fistCooldown / maxCd) * 100}%`;
@@ -999,8 +1013,8 @@ async function run(mode) {
             } else {
                 if (fistBtn) fistBtn.classList.remove('cooldown-active');
                 if (fistUi) {
-                    const text = fistUi.querySelector('.cooldown-text');
-                    const bar = fistUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.fist.text;
+                    const bar = _cdChildren.fist.bar;
                     if (text) text.textContent = '';
                     if (bar) bar.style.height = '0%';
                 }
@@ -1032,8 +1046,8 @@ async function run(mode) {
             } else {
                 if (moonBtn) moonBtn.classList.remove('cooldown-active');
                 if (moonUi) {
-                    const text = moonUi.querySelector('.cooldown-text');
-                    const bar = moonUi.querySelector('.cooldown-bar');
+                    const text = _cdChildren.moon.text;
+                    const bar = _cdChildren.moon.bar;
                     if (text) text.textContent = '';
                     if (bar) bar.style.height = '0%';
                 }
@@ -2342,14 +2356,14 @@ async function run(mode) {
                 // Spawn invisible rain particles during growing phase (0 to 5s)
                 if (bh.time <= 5.0) {
                     const progress = Math.min(1.0, bh.time / 5.0);
-                    const spawnChance = 0.10 + progress * 0.35; // scales from 10% to 45%
+                    const spawnChance = (0.10 + progress * 0.35) * 0.9; // 10% fewer overall
 
                     // Current behavior: rain falling from outer orbit
                     if (Math.random() < spawnChance) {
                         const bhAngle = Math.atan2(bh.y - CENTER_Y, bh.x - CENTER_X);
                         const spreadWidth = 0.9 + progress * 2; // scales from 0.4 to 2.2 rad
                         const spreadAngle = bhAngle + (Math.random() - 0.5) * spreadWidth;
-                        const rSpeed = Math.random() * 3.5 + 4.0;
+                        const rSpeed = (Math.random() * 5 + 6.0); // 50% faster
 
                         const spawnDist = getConfigValue('gameplay.spawnDistance', 300) + -25;
                         const px = CENTER_X + Math.cos(spreadAngle) * spawnDist;
@@ -2368,7 +2382,7 @@ async function run(mode) {
                         const toPlanetAngle = Math.atan2(CENTER_Y - bh.y, CENTER_X - bh.x);
                         const spreadWidth = 2.2;
                         const spreadAngle = toPlanetAngle + (Math.random() - 0.5) * spreadWidth;
-                        const rSpeed = Math.random() * 3.5 + 4.0;
+                        const rSpeed = (Math.random() * 5 + 6.0); // 50% faster
 
                         bh.projectiles.push({
                             x: bh.x,
@@ -2380,6 +2394,7 @@ async function run(mode) {
                 }
 
                 let blackholeHitThisFrame = false;
+                const sharedData = getSharedPlanetData();
 
                 // Update rain projectiles
                 for (let pIdx = bh.projectiles.length - 1; pIdx >= 0; pIdx--) {
@@ -2393,14 +2408,13 @@ async function run(mode) {
                     const py = Math.floor(local.y);
 
                     if (px >= 0 && px < PLANET_CANVAS_SIZE && py >= 0 && py < PLANET_CANVAS_SIZE) {
-                        const sharedData = getSharedPlanetData();
                         const idx = (py * PLANET_CANVAS_SIZE + px) * 4;
                         if (sharedData.data[idx + 3] > 0) {
                             // Collision detected! Read exact color
                             const color = `rgb(${sharedData.data[idx]},${sharedData.data[idx + 1]},${sharedData.data[idx + 2]})`;
 
                             // Calculate growing explosion scale (start +40% bigger, grow to +170% by end of active phase)
-                            const scale = 1.4 + Math.min(1.0, bh.time / 5.0) * 1.3;
+                            const scale = 2 + Math.min(1.0, bh.time / 5.0) * 1.3;
                             let radius = 8 * scale;
                             if (currentPlanet === 'neutron_star') {
                                 radius *= 0.225;
@@ -2912,7 +2926,7 @@ async function run(mode) {
                         const isSpecial = Math.random() < 0.15; // 15% chance
                         const color = isSpecial ? '#66b2ff' : (Math.random() < 0.5 ? '#00f0ff' : '#ff00ff');
                         const baseSize = isSpecial ? 16 : 8; // 8 is slightly smaller than 12
-                        const explosionRadius = isSpecial ? 27 : 17; // Reduced by 4 units
+                        const explosionRadius = isSpecial ? 29 : 19;
                         const shakeIntensity = isSpecial ? 8 : 5;
 
                         activeStarProjectiles.push({
@@ -4282,11 +4296,9 @@ async function run(mode) {
             ctx.translate(indX, indY);
             ctx.rotate(angle + Math.PI); // Rotate to point inward
 
-            // Draw sleek hollow glowing yellow triangle pointing right (inward)
+            // Draw sleek hollow yellow triangle pointing right (inward)
             ctx.strokeStyle = '#ffd200';
             ctx.lineWidth = 3;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = 'rgba(255, 210, 0, 0.85)';
 
             ctx.beginPath();
             ctx.moveTo(-12, -8); // Back top
@@ -4345,23 +4357,24 @@ async function run(mode) {
         // Draw Lightning Charge Meter
         if (isHolding && selectedWeapon === 'lightning' && !victoryTriggered && mode === 'play' && lightningCooldown <= 0) {
             const isMax = lightningHoldTime >= 2.10;
+            const width = isMobile ? 160 : 80;
+            const height = isMobile ? 16 : 8;
+
             let meterX = pointerX;
-            let meterY = pointerY - 45;
+            let meterY = pointerY - (isMobile ? 75 : 25);
             if (isMax || lightningChargeShakeTimer > 0) {
                 const shakeAmt = isMax ? 4 : 3;
-                meterX += (Math.random() - 0.5) * shakeAmt;
-                meterY += (Math.random() - 0.5) * shakeAmt;
+                meterX += (Math.random() - 0.5) * (isMobile ? shakeAmt * 2 : shakeAmt);
+                meterY += (Math.random() - 0.5) * (isMobile ? shakeAmt * 2 : shakeAmt);
             }
 
-            const width = 80;
-            const height = 8;
             const x = meterX - width / 2;
             const y = meterY;
 
             ctx.save();
             ctx.fillStyle = 'rgba(15, 15, 15, 0.6)';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = isMobile ? 3.0 : 1.5;
             ctx.beginPath();
             ctx.rect(x, y, width, height);
             ctx.fill();
@@ -4371,26 +4384,28 @@ async function run(mode) {
             if (pct > 0) {
                 if (isMax || lightningChargeFlashTimer > 0) {
                     ctx.fillStyle = '#ffffff';
-                    ctx.shadowBlur = 15;
+                    ctx.shadowBlur = isMobile ? 30 : 15;
                     ctx.shadowColor = '#ffffff';
                 } else {
                     ctx.fillStyle = '#ffd200';
-                    ctx.shadowBlur = 8;
+                    ctx.shadowBlur = isMobile ? 16 : 8;
                     ctx.shadowColor = 'rgba(255, 210, 0, 0.6)';
                 }
                 ctx.beginPath();
-                ctx.rect(x + 1.5, y + 1.5, (width - 3) * pct, height - 3);
+                const inset = isMobile ? 3 : 1.5;
+                ctx.rect(x + inset, y + inset, (width - inset * 2) * pct, height - inset * 2);
                 ctx.fill();
             }
 
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = isMobile ? 2 : 1;
             ctx.shadowBlur = 0;
             for (let i = 1; i < 7; i++) {
                 const tx = x + (width / 7) * i;
                 ctx.beginPath();
-                ctx.moveTo(tx, y + 1.5);
-                ctx.lineTo(tx, y + height - 1.5);
+                const inset = isMobile ? 3 : 1.5;
+                ctx.moveTo(tx, y + inset);
+                ctx.lineTo(tx, y + height - inset);
                 ctx.stroke();
             }
 

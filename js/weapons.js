@@ -16,7 +16,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             const now = Date.now();
             if (now - lastCooldownTextTime >= 1500) {
                 const outOfAmmoText = (translations[currentLanguage] || translations['en']).outOfAmmo || "OUT OF AMMO";
-                addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 30, 80,', 0.8, 45, 18);
+                addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 30, 80,', 0.8, 45, isMobile ? 26 : 22);
                 lastCooldownTextTime = now;
             }
             const btn = document.getElementById('btn-' + type);
@@ -58,7 +58,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
                 if (defaultCd > 2.5) {
                     const now = Date.now();
                     if (now - lastCooldownTextTime >= 1500) {
-                        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, 18);
+                        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, isMobile ? 26 : 22);
                         lastCooldownTextTime = now;
                     }
                 }
@@ -198,7 +198,9 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             return;
         }
 
-        soundManager.play('sfx_launch_heavy');
+        const playVol = 0.7 + Math.random() * 0.15;
+        const detune = (Math.random() - 0.5) * 300;
+        soundManager.play('sfx_launch_heavy', false, playVol, detune);
         activeBowlingBalls.push({
             x: spawnX,
             y: spawnY,

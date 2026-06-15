@@ -1,0 +1,35 @@
+/* Orbitron - Variable Weight (Supports 100 to 900, including 400, 700, 900) */
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./Orbitron-VariableFont_wght.ttf') format('truetype');
+}
+
+/* Roboto Regular (400) */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./Roboto-Regular.ttf') format('truetype');
+}
+
+/* Roboto Bold (700) */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./Roboto-Bold.ttf') format('truetype');
+}
+
+/* Share Tech Mono (400) */
+@font-face {
+  font-family: 'Share Tech Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./ShareTechMono-Regular.ttf') format('truetype');
+}
