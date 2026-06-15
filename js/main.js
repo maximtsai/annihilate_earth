@@ -1117,7 +1117,7 @@ async function run(mode) {
                     const strike = lightningQueue[i];
                     strike.delay -= deltaTime;
                     if (strike.delay <= 0) {
-                        fireLightning(pointerX, pointerY, lightningQueue.length - i);
+                        fireLightning(pointerX, pointerY, strike.chargeIndex || 1);
                         lightningQueue.splice(i, 1);
                     }
                 }
@@ -4836,7 +4836,8 @@ async function run(mode) {
                         lightningQueue.push({
                             x: pointerX,
                             y: pointerY,
-                            delay: i * 0.1
+                            delay: i * 0.1,
+                            chargeIndex: i + 1
                         });
                     }
                 }

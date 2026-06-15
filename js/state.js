@@ -216,6 +216,14 @@ function saveUnlockedWeapons() {
     queueSaveState(state => {
         state.unlockedWeapons = unlockedWeapons;
     });
+    try {
+        const saved = localStorage.getItem('annihilate_earth_save');
+        const state = saved ? JSON.parse(saved) : {};
+        state.unlockedWeapons = unlockedWeapons;
+        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+    } catch (e) {
+        console.warn('Failed to save unlocked weapons immediately:', e);
+    }
 }
 
 function unlockRandomWeapon() {
