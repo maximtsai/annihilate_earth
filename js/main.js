@@ -1929,7 +1929,7 @@ async function run(mode) {
                     let makesContact = false;
                     const hHalf = w.width * 0.42;
                     const perpAngle = w.angle + Math.PI / 2;
-                    const imgData = hiddenCtx.getImageData(0, 0, PLANET_CANVAS_SIZE, PLANET_CANVAS_SIZE);
+                    const imgData = getSharedPlanetData();
                     const data = imgData.data;
 
                     for (let k = -3; k <= 3; k++) {
