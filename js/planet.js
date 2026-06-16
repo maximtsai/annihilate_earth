@@ -979,6 +979,8 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     }
     if (currentPlanet === 'neutron_star') {
         finalRadius *= 0.225;
+    } else {
+        finalRadius *= 0.94;
     }
 
     // Erase using centralized core-aware terrain logic
@@ -1225,6 +1227,8 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
     }
     if (currentPlanet === 'neutron_star') {
         finalRadius *= 0.225;
+    } else {
+        finalRadius *= 0.94;
     }
 
     // Erase using centralized core-aware terrain logic
@@ -1548,6 +1552,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
         weaponAmmo.missile = 30;
         weaponAmmo.nuke = 18;
         weaponAmmo.bowling = 15;
+        weaponAmmo.mysterybox = 3;
         if (typeof updateAmmoUI === 'function') {
             updateAmmoUI();
         }
@@ -1583,6 +1588,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     activeFists = [];
     activeStars = [];
     activeStarProjectiles = [];
+    activeMysteryBoxes = [];
     if (iceGrid) iceGrid.fill(0);
     fistStuckCount = 0;
 
@@ -1591,7 +1597,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     if (!keepCooldowns) {
         gammaBurstCooldown = 40.0;
         laserCooldown = 4.0;
-        asteroidCooldown = 11.0;
+        asteroidCooldown = 12.0;
         swordCooldown = 75.0;
         moonCooldown = 150.0;
         isInitialAsteroidCooldown = true;

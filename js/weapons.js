@@ -395,13 +395,30 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
         return;
     }
 
-    if (type === 'nuke') {
-        if (nukeCooldown > 0) {
-            weaponQueues['nuke'] = { x: clickX, y: clickY };
-            return;
+    if (type === 'mysterybox') {
+        // Unlocked and ammo check is handled at the beginning of spawnWeapon
+        const playVol = 0.7 + Math.random() * 0.15;
+        const detune = (Math.random() - 0.5) * 300;
+        soundManager.play('sfx_launch_heavy', false, playVol, detune);
+
+        activeMysteryBoxes.push({
+            x: spawnX,
+            y: spawnY,
+            vx: Math.cos(angle + Math.PI) * 4.0,
+            vy: Math.sin(angle + Math.PI) * 4.0,
+            size: 40, // size of the box (e.g. 40x40)
+            angle: Math.random() * Math.PI * 2,
+            angularVelocity: (Math.random() - 0.5) * 0.2,
+            hasExploded: false,
+            bounces: 0
+        });
+
+        if (typeof weaponAmmo !== 'undefined' && weaponAmmo[type] !== undefined) {
+            weaponAmmo[type]--;
+            if (typeof updateAmmoUI === 'function') {
+                updateAmmoUI(type);
+            }
         }
-        executeSpawn('nuke', clickX, clickY);
-        nukeCooldown = 0.36;
         return;
     }
 

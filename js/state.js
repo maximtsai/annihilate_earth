@@ -205,8 +205,8 @@ function saveOptions(options) {
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
-let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
-let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole'];
+let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'mysterybox'];
+let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'mysterybox'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 let claimedPlanetSpinners = [];
 
@@ -312,10 +312,13 @@ async function loadUnlockedPlanets() {
                     weaponOrder.splice(newBowlingIdx + 1, 0, 'lightning');
                 }
             }
-            if (response.state.unlockedWeapons) {
-                unlockedWeapons = response.state.unlockedWeapons;
-                initiallyUnlockedWeapons = new Set(unlockedWeapons);
-            }
+             if (response.state.unlockedWeapons) {
+                 unlockedWeapons = response.state.unlockedWeapons;
+                 if (!unlockedWeapons.includes('mysterybox')) {
+                     unlockedWeapons.push('mysterybox');
+                 }
+                 initiallyUnlockedWeapons = new Set(unlockedWeapons);
+             }
             if (response.state.unlockedPlanets) {
                 unlockedPlanets = response.state.unlockedPlanets;
                 initiallyUnlockedPlanets = new Set(unlockedPlanets);
@@ -421,7 +424,8 @@ let showPointer = false;
 let weaponAmmo = {
     missile: 30,
     nuke: 18,
-    bowling: 15
+    bowling: 15,
+    mysterybox: 3
 };
 
 function updateAmmoUI(type) {
@@ -442,10 +446,11 @@ function updateAmmoUI(type) {
         updateAmmoUI('missile');
         updateAmmoUI('nuke');
         updateAmmoUI('bowling');
+        updateAmmoUI('mysterybox');
     }
 }
 
-let asteroidCooldown = 11.0;
+let asteroidCooldown = 12.0;
 let moonCooldown = 160.0;
 let nukeCooldown = 0;
 let missileCooldown = 0;
@@ -482,6 +487,7 @@ let activeBlackHoles = [];
 let activeFists = [];
 let activeStars = [];
 let activeStarProjectiles = [];
+let activeMysteryBoxes = [];
 let fistStuckCount = 0;
 let isHolding = false;
 let missileLaunchTimer = 0;
@@ -495,6 +501,7 @@ let laserFlicker2Time = 0;
 let laserFlicker2Triggered = false;
 let lastLaserImpact = null;
 let lastLaserTier = 1;
+let laserPulseCount = 0;
 let activeLightnings = [];
 let lightningCooldown = 0;
 let lightningHoldTime = 0;

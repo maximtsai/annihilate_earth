@@ -78,6 +78,9 @@ function resizeLoadingCanvas() {
     loadingStarsCanvas.height = window.innerHeight;
     loadingScreenWidth = loadingScreen.offsetWidth || window.innerWidth;
     loadingScreenHeight = loadingScreen.offsetHeight || window.innerHeight;
+    if (!supportsGlow || isMobile) {
+        drawStaticStars();
+    }
 }
 window.addEventListener('resize', resizeLoadingCanvas);
 
@@ -144,7 +147,37 @@ function animateMissile(timestamp) {
     missileDiv.style.opacity = '1';
 }
 
+function drawStaticStars() {
+    lsCtx.fillStyle = '#020206';
+    lsCtx.fillRect(0, 0, loadingStarsCanvas.width, loadingStarsCanvas.height);
+
+    const cx = loadingStarsCanvas.width / 2;
+    const cy = loadingStarsCanvas.height / 2;
+    const scaleX = loadingStarsCanvas.width / 1600;
+    const scaleY = loadingStarsCanvas.height / 900;
+    const starScale = scaleY;
+
+    loadingStars.forEach(star => {
+        const sx = (star.x / star.z) * 400 * scaleX + cx;
+        const sy = (star.y / star.z) * 400 * scaleY + cy;
+        const size = Math.max(0.5, (1 - star.z / 1000) * 3 * starScale);
+        const alpha = Math.max(0.2, 1 - star.z / 1000);
+
+        lsCtx.fillStyle = `rgba(180, 220, 255, ${alpha})`;
+        lsCtx.beginPath();
+        lsCtx.arc(sx, sy, size, 0, Math.PI * 2);
+        lsCtx.fill();
+    });
+}
+
 let loadingAnimId = null;
+
+function animateMissileOnly(timestamp) {
+    timestamp = timestamp || performance.now();
+    animateMissile(timestamp);
+    loadingAnimId = requestAnimationFrame(animateMissileOnly);
+}
+
 function animateLoadingStars(timestamp) {
     timestamp = timestamp || performance.now();
     lsCtx.fillStyle = 'rgba(2, 2, 6, 0.3)';
@@ -179,7 +212,13 @@ function animateLoadingStars(timestamp) {
 
     loadingAnimId = requestAnimationFrame(animateLoadingStars);
 }
-animateLoadingStars();
+
+if (!supportsGlow || isMobile) {
+    drawStaticStars();
+    animateMissileOnly();
+} else {
+    animateLoadingStars();
+}
 
 function setLoadingProgress(pct, status) {
     if (loadingBar) loadingBar.style.width = pct + '%';
@@ -374,6 +413,7 @@ async function run(mode) {
         const idx = (py * PLANET_CANVAS_SIZE + px) * 4;
         return imgData.data[idx + 3] > 0;
     }
+    window.isSolidPixel = isSolidPixel;
 
     // Intercept hidden canvas modifications to invalidate the cache automatically
     const originalPutImageData = hiddenCtx.putImageData;
@@ -640,6 +680,9 @@ async function run(mode) {
                     if (lastLaserImpact && lastLaserImpact.local) {
                         createExplosion(lastLaserImpact.local.x, lastLaserImpact.local.y, laserExplosionSize, 2, 'laser', false, true);
                     }
+                    if (laserTier3) {
+                        laserPulseCount++;
+                    }
                     laserLaunchTimer -= laserInterval;
                 }
             } else {
@@ -653,6 +696,7 @@ async function run(mode) {
                 laserFlicker2Time = 0;
                 lastLaserImpact = null;
                 lastLaserTier = 1;
+                laserPulseCount = 0;
                 if (activeBlackHoles.length === 0) {
                     soundManager.stopLoop('sfx_laser_hum');
                 }
@@ -2071,7 +2115,7 @@ async function run(mode) {
                         const explX = w.x - Math.cos(w.angle) * 35;
                         const explY = w.y - Math.sin(w.angle) * 35;
                         const localHit = screenToLocal(explX, explY, CENTER_X, CENTER_Y, planetRotation);
-                        createExplosion(localHit.x, localHit.y, 83, 64, 'asteroid', false, true);
+                        createExplosion(localHit.x, localHit.y, 75, 60, 'asteroid', false, true);
                     }
 
                 } else if (w.state === 'micro_pull') {
@@ -2417,7 +2461,9 @@ async function run(mode) {
                             const scale = 2 + Math.min(1.0, bh.time / 5.0) * 1.3;
                             let radius = 8 * scale;
                             if (currentPlanet === 'neutron_star') {
-                                radius *= 0.225;
+                                radius *= 0.22;
+                            } else {
+                                radius *= 0.94;
                             }
 
                             // Play subtle crackling/crushing impact sound
@@ -2576,6 +2622,11 @@ async function run(mode) {
                         const gravity = 0.22 * dt60;
                         w.vx += (dx / dist) * gravity;
                         w.vy += (dy / dist) * gravity;
+
+                        // Add slight decay to velocity components so orbital/lateral movement dampens over time
+                        w.vx *= Math.pow(0.99, dt60);
+                        w.vy *= Math.pow(0.99, dt60);
+
                         // Align rotation with velocity vector
                         w.angle = Math.atan2(w.vy, w.vx);
                     }
@@ -2790,6 +2841,9 @@ async function run(mode) {
                     weapons.splice(i, 1);
                 }
             }
+
+            // Update active mystery boxes
+            updateMysteryBoxes(deltaTime, dt60);
 
             // Update particles using the static pool (no array splicing, no allocations)
             for (let i = 0; i < particles.pool.length; i++) {
@@ -3964,6 +4018,41 @@ async function run(mode) {
         activeStarProjectiles.forEach(drawStarProjectile);
         activeStars.forEach(drawStar);
 
+        // Draw active mystery boxes
+        activeMysteryBoxes.forEach(box => {
+            ctx.save();
+            ctx.translate(box.x, box.y);
+            ctx.rotate(box.angle);
+
+            // Draw yellow box (or red if flashing_red state)
+            let fillColor = '#ffeb3b';
+            let strokeColor = '#f57f17';
+            if (box.state === 'flashing_red') {
+                // Flash red/yellow based on remaining time (e.g. 0.05s intervals)
+                const flashInterval = 0.07;
+                const phase = Math.floor(box.flashTimer / flashInterval) % 2;
+                if (phase === 0) {
+                    fillColor = '#f44336'; // vivid red
+                    strokeColor = '#b71c1c'; // dark red border
+                }
+            }
+
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 2;
+            const size = box.size || 20;
+            ctx.fillRect(-size / 2, -size / 2, size, size);
+            ctx.strokeRect(-size / 2, -size / 2, size, size);
+
+            // Draw thick "?" symbol in white
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 32px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('?', 0, 0);
+
+            ctx.restore();
+        });
 
         // Draw flying or penetrating bowling balls in screen space (higher depth)
         activeBowlingBalls.forEach(w => {
@@ -4453,6 +4542,11 @@ async function run(mode) {
 
             // Draw the multi-layered glowing laser beam
             ctx.save();
+
+            // Dim tier 3 laser to 50% alpha every 6th pulse
+            if (laserTier3 && laserPulseCount > 0 && Math.floor(laserPulseCount / 1) % 4 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
 
             // For tier 3: main beam and core are 25% bigger; outer aura stays the same size
             const innerWidthMult = (laserTier3 && !laserColorOverride) ? widthMult * 1.25 : widthMult;
@@ -5459,8 +5553,8 @@ async function run(mode) {
             initiallyUnlockedPlanets = new Set(['earth']);
             bestTimes = {};
             claimedPlanetSpinners = [];
-            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
-            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole'];
+            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'mysterybox'];
+            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'mysterybox'];
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
             saveWeaponOrder();
             saveUnlockedWeapons();
