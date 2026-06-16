@@ -248,6 +248,10 @@ const assets = {
     "sprite_smoke_missile": {
         "url": "./assets/smoke_missile.webp",
         "type": "image"
+    },
+    "sfx_error": {
+        "url": "./assets/error_bleep.mp3",
+        "type": "audio"
     }
 };
 

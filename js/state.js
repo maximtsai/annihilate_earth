@@ -422,14 +422,14 @@ let pointerY = 340;
 let showPointer = false;
 // Weapon states
 let weaponAmmo = {
-    missile: 30,
     nuke: 18,
     bowling: 15,
-    mysterybox: 3
+    mysterybox: 15
 };
 
 function updateAmmoUI(type) {
     if (type) {
+        if (weaponAmmo[type] === undefined) return;
         const ammoEl = document.getElementById(`ammo-${type}`);
         if (ammoEl) {
             ammoEl.textContent = weaponAmmo[type];
@@ -443,7 +443,6 @@ function updateAmmoUI(type) {
             }
         }
     } else {
-        updateAmmoUI('missile');
         updateAmmoUI('nuke');
         updateAmmoUI('bowling');
         updateAmmoUI('mysterybox');
@@ -454,7 +453,7 @@ let asteroidCooldown = 12.0;
 let moonCooldown = 160.0;
 let nukeCooldown = 0;
 let missileCooldown = 0;
-let gammaBurstCooldown = 40.0;
+let gammaBurstCooldown = 35.0;
 let laserCooldown = 4.0;
 let swordCooldown = 80.0;
 let bowlingCooldown = 0;

@@ -239,7 +239,7 @@ const soundIds = [
     'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
     'sfx_mystical_moon_explosion', 'sfx_holy_shine',
     'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter', 'sfx_lightning'
+    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error'
 ];
 soundIds.forEach(id => soundManager.load(id));
 
@@ -600,9 +600,9 @@ async function run(mode) {
             // Handle continuous missile auto-launch
             if (isHolding && selectedWeapon === 'missile' && !victoryTriggered) {
                 missileLaunchTimer += deltaTime;
-                while (missileLaunchTimer >= 0.125) {
+                while (missileLaunchTimer >= 0.2) {
                     spawnWeapon(pointerX, pointerY);
-                    missileLaunchTimer -= 0.125;
+                    missileLaunchTimer -= 0.2;
                 }
             } else {
                 missileLaunchTimer = 0;
@@ -1428,42 +1428,57 @@ async function run(mode) {
                     w.x += w.vx * dt60;
                     w.y += w.vy * dt60;
 
+                    // Calculate distance squared to the center of the planet
+                    const sDx = w.x - CENTER_X;
+                    const sDy = w.y - CENTER_Y;
+                    const currentDistSq = sDx * sDx + sDy * sDy;
+
+                    let forcedStuck = false;
+                    if (w.lastDistanceSq !== undefined && w.lastDistanceSq !== null && currentDistSq < 10000 && currentDistSq > w.lastDistanceSq) {
+                        forcedStuck = true;
+                    }
+                    w.lastDistanceSq = currentDistSq;
+
                     // Check collision with planet silhouette
                     const local = screenToLocal(w.x, w.y, CENTER_X, CENTER_Y, planetRotation);
+                    let hitTerrain = false;
+
                     if (local.x >= 0 && local.x < hiddenCanvas.width &&
                         local.y >= 0 && local.y < hiddenCanvas.height) {
-
                         const px = Math.floor(local.x);
                         const py = Math.floor(local.y);
-
                         if (isSolidPixel(px, py, getSharedPlanetData())) {
-                            // Make contact!
-                            soundManager.stopLoop('sfx_sword_fly');
-                            soundManager.play('sfx_sword_stab');
-                            w.state = 'penetrating';
-                            w.contactX = w.x;
-                            w.contactY = w.y;
-                            w.targetX = w.x + Math.cos(w.angle) * 70; // 70px penetration depth
-                            w.targetY = w.y + Math.sin(w.angle) * 70; // 70px penetration depth
-                            w.penetrateTimer = 0.06; // Highly satisfying rapid stab (0.06s)
+                            hitTerrain = true;
+                        }
+                    }
 
-                            // Spawn dust particles flying away from the center of Earth in a 140-degree arc
-                            const angleAway = Math.atan2(w.y - CENTER_Y, w.x - CENTER_X);
-                            for (let p = 0; p < 25; p++) {
-                                const spreadAngle = angleAway + (Math.random() - 0.5) * (140 * Math.PI / 180);
-                                const pSpeed = Math.random() * 3.5 + 1.5;
-                                particles.push({
-                                    x: w.x,
-                                    y: w.y,
-                                    vx: Math.cos(spreadAngle) * pSpeed,
-                                    vy: Math.sin(spreadAngle) * pSpeed,
-                                    life: 1.0,
-                                    maxLife: Math.random() * 0.8 + 0.6,
-                                    size: Math.random() * 5 + 3,
-                                    color: `rgba(${Math.random() * 40 + 120}, ${Math.random() * 30 + 110}, ${Math.random() * 30 + 100}, ${0.5 + Math.random() * 0.4})`, // high-fidelity dust smoke HSL/RGBA
-                                    type: 'smoke'
-                                });
-                            }
+                    if (hitTerrain || forcedStuck) {
+                        // Make contact!
+                        soundManager.stopLoop('sfx_sword_fly');
+                        soundManager.play('sfx_sword_stab');
+                        w.state = 'penetrating';
+                        w.contactX = w.x;
+                        w.contactY = w.y;
+                        w.targetX = w.x + Math.cos(w.angle) * 70; // 70px penetration depth
+                        w.targetY = w.y + Math.sin(w.angle) * 70; // 70px penetration depth
+                        w.penetrateTimer = 0.06; // Highly satisfying rapid stab (0.06s)
+
+                        // Spawn dust particles flying away from the center of Earth in a 140-degree arc
+                        const angleAway = Math.atan2(w.y - CENTER_Y, w.x - CENTER_X);
+                        for (let p = 0; p < 25; p++) {
+                            const spreadAngle = angleAway + (Math.random() - 0.5) * (140 * Math.PI / 180);
+                            const pSpeed = Math.random() * 3.5 + 1.5;
+                            particles.push({
+                                x: w.x,
+                                y: w.y,
+                                vx: Math.cos(spreadAngle) * pSpeed,
+                                vy: Math.sin(spreadAngle) * pSpeed,
+                                life: 1.0,
+                                maxLife: Math.random() * 0.8 + 0.6,
+                                size: Math.random() * 5 + 3,
+                                color: `rgba(${Math.random() * 40 + 120}, ${Math.random() * 30 + 110}, ${Math.random() * 30 + 100}, ${0.5 + Math.random() * 0.4})`, // high-fidelity dust smoke HSL/RGBA
+                                type: 'smoke'
+                            });
                         }
                     }
 
@@ -3889,7 +3904,7 @@ async function run(mode) {
                 ctx.translate(dxLocal, dyLocal);
                 let scaleFactor = coreRatio * pulse;
                 if (currentPlanet === 'mars') {
-                    scaleFactor *= 0.85;
+                    scaleFactor *= 0.765;
                 }
                 ctx.scale(scaleFactor, scaleFactor);
                 ctx.drawImage(coreImg, -coreImg.width / 2, -coreImg.height / 2);
@@ -4025,12 +4040,14 @@ async function run(mode) {
             ctx.rotate(box.angle);
 
             // Draw yellow box (or red if flashing_red state)
-            let fillColor = '#ffeb3b';
+            let fillColor = '#fdcf35';
             let strokeColor = '#f57f17';
-            if (box.state === 'flashing_red') {
-                // Flash red/yellow based on remaining time (e.g. 0.05s intervals)
+            if (box.state === 'flashing_red' || (box.state && box.state.startsWith('flying_up'))) {
+                // Flash red/yellow based on time (e.g. 0.07s intervals)
+                const isFlying = box.state.startsWith('flying_up');
+                const tValue = isFlying ? performance.now() * 0.001 : box.flashTimer;
                 const flashInterval = 0.07;
-                const phase = Math.floor(box.flashTimer / flashInterval) % 2;
+                const phase = Math.floor(tValue / flashInterval) % 2;
                 if (phase === 0) {
                     fillColor = '#f44336'; // vivid red
                     strokeColor = '#b71c1c'; // dark red border
@@ -4052,6 +4069,62 @@ async function run(mode) {
             ctx.fillText('?', 0, 0);
 
             ctx.restore();
+
+            // Draw the laser coming out of the spinning mystery box
+            if (box.state === 'spinning_lasers') {
+                const sharedData = getSharedPlanetData();
+                const beamAngle = Math.atan2(CENTER_Y - box.y, CENTER_X - box.x);
+                const impact = findLaserImpactWithData(box.x, box.y, sharedData, Math.cos(beamAngle), Math.sin(beamAngle));
+
+                const t3pulse = Math.sin(performance.now() * 0.03) * 0.5 + 0.5;
+                const widthMult = 4.0 + t3pulse * 1.0;
+                const innerWidthMult = widthMult * 1.25;
+
+                ctx.save();
+                // 1. Thick Outer Neon Glow
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+                ctx.lineWidth = 10 * widthMult;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(box.x, box.y);
+                ctx.lineTo(impact.x, impact.y);
+                ctx.stroke();
+
+                // 2. Vibrant Inner Beam
+                ctx.strokeStyle = '#00f0ff';
+                ctx.lineWidth = 4 * innerWidthMult;
+                ctx.beginPath();
+                ctx.moveTo(box.x, box.y);
+                ctx.lineTo(impact.x, impact.y);
+                ctx.stroke();
+
+                // 3. Bright White Core
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5 * innerWidthMult;
+                ctx.beginPath();
+                ctx.moveTo(box.x, box.y);
+                ctx.lineTo(impact.x, impact.y);
+                ctx.stroke();
+
+                ctx.restore();
+
+                // Continuous spark particles spray at impact point
+                if (impact.local && Math.random() < 0.3) {
+                    const pAngle = beamAngle + Math.PI + (Math.random() - 0.5) * 1.5;
+                    const speed = Math.random() * 2 + 1;
+                    particles.push({
+                        x: impact.x,
+                        y: impact.y,
+                        vx: Math.cos(pAngle) * speed + (Math.random() - 0.5) * 1,
+                        vy: Math.sin(pAngle) * speed + (Math.random() - 0.5) * 1,
+                        life: 1.0,
+                        maxLife: Math.random() * 0.2 + 0.1,
+                        size: Math.random() * 3 + 1.5,
+                        color: `hsl(${Math.random() * 30 + 175}, 100%, ${Math.random() * 20 + 70}%)`,
+                        type: 'fire'
+                    });
+                }
+            }
         });
 
         // Draw flying or penetrating bowling balls in screen space (higher depth)
@@ -5292,6 +5365,18 @@ async function run(mode) {
     // Restart / Next Planet trigger
     document.getElementById('restart-button').addEventListener('click', (e) => {
         e.stopPropagation();
+
+        // If this button is acting as the Spinner Stop button
+        if (e.currentTarget.isSpinnerStopButton) {
+            if (window.activeWeaponSpinner && window.activeWeaponSpinner.isSpinning && window.activeWeaponSpinner.spinPhase === 'running') {
+                window.activeWeaponSpinner.stop();
+                e.currentTarget.disabled = true;
+                e.currentTarget.style.opacity = '0.5';
+                e.currentTarget.style.pointerEvents = 'none';
+                e.currentTarget.style.cursor = 'default';
+            }
+            return;
+        }
 
         const nextPlanetVal = getNextPlanet(currentPlanet);
         const isNextPlanet = nextPlanetVal !== 'earth';

@@ -72,8 +72,8 @@
                     console.log("[ShootingStar] Left screen, deactivating.");
                     star = null;
                 } else {
-                    // Spawn particle trail (reduced spawn rate by 20%)
-                    if (typeof particles !== 'undefined' && Math.random() < 0.36) {
+                    // Spawn particle trail (reduced spawn rate by 20% more)
+                    if (typeof particles !== 'undefined' && Math.random() < 0.3) {
                         const angleOff = Math.random() * Math.PI * 2;
                         // Spawn in a wider area around the star
                         const distOff = Math.random() * star.size * 1.6;
@@ -291,7 +291,7 @@
 
                 // Play sound
                 if (typeof soundManager !== 'undefined') {
-                    soundManager.play('sfx_holy_shine', false, 0.9);
+                    soundManager.play('sfx_holy_shine', false, 0.68);
                 }
 
                 // Open the ad spin popup

@@ -16,7 +16,8 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             const now = Date.now();
             if (now - lastCooldownTextTime >= 1100) {
                 const outOfAmmoText = (translations[currentLanguage] || translations['en']).outOfAmmo || "OUT OF AMMO";
-                addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 30, 80,', 0.8, 45, isMobile ? 26 : 22);
+                addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 120, 180,', 1.3, 45, isMobile ? 36 : 30);
+                soundManager.play('sfx_error');
                 lastCooldownTextTime = now;
             }
             const btn = document.getElementById('btn-' + type);
@@ -58,7 +59,8 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
                 if (defaultCd > 2.5) {
                     const now = Date.now();
                     if (now - lastCooldownTextTime >= 1100) {
-                        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 30, 80,', 0.8, 45, isMobile ? 26 : 22);
+                        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 120, 180,', 1.3, 45, isMobile ? 36 : 30);
+                        soundManager.play('sfx_error');
                         lastCooldownTextTime = now;
                     }
                 }
@@ -150,7 +152,8 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             penetrateTimer: 0,
             stuckTimer: 2.5,
             pullTimer: 0.35,
-            opacity: 1.0
+            opacity: 1.0,
+            lastDistanceSq: null
         });
 
         swordCooldown = MAX_COOLDOWNS.sword; // 10s cooldown
@@ -351,7 +354,18 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
         const bhSpawnY = CENTER_Y + Math.sin(angle) * bhSpawnRadius;
 
         soundManager.play('sfx_black_hole_spawn');
-        soundManager.play('sfx_mystical_moon_explosion', false, 0.9);
+        soundManager.play('sfx_mystical_moon_explosion', false, 0.8);
+        soundManager.play('sfx_lightning', false, 0.5);
+
+        // Create a large circle in effect (imploding shockwave)
+        shockwaves.push({
+            x: bhSpawnX,
+            y: bhSpawnY,
+            radius: 250,
+            maxRadius: 0,
+            life: 1.0,
+            maxLife: 0.6
+        });
 
         activeBlackHoles.push({
             x: bhSpawnX,
@@ -453,7 +467,7 @@ function executeSpawn(type, clickX, clickY) {
 
     const speed = getConfigValue(`weapons.${type}.speed`, type === 'missile' ? 7 : (type === 'nuke' || type === 'asteroid' || type === 'comet') ? 4 : type === 'moon' ? 1.8 : 2);
     const size = getConfigValue(`weapons.${type}.size`, type === 'missile' ? 5 : type === 'nuke' ? 9 : type === 'moon' ? 25 : type === 'comet' ? 20 : 15);
-    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 12.0 : type === 'nuke' ? 20 : type === 'sword' ? 24 : type === 'moon' ? 102 : type === 'comet' ? 92 : 41);
+    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 11.0 : type === 'nuke' ? 20 : type === 'sword' ? 24 : type === 'moon' ? 102 : type === 'comet' ? 92 : 41);
     const shakeIntensity = getConfigValue(`weapons.${type}.shakeIntensity`, type === 'missile' ? 4.5 : type === 'nuke' ? 12 : type === 'moon' ? 32 : type === 'comet' ? 8 : 22);
 
     let vx = (dirX / dist) * speed;
@@ -493,7 +507,7 @@ function executeSpawn(type, clickX, clickY) {
         moonCooldown = 15.0;
     }
     if (type === 'missile') {
-        missileCooldown = 0.07;
+        missileCooldown = 0.13;
     }
 }
 

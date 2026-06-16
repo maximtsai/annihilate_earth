@@ -1422,10 +1422,15 @@ function triggerVictory() {
 
         // Update the button to show the next planet
         const restartBtn = document.getElementById('restart-button');
+        const next = getNextPlanet(currentPlanet);
+        const nextPlanetLabel = next === 'earth' ? t.restartSim : `${t.next}: ${(t.planets[next] || next).toUpperCase()}`;
         if (restartBtn) {
-            const next = getNextPlanet(currentPlanet);
-            const label = next === 'earth' ? t.restartSim : `${t.next}: ${(t.planets[next] || next).toUpperCase()}`;
-            restartBtn.textContent = label;
+            restartBtn.textContent = nextPlanetLabel;
+            restartBtn.disabled = false;
+            restartBtn.style.opacity = '1';
+            restartBtn.style.pointerEvents = 'auto';
+            restartBtn.style.cursor = 'pointer';
+            restartBtn.isSpinnerStopButton = false;
         }
 
         // Setup the Victory Spinner
@@ -1435,8 +1440,6 @@ function triggerVictory() {
             const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
             if (restartBtn) {
-                restartBtn.style.opacity = '1';
-                restartBtn.style.pointerEvents = 'auto';
                 restartBtn.style.display = 'block';
             }
 
@@ -1449,6 +1452,14 @@ function triggerVictory() {
                             if (!claimedPlanetSpinners.includes(currentPlanet)) {
                                 claimedPlanetSpinners.push(currentPlanet);
                                 saveClaimedPlanetSpinners();
+                            }
+                            if (restartBtn) {
+                                restartBtn.textContent = nextPlanetLabel;
+                                restartBtn.disabled = false;
+                                restartBtn.style.opacity = '1';
+                                restartBtn.style.pointerEvents = 'auto';
+                                restartBtn.style.cursor = 'pointer';
+                                restartBtn.isSpinnerStopButton = false;
                             }
                         }
                     });
@@ -1475,6 +1486,14 @@ function triggerVictory() {
                         e.stopPropagation();
                         container.classList.remove('primed-pulse');
                         soundManager.play('sfx_ui_switch');
+                        if (restartBtn) {
+                            restartBtn.textContent = 'Stop Spinner';
+                            restartBtn.isSpinnerStopButton = true;
+                            restartBtn.disabled = true;
+                            restartBtn.style.opacity = '0.5';
+                            restartBtn.style.pointerEvents = 'none';
+                            restartBtn.style.cursor = 'default';
+                        }
                         if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
                             window.PlatformBridge.showRewardedAd(() => {
                                 startReplaySpinner();
@@ -1489,12 +1508,46 @@ function triggerVictory() {
                         spinner.start();
                     };
                 } else {
+                    if (restartBtn) {
+                        restartBtn.textContent = 'Stop Spinner';
+                        restartBtn.isSpinnerStopButton = true;
+                        restartBtn.disabled = true;
+                        restartBtn.style.opacity = '0.5';
+                        restartBtn.style.pointerEvents = 'none';
+                        restartBtn.style.cursor = 'default';
+                    }
+
                     const spinner = new WeaponSpinner(container, {
+                        onStart: () => {
+                            const checkInterval = setInterval(() => {
+                                if (spinner.isDestroyed || !spinner.isSpinning) {
+                                    clearInterval(checkInterval);
+                                    return;
+                                }
+                                if (spinner.spinPhase === 'running') {
+                                    clearInterval(checkInterval);
+                                    if (restartBtn && restartBtn.isSpinnerStopButton) {
+                                        restartBtn.disabled = false;
+                                        restartBtn.style.opacity = '1';
+                                        restartBtn.style.pointerEvents = 'auto';
+                                        restartBtn.style.cursor = 'pointer';
+                                    }
+                                }
+                            }, 50);
+                        },
                         onStop: (weaponToUnlock) => {
                             unlockSpecificWeapon(weaponToUnlock);
                             if (!claimedPlanetSpinners.includes(currentPlanet)) {
                                 claimedPlanetSpinners.push(currentPlanet);
                                 saveClaimedPlanetSpinners();
+                            }
+                            if (restartBtn) {
+                                restartBtn.textContent = nextPlanetLabel;
+                                restartBtn.disabled = false;
+                                restartBtn.style.opacity = '1';
+                                restartBtn.style.pointerEvents = 'auto';
+                                restartBtn.style.cursor = 'pointer';
+                                restartBtn.isSpinnerStopButton = false;
                             }
                         }
                     });
@@ -1549,10 +1602,9 @@ function updatePlanetButtons() {
 // Reset Game values
 function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     if (typeof weaponAmmo !== 'undefined') {
-        weaponAmmo.missile = 30;
         weaponAmmo.nuke = 18;
         weaponAmmo.bowling = 15;
-        weaponAmmo.mysterybox = 3;
+        weaponAmmo.mysterybox = 15;
         if (typeof updateAmmoUI === 'function') {
             updateAmmoUI();
         }
@@ -1595,7 +1647,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     for (const key in weaponQueues) delete weaponQueues[key];
 
     if (!keepCooldowns) {
-        gammaBurstCooldown = 40.0;
+        gammaBurstCooldown = 36.0;
         laserCooldown = 4.0;
         asteroidCooldown = 12.0;
         swordCooldown = 75.0;
