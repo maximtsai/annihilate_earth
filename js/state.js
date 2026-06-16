@@ -385,12 +385,13 @@ function refreshWeaponLocks() {
 }
 
 function getPlanetSize() {
-    if (currentPlanet === 'neutron_star') return 175;
-    if (currentPlanet === 'mars') return 195;
+    if (currentPlanet === 'earth') return 240;
+    if (currentPlanet === 'neutron_star') return 188;
+    if (currentPlanet === 'mars') return 201;
     if (currentPlanet === 'neptune') return 340;
     if (currentPlanet === 'jupiter') return 380;
     if (currentPlanet === 'sun') return 455;
-    return getConfigValue('planet.size', 230);
+    return getConfigValue('planet.size', 245);
 }
 
 function getCoreRadius(planetSize, planetName = currentPlanet) {
