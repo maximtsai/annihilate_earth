@@ -8,7 +8,7 @@ const translations = {
         annihilate: 'ANNIHILATE',
         annihilateThe: 'ANNIHILATE THE',
         planets: { earth: 'Earth', mars: 'Mars', neptune: 'Neptune', jupiter: 'Jupiter', sun: 'Sun', neutron_star: 'Neutron Star' },
-        weaponNames: { missile: 'Missile', nuke: 'Nuke', asteroid: 'Asteroid', laser: 'Laser', lightning: 'Lightning', gamma: 'Gamma<br>Burst', sword: 'Excalibur', moon: 'Moon', kraken: 'Cthulhu', bowling: 'Bowling', worm: 'Worm', fist: 'Fist', blackhole: 'Black<br>Hole', star: 'Star', comet: 'Comet' },
+        weaponNames: { missile: 'Missile', nuke: 'Nuke', asteroid: 'Asteroid', laser: 'Laser', lightning: 'Lightning', gamma: 'Gamma<br>Burst', sword: 'Excalibur', moon: 'Moon', kraken: 'Cthulhu', bowling: 'Bowling', worm: 'Worm', fist: 'Fist', blackhole: 'Black<br>Hole', star: 'Star', comet: 'Comet', mysterybox: 'Mystery' },
         earthAnnihilated: 'EARTH ANNIHILATED',
         marsAnnihilated: 'MARS ANNIHILATED',
         neptuneAnnihilated: 'NEPTUNE ANNIHILATED',
@@ -63,7 +63,10 @@ const translations = {
         screenShake: 'SCREEN SHAKE',
         none: 'NONE',
         half: 'HALF',
-        full: 'FULL'
+        full: 'FULL',
+        switchWeapons: 'CLICK TO\nSWITCH WEAPONS',
+        newWeapon: 'NEW WEAPON',
+        stopSpinner: 'STOP SPINNER'
     },
     'zh-CN': {
         options: '设置',
@@ -74,7 +77,7 @@ const translations = {
         annihilate: '毁灭',
         annihilateThe: '毁灭',
         planets: { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星', sun: '太阳', neutron_star: '中子星' },
-        weaponNames: { missile: '导弹', nuke: '核弹', asteroid: '小行星', laser: '激光', lightning: '闪电', gamma: '伽马爆发', sword: '圣剑', moon: '月球', kraken: '克苏鲁', bowling: '保龄球', worm: '蠕虫', fist: '铁拳', blackhole: '黑洞', star: '星星', comet: '彗星' },
+        weaponNames: { missile: '导弹', nuke: '核弹', asteroid: '小行星', laser: '激光', lightning: '闪电', gamma: '伽马爆发', sword: '圣剑', moon: '月球', kraken: '克苏鲁', bowling: '保龄球', worm: '蠕虫', fist: '铁拳', blackhole: '黑洞', star: '星星', comet: '彗星', mysterybox: '神秘' },
         earthAnnihilated: '地球已毁灭',
         marsAnnihilated: '火星已毁灭',
         neptuneAnnihilated: '海王星已毁灭',
@@ -129,7 +132,10 @@ const translations = {
         screenShake: '屏幕抖动',
         none: '无',
         half: '一半',
-        full: '全'
+        full: '全',
+        switchWeapons: '点击切换\n武器',
+        newWeapon: '新武器',
+        stopSpinner: '停止转盘'
     },
     'zh-TW': {
         options: '設定',
@@ -140,7 +146,7 @@ const translations = {
         annihilate: '毀滅',
         annihilateThe: '毀滅',
         planets: { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星', sun: '太陽', neutron_star: '中子星' },
-        weaponNames: { missile: '導彈', nuke: '核彈', asteroid: '小行星', laser: '雷射', lightning: '閃電', gamma: '伽瑪射線', sword: '聖劍', moon: '月球', kraken: '克蘇魯', bowling: '保齡球', worm: '蠕蟲', fist: '鐵拳', blackhole: '黑洞', star: '星星', comet: '彗星' },
+        weaponNames: { missile: '導彈', nuke: '核彈', asteroid: '小行星', laser: '雷射', lightning: '閃電', gamma: '伽瑪射線', sword: '聖劍', moon: '月球', kraken: '克蘇魯', bowling: '保齡球', worm: '蠕蟲', fist: '鐵拳', blackhole: '黑洞', star: '星星', comet: '彗星', mysterybox: '神秘' },
         earthAnnihilated: '地球已毀滅',
         marsAnnihilated: '火星已毀滅',
         neptuneAnnihilated: '海王星已毀滅',
@@ -195,7 +201,10 @@ const translations = {
         screenShake: '螢幕抖動',
         none: '無',
         half: '一半',
-        full: '全'
+        full: '全',
+        switchWeapons: '點擊切換\n武器',
+        newWeapon: '新武器',
+        stopSpinner: '停止轉盤'
     },
     es: {
         options: 'OPCIONES',
@@ -206,7 +215,7 @@ const translations = {
         annihilate: 'DESTRUIR',
         annihilateThe: 'DESTRUIR',
         planets: { earth: 'Tierra', mars: 'Marte', neptune: 'Neptuno', jupiter: 'Júpiter', sun: 'Sol', neutron_star: 'Estrella de neutrones' },
-        weaponNames: { missile: 'Misil', nuke: 'Nuclear', asteroid: 'Asteroide', laser: 'Láser', lightning: 'Rayo', gamma: 'Rayo<br>Gamma', sword: 'Excalibur', moon: 'Luna', kraken: 'Cthulhu', bowling: 'Boliche', worm: 'Gusano', fist: 'Puño', blackhole: 'Agujero<br>Negro', star: 'Estrella', comet: 'Cometa' },
+        weaponNames: { missile: 'Misil', nuke: 'Nuclear', asteroid: 'Asteroide', laser: 'Láser', lightning: 'Rayo', gamma: 'Rayo<br>Gamma', sword: 'Excalibur', moon: 'Luna', kraken: 'Cthulhu', bowling: 'Boliche', worm: 'Gusano', fist: 'Puño', blackhole: 'Agujero<br>Negro', star: 'Estrella', comet: 'Cometa', mysterybox: 'Misterio' },
         earthAnnihilated: 'TIERRA DESTRUIDA',
         marsAnnihilated: 'MARTE DESTRUIDO',
         neptuneAnnihilated: 'NEPTUNO DESTRUIDO',
@@ -261,7 +270,10 @@ const translations = {
         screenShake: 'VIBRACIÓN',
         none: 'NINGUNO',
         half: 'MITAD',
-        full: 'COMPLETO'
+        full: 'COMPLETO',
+        switchWeapons: 'TOCA PARA\nCAMBIAR ARMA',
+        newWeapon: 'NUEVA ARMA',
+        stopSpinner: 'DETENER RULETA'
     },
     fr: {
         options: 'OPTIONS',
@@ -272,7 +284,7 @@ const translations = {
         annihilate: 'ANÉANTIR',
         annihilateThe: 'ANÉANTIR',
         planets: { earth: 'Terre', mars: 'Mars', neptune: 'Neptune', jupiter: 'Jupiter', sun: 'Soleil', neutron_star: 'Étoile à neutrons' },
-        weaponNames: { missile: 'Missile', nuke: 'Bombe', asteroid: 'Astéroïde', laser: 'Laser', lightning: 'Éclair', gamma: 'Rayon<br>Gamma', sword: 'Excalibur', moon: 'Lune', kraken: 'Cthulhu', bowling: 'Bowling', worm: 'Ver', fist: 'Poing', blackhole: 'Trou<br>Noir', star: 'Étoile', comet: 'Comète' },
+        weaponNames: { missile: 'Missile', nuke: 'Bombe', asteroid: 'Astéroïde', laser: 'Laser', lightning: 'Éclair', gamma: 'Rayon<br>Gamma', sword: 'Excalibur', moon: 'Lune', kraken: 'Cthulhu', bowling: 'Bowling', worm: 'Ver', fist: 'Poing', blackhole: 'Trou<br>Noir', star: 'Étoile', comet: 'Comète', mysterybox: 'Mystère' },
         earthAnnihilated: 'TERRE ANÉANTIE',
         marsAnnihilated: 'MARS ANÉANTIE',
         neptuneAnnihilated: 'NEPTUNE ANÉANTIE',
@@ -327,7 +339,10 @@ const translations = {
         screenShake: 'SECOUSSE',
         none: 'SANS',
         half: 'MOITIÉ',
-        full: 'PLEIN'
+        full: 'PLEIN',
+        switchWeapons: 'CLIQUER POUR\nCHANGER D\'ARME',
+        newWeapon: 'NOUVELLE ARME',
+        stopSpinner: 'ARRÊTER LA ROUE'
     },
     ru: {
         options: 'НАСТРОЙКИ',
@@ -338,7 +353,7 @@ const translations = {
         annihilate: 'УНИЧТОЖИТЬ',
         annihilateThe: 'УНИЧТОЖИТЬ',
         planets: { earth: 'Земля', mars: 'Марс', neptune: 'Нептун', jupiter: 'Юпитер', sun: 'Солнце', neutron_star: 'Нейтронная звезда' },
-        weaponNames: { missile: 'Ракета', nuke: 'Ядерная', asteroid: 'Астероид', laser: 'Лазер', lightning: 'Молния', gamma: 'Гамма<br>Луч', sword: 'Экскалибур', moon: 'Луна', kraken: 'Ктулху', bowling: 'Боулинг', worm: 'Червь', fist: 'Кулак', blackhole: 'Чёрная<br>Дыра', star: 'Звезда', comet: 'Комета' },
+        weaponNames: { missile: 'Ракета', nuke: 'Ядерная', asteroid: 'Астероид', laser: 'Лазер', lightning: 'Молния', gamma: 'Гамма<br>Луч', sword: 'Экскалибур', moon: 'Луна', kraken: 'Ктулху', bowling: 'Боулинг', worm: 'Червь', fist: 'Кулак', blackhole: 'Чёрная<br>Дыра', star: 'Звезда', comet: 'Комета', mysterybox: 'Секрет' },
         earthAnnihilated: 'ЗЕМЛЯ УНИЧТОЖЕНА',
         marsAnnihilated: 'МАРС УНИЧТОЖЕН',
         neptuneAnnihilated: 'НЕПТУН УНИЧТОЖЕН',
@@ -393,7 +408,10 @@ const translations = {
         screenShake: 'ВИБРАЦИЯ',
         none: 'НЕТ',
         half: '50%',
-        full: 'ПОЛНОЕ'
+        full: 'ПОЛНОЕ',
+        switchWeapons: 'НАЖМИТЕ, ЧТОБЫ\nСМЕНИТЬ ОРУЖИЕ',
+        newWeapon: 'НОВОЕ ОРУЖИЕ',
+        stopSpinner: 'ОСТАНОВИТЬ КОЛЕСО'
     },
     ja: {
         options: 'オプション',
@@ -404,7 +422,7 @@ const translations = {
         annihilate: '破壊せよ',
         annihilateThe: '破壊せよ',
         planets: { earth: '地球', mars: '火星', neptune: '海王星', jupiter: '木星', sun: '太陽', neutron_star: '中性子星' },
-        weaponNames: { missile: 'ミサイル', nuke: '核爆弾', asteroid: '隕石', laser: 'レーザー', lightning: '雷', gamma: 'ガンマ線', sword: 'エクスカリバー', moon: '月', kraken: 'クトゥルフ', bowling: 'ボウリング', worm: 'ワーム', fist: '拳', blackhole: 'ブラックホール', star: '星', comet: '彗星' },
+        weaponNames: { missile: 'ミサイル', nuke: '核爆弾', asteroid: '隕石', laser: 'レーザー', lightning: '雷', gamma: 'ガンマ線', sword: 'エクスカリバー', moon: '月', kraken: 'クトゥルフ', bowling: 'ボウリング', worm: 'ワーム', fist: '拳', blackhole: 'ブラックホール', star: '星', comet: '彗星', mysterybox: 'ミステリー' },
         earthAnnihilated: '地球 消滅',
         marsAnnihilated: '火星 消滅',
         neptuneAnnihilated: '海王星 消滅',
@@ -459,7 +477,10 @@ const translations = {
         screenShake: '画面の揺れ',
         none: 'なし',
         half: '半分',
-        full: '全'
+        full: '全',
+        switchWeapons: 'タップして\n武器を切替',
+        newWeapon: '新武器',
+        stopSpinner: 'ルーレットを止める'
     },
     ar: {
         options: 'الخيارات',
@@ -470,7 +491,7 @@ const translations = {
         annihilate: 'دمّر',
         annihilateThe: 'دمّر',
         planets: { earth: 'الأرض', mars: 'المريخ', neptune: 'نبتون', jupiter: 'المشتري', sun: 'الشمس', neutron_star: 'النجم النيوتروني' },
-        weaponNames: { missile: 'صاروخ', nuke: 'نووي', asteroid: 'كويكب', laser: 'ليزر', lightning: 'برق', gamma: 'أشعة<br>غاما', sword: 'إكسكاليبر', moon: 'القمر', kraken: 'كثولو', bowling: 'بولينغ', worm: 'دودة', fist: 'قبضة', blackhole: 'ثقب<br>أسود', star: 'نجمة', comet: 'مذنب' },
+        weaponNames: { missile: 'صاروخ', nuke: 'نووي', asteroid: 'كويكب', laser: 'ليزر', lightning: 'برق', gamma: 'أشعة<br>غاما', sword: 'إكسكاليبر', moon: 'القمر', kraken: 'كثولو', bowling: 'بولينغ', worm: 'دودة', fist: 'قبضة', blackhole: 'ثقب<br>أسود', star: 'نجمة', comet: 'مذنب', mysterybox: 'غموض' },
         earthAnnihilated: 'تم تدمير الأرض',
         marsAnnihilated: 'تم تدمير المريخ',
         neptuneAnnihilated: 'تم تدمير نبتون',
@@ -525,6 +546,9 @@ const translations = {
         screenShake: 'اهتزاز الشاشة',
         none: 'بدون',
         half: 'نصف',
-        full: 'كامل'
+        full: 'كامل',
+        switchWeapons: 'اضغط للتبديل\nالسلاح',
+        newWeapon: 'سلاح جديد',
+        stopSpinner: 'أوقف العجلة'
     }
 };

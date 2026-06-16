@@ -19,11 +19,12 @@ class WeaponSpinner {
             'fist': { icon: '✊', name: 'Fist', color: '#f59e0b' },     // Amber
             'bowling': { icon: '🎳', name: 'Bowling', color: '#ef4444' }, // Red
             'star': { icon: '⭐', name: 'Star', color: '#3b82f6' },     // Blue
-            'comet': { icon: '❄️', name: 'Comet', color: '#06b6d4' }     // Cyan
+            'comet': { icon: '❄️', name: 'Comet', color: '#06b6d4' },    // Cyan
+            'sword': { icon: '🗡️', name: 'Excalibur', color: '#60a5fa' } // Light Blue
         };
 
         // Determine currently locked weapons
-        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
         const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
         this.lockedWeapons = allLockedWeapons.filter(wid => !currentUnlocked.includes(wid));
 
@@ -435,7 +436,10 @@ class WeaponSpinner {
         if (this.announcement && meta) {
             const t = translations[currentLanguage] || translations['en'];
             const suffix = this.isStar ? (' ' + (t.available || 'AVAILABLE!')) : (' ' + (t.unlocked || 'UNLOCKED!'));
-            this.announcement.textContent = `${meta.name.toUpperCase()}${suffix}`;
+            const announceName = (t.weaponNames && t.weaponNames[winningWeapon])
+                ? t.weaponNames[winningWeapon].replace(/<br>/gi, ' ')
+                : meta.name;
+            this.announcement.textContent = `${announceName.toUpperCase()}${suffix}`;
             this.announcement.style.color = meta.color;
             this.announcement.style.textShadow = `0 0 12px ${meta.color}`;
             this.announcement.style.display = 'block';
@@ -578,7 +582,11 @@ class WeaponSpinner {
             ctx.fillStyle = '#ffffff';
             ctx.shadowBlur = 6;
             ctx.shadowColor = '#000000';
-            ctx.fillText(meta.name.toUpperCase(), 0, 27);
+            const t_dn = translations[currentLanguage] || translations['en'];
+            const displayName = (t_dn.weaponNames && t_dn.weaponNames[weaponId])
+                ? t_dn.weaponNames[weaponId].replace(/<br>/gi, ' ')
+                : meta.name;
+            ctx.fillText(displayName.toUpperCase(), 0, 27);
 
             ctx.restore();
         }

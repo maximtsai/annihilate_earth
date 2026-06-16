@@ -206,8 +206,8 @@ function saveOptions(options) {
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
-let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'mysterybox'];
-let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'mysterybox'];
+let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
+let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 let claimedPlanetSpinners = [];
 
@@ -346,7 +346,8 @@ function refreshWeaponLocks() {
         { id: 'worm', getCd: () => wormCooldown, setCd: (v) => wormCooldown = v, getInitCd: () => isInitialWormCooldown, setInitCd: (v) => isInitialWormCooldown = v },
         { id: 'fist', getCd: () => fistCooldown, setCd: (v) => fistCooldown = v, getInitCd: () => isInitialFistCooldown, setInitCd: (v) => isInitialFistCooldown = v },
         { id: 'star', getCd: () => starCooldown, setCd: (v) => starCooldown = v, getInitCd: () => isInitialStarCooldown, setInitCd: (v) => isInitialStarCooldown = v },
-        { id: 'comet', getCd: () => cometCooldown, setCd: (v) => cometCooldown = v, getInitCd: () => isInitialCometCooldown, setInitCd: (v) => isInitialCometCooldown = v }
+        { id: 'comet', getCd: () => cometCooldown, setCd: (v) => cometCooldown = v, getInitCd: () => isInitialCometCooldown, setInitCd: (v) => isInitialCometCooldown = v },
+        { id: 'sword', getCd: () => swordCooldown, setCd: (v) => swordCooldown = v, getInitCd: () => isInitialSwordCooldown, setInitCd: (v) => isInitialSwordCooldown = v }
     ];
 
     weaponsInfo.forEach(w => {
@@ -426,7 +427,7 @@ let showPointer = false;
 let weaponAmmo = {
     nuke: 18,
     bowling: 15,
-    mysterybox: 15
+    mysterybox: 3
 };
 
 function updateAmmoUI(type) {
@@ -457,7 +458,8 @@ let nukeCooldown = 0;
 let missileCooldown = 0;
 let gammaBurstCooldown = 35.0;
 let laserCooldown = 4.0;
-let swordCooldown = 80.0;
+let swordCooldown = 0;
+let mysteryboxCooldown = 80.0;
 let bowlingCooldown = 0;
 let krakenCooldown = 0;
 let wormCooldown = 0.0;
@@ -468,7 +470,8 @@ let cometCooldown = 0;
 let isInitialAsteroidCooldown = true;
 let isInitialLaserCooldown = true;
 let isInitialGammaCooldown = true;
-let isInitialSwordCooldown = true;
+let isInitialSwordCooldown = false;
+let isInitialMysteryBoxCooldown = true;
 let isInitialMoonCooldown = true;
 let isInitialKrakenCooldown = false;
 let isInitialBowlingCooldown = false;

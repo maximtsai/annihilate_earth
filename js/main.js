@@ -512,6 +512,7 @@ async function run(mode) {
         asteroid: 1.75,
         moon: 14.0,
         sword: 10.0,
+        mysterybox: 10.0,
         bowling: 0.35,
         kraken: 8.5,
         worm: 35.0,
@@ -533,6 +534,8 @@ async function run(mode) {
         asteroidUi: document.getElementById('asteroid-cooldown-ui'),
         swordBtn: document.getElementById('btn-sword'),
         swordUi: document.getElementById('sword-cooldown-ui'),
+        mysteryboxBtn: document.getElementById('btn-mysterybox'),
+        mysteryboxUi: document.getElementById('mysterybox-cooldown-ui'),
         bowlingBtn: document.getElementById('btn-bowling'),
         bowlingUi: document.getElementById('bowling-cooldown-ui'),
         krakenBtn: document.getElementById('btn-kraken'),
@@ -559,7 +562,7 @@ async function run(mode) {
     };
     // Pre-resolve child elements for cooldown UIs
     const _cdChildren = {};
-    ['gamma', 'laser', 'lightning', 'asteroid', 'sword', 'bowling', 'kraken', 'worm', 'blackhole', 'fist', 'moon', 'star', 'comet'].forEach(name => {
+    ['gamma', 'laser', 'lightning', 'asteroid', 'sword', 'mysterybox', 'bowling', 'kraken', 'worm', 'blackhole', 'fist', 'moon', 'star', 'comet'].forEach(name => {
         const ui = _dom[name + 'Ui'];
         _cdChildren[name] = ui ? {
             text: ui.querySelector('.cooldown-text'),
@@ -567,9 +570,109 @@ async function run(mode) {
         } : { text: null, bar: null };
     });
 
+    // ── Switch-weapon tooltip state ──
+    const _switchTooltip = {
+        el: document.getElementById('switch-weapon-tooltip'),
+        arrowEl: null,
+        timer: 0,           // seconds elapsed since conditions first met
+        shown: false,       // currently visible
+        dismissed: false,   // permanently dismissed this session
+        DELAY: 12           // seconds before showing
+    };
+    if (_switchTooltip.el) {
+        _switchTooltip.arrowEl = _switchTooltip.el.querySelector('.tooltip-arrow');
+        _switchTooltip.labelEl = _switchTooltip.el.querySelector('.tooltip-label');
+    }
+    function _applySwitchTooltipLabel() {
+        if (!_switchTooltip.labelEl) return;
+        const t = translations[currentLanguage] || translations['en'];
+        _switchTooltip.labelEl.textContent = t.switchWeapons || 'CLICK TO\nSWITCH WEAPONS';
+    }
+    _applySwitchTooltipLabel();
+
+    function _updateSwitchTooltipPosition() {
+        const tip = _switchTooltip.el;
+        if (!tip) return;
+        const weaponBar = document.querySelector('.weapon-bar-wrapper');
+        if (!weaponBar) return;
+        const rect = weaponBar.getBoundingClientRect();
+        const isPortrait = window.innerHeight > window.innerWidth;
+        tip.classList.remove('tooltip-portrait', 'tooltip-landscape');
+        if (isPortrait) {
+            // Portrait: above the weapon bar, arrow pointing DOWN
+            tip.classList.add('tooltip-portrait');
+            if (_switchTooltip.arrowEl) _switchTooltip.arrowEl.textContent = '▼';
+            const tipW = tip.offsetWidth || 160;
+            const tipH = tip.offsetHeight || 70;
+            const left = rect.left + rect.width / 2 - tipW / 2;
+            const top = rect.top - tipH - 14;
+            tip.style.left = Math.max(8, left) + 'px';
+            tip.style.top = Math.max(8, top) + 'px';
+        } else {
+            // Landscape: left of the weapon bar, arrow pointing RIGHT
+            tip.classList.add('tooltip-landscape');
+            if (_switchTooltip.arrowEl) _switchTooltip.arrowEl.textContent = '▶';
+            const tipW = tip.offsetWidth || 180;
+            const tipH = tip.offsetHeight || 54;
+            const left = rect.left - tipW - 14;
+            const top = rect.top + rect.height / 2 - tipH / 2;
+            tip.style.left = Math.max(8, left) + 'px';
+            tip.style.top = Math.max(8, top) + 'px';
+        }
+    }
+
     function update(deltaTime) {
         deltaTime = Math.min(deltaTime, 0.11);
         dt60 = deltaTime * 60;
+
+        function updateCooldownWeapon(id, getCd, setCd, getInitCd, setInitCd, defaultMaxCd) {
+            const btn = _dom[id + 'Btn'];
+            const ui = _dom[id + 'Ui'];
+            if (!unlockedWeapons.includes(id)) {
+                if (btn) btn.classList.add('cooldown-active');
+                if (ui) {
+                    const text = _cdChildren[id].text;
+                    const bar = _cdChildren[id].bar;
+                    if (text) text.textContent = getTranslation('locked');
+                    if (bar) bar.style.height = '100%';
+                }
+            } else {
+                let cd = getCd();
+                if (cd > 0) {
+                    cd -= deltaTime;
+                    if (cd <= 0) {
+                        cd = 0;
+                        if (btn) {
+                            btn.classList.add('weapon-ready-glow');
+                            setTimeout(() => btn.classList.remove('weapon-ready-glow'), 600);
+                        }
+                        if (getInitCd()) {
+                            showUnlockNotification(getUnlockText(id));
+                            setInitCd(false);
+                        }
+                    }
+                    setCd(cd);
+                }
+                if (cd > 0) {
+                    if (btn) btn.classList.add('cooldown-active');
+                    if (ui) {
+                        const text = _cdChildren[id].text;
+                        const bar = _cdChildren[id].bar;
+                        const maxCd = getInitCd() ? (id === 'blackhole' ? 240.0 : 1.25) : defaultMaxCd;
+                        if (text) text.textContent = `${Math.ceil(cd)}s`;
+                        if (bar) bar.style.height = `${Math.min(100, (cd / maxCd) * 100)}%`;
+                    }
+                } else {
+                    if (btn) btn.classList.remove('cooldown-active');
+                    if (ui) {
+                        const text = _cdChildren[id].text;
+                        const bar = _cdChildren[id].bar;
+                        if (text) text.textContent = '';
+                        if (bar) bar.style.height = '0%';
+                    }
+                }
+            }
+        }
 
         if (!victoryTriggered) {
             planetTimeSpent += deltaTime;
@@ -769,47 +872,7 @@ async function run(mode) {
             }
 
             // Handle Lightning Cooldown UI ticking
-            const lightningBtn = _dom.lightningBtn;
-            const lightningUi = _dom.lightningUi;
-            if (!unlockedWeapons.includes('lightning')) {
-                if (lightningBtn) lightningBtn.classList.add('cooldown-active');
-                if (lightningUi) {
-                    const text = _cdChildren.lightning.text;
-                    const bar = _cdChildren.lightning.bar;
-                    if (text) text.textContent = getTranslation('locked');
-                    if (bar) bar.style.height = '100%';
-                }
-            }
-            else if (lightningCooldown > 0) {
-                lightningCooldown -= deltaTime;
-                if (lightningCooldown <= 0) {
-                    lightningCooldown = 0;
-                    if (lightningBtn) {
-                        lightningBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => lightningBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialLightningCooldown) {
-                        showUnlockNotification(getUnlockText('lightning'));
-                        isInitialLightningCooldown = false;
-                    }
-                }
-                if (lightningBtn) lightningBtn.classList.add('cooldown-active');
-                if (lightningUi) {
-                    const text = _cdChildren.lightning.text;
-                    const bar = _cdChildren.lightning.bar;
-                    const maxCd = isInitialLightningCooldown ? 1.25 : MAX_COOLDOWNS.lightning;
-                    if (text) text.textContent = `${Math.ceil(lightningCooldown)}s`;
-                    if (bar) bar.style.height = `${(lightningCooldown / maxCd) * 100}%`;
-                }
-            } else {
-                if (lightningBtn) lightningBtn.classList.remove('cooldown-active');
-                if (lightningUi) {
-                    const text = _cdChildren.lightning.text;
-                    const bar = _cdChildren.lightning.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('lightning', () => lightningCooldown, v => lightningCooldown = v, () => isInitialLightningCooldown, v => isInitialLightningCooldown = v, MAX_COOLDOWNS.lightning);
 
             // Handle Nuke Cooldown
             if (nukeCooldown > 0) {
@@ -824,70 +887,13 @@ async function run(mode) {
             }
 
             // Handle Asteroid Cooldown UI ticking
-            const asteroidBtn = _dom.asteroidBtn;
-            const asteroidUi = _dom.asteroidUi;
-            if (asteroidCooldown > 0) {
-                asteroidCooldown -= deltaTime;
-                if (asteroidCooldown <= 0) {
-                    asteroidCooldown = 0;
-                    if (asteroidBtn) {
-                        asteroidBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => asteroidBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialAsteroidCooldown) {
-                        showUnlockNotification(getUnlockText('asteroid'));
-                        isInitialAsteroidCooldown = false;
-                    }
-                }
-                if (asteroidBtn) asteroidBtn.classList.add('cooldown-active');
-                if (asteroidUi) {
-                    const text = _cdChildren.asteroid.text;
-                    const bar = _cdChildren.asteroid.bar;
-                    if (text) text.textContent = `${Math.ceil(asteroidCooldown)}s`;
-                    if (bar) bar.style.height = `${Math.min(100, (asteroidCooldown / MAX_COOLDOWNS.asteroid) * 100)}%`;
-                }
-            } else {
-                if (asteroidBtn) asteroidBtn.classList.remove('cooldown-active');
-                if (asteroidUi) {
-                    const text = _cdChildren.asteroid.text;
-                    const bar = _cdChildren.asteroid.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('asteroid', () => asteroidCooldown, v => asteroidCooldown = v, () => isInitialAsteroidCooldown, v => isInitialAsteroidCooldown = v, MAX_COOLDOWNS.asteroid);
 
             // Handle Sword Cooldown UI ticking
-            const swordBtn = _dom.swordBtn;
-            const swordUi = _dom.swordUi;
-            if (swordCooldown > 0) {
-                swordCooldown -= deltaTime;
-                if (swordCooldown <= 0) {
-                    swordCooldown = 0;
-                    if (swordBtn) {
-                        swordBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => swordBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialSwordCooldown) {
-                        showUnlockNotification(getUnlockText('sword'));
-                        isInitialSwordCooldown = false;
-                    }
-                }
-                if (swordBtn) swordBtn.classList.add('cooldown-active');
-                if (swordUi) {
-                    const text = _cdChildren.sword.text;
-                    const bar = _cdChildren.sword.bar;
-                    if (text) text.textContent = `${Math.ceil(swordCooldown)}s`;
-                    if (bar) bar.style.height = `${Math.min(100, (swordCooldown / MAX_COOLDOWNS.sword) * 100)}%`;
-                }
-            } else {
-                if (swordBtn) swordBtn.classList.remove('cooldown-active');
-                if (swordUi) {
-                    const text = _cdChildren.sword.text;
-                    const bar = _cdChildren.sword.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('sword', () => swordCooldown, v => swordCooldown = v, () => isInitialSwordCooldown, v => isInitialSwordCooldown = v, MAX_COOLDOWNS.sword);
+
+            // Handle Mystery Box Cooldown UI ticking
+            updateCooldownWeapon('mysterybox', () => mysteryboxCooldown, v => mysteryboxCooldown = v, () => isInitialMysteryBoxCooldown, v => isInitialMysteryBoxCooldown = v, MAX_COOLDOWNS.mysterybox);
 
             // Handle Bowling Cooldown UI ticking
             const bowlingBtn = _dom.bowlingBtn;
@@ -902,286 +908,25 @@ async function run(mode) {
             }
 
             // Handle Kraken (Cthulhu) Cooldown UI ticking
-            const krakenBtn = _dom.krakenBtn;
-            const krakenUi = _dom.krakenUi;
-            if (!unlockedWeapons.includes('kraken')) {
-                if (krakenBtn) krakenBtn.classList.add('cooldown-active');
-                if (krakenUi) {
-                    const text = _cdChildren.kraken.text;
-                    const bar = _cdChildren.kraken.bar;
-                    if (text) text.textContent = getTranslation('locked');
-                    if (bar) bar.style.height = '100%';
-                }
-            }
-            else if (krakenCooldown > 0) {
-                krakenCooldown -= deltaTime;
-                if (krakenCooldown <= 0) {
-                    krakenCooldown = 0;
-                    if (krakenBtn) {
-                        krakenBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => krakenBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialKrakenCooldown) {
-                        showUnlockNotification(getUnlockText('kraken'));
-                        isInitialKrakenCooldown = false;
-                    }
-                }
-                if (krakenBtn) krakenBtn.classList.add('cooldown-active');
-                if (krakenUi) {
-                    const text = _cdChildren.kraken.text;
-                    const bar = _cdChildren.kraken.bar;
-                    const maxCd = isInitialKrakenCooldown ? 1.25 : MAX_COOLDOWNS.kraken;
-                    if (text) text.textContent = `${Math.ceil(krakenCooldown)}s`;
-                    if (bar) bar.style.height = `${(krakenCooldown / maxCd) * 100}%`;
-                }
-            } else {
-                if (krakenBtn) krakenBtn.classList.remove('cooldown-active');
-                if (krakenUi) {
-                    const text = _cdChildren.kraken.text;
-                    const bar = _cdChildren.kraken.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('kraken', () => krakenCooldown, v => krakenCooldown = v, () => isInitialKrakenCooldown, v => isInitialKrakenCooldown = v, MAX_COOLDOWNS.kraken);
 
             // Handle Worm Cooldown UI ticking
-            const wormBtn = _dom.wormBtn;
-            const wormUi = _dom.wormUi;
-            if (!unlockedWeapons.includes('worm')) {
-                if (wormBtn) wormBtn.classList.add('cooldown-active');
-                if (wormUi) {
-                    const text = _cdChildren.worm.text;
-                    const bar = _cdChildren.worm.bar;
-                    if (text) text.textContent = getTranslation('locked');
-                    if (bar) bar.style.height = '100%';
-                }
-            }
-            else if (wormCooldown > 0) {
-                wormCooldown -= deltaTime;
-                if (wormCooldown <= 0) {
-                    wormCooldown = 0;
-                    if (wormBtn) {
-                        wormBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => wormBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialWormCooldown) {
-                        showUnlockNotification(getUnlockText('worm'));
-                        isInitialWormCooldown = false;
-                    }
-                }
-                if (wormBtn) wormBtn.classList.add('cooldown-active');
-                if (wormUi) {
-                    const text = _cdChildren.worm.text;
-                    const bar = _cdChildren.worm.bar;
-                    const maxCd = isInitialWormCooldown ? 1.25 : MAX_COOLDOWNS.worm;
-                    if (text) text.textContent = `${Math.ceil(wormCooldown)}s`;
-                    if (bar) bar.style.height = `${(wormCooldown / maxCd) * 100}%`;
-                }
-            } else {
-                if (wormBtn) wormBtn.classList.remove('cooldown-active');
-                if (wormUi) {
-                    const text = _cdChildren.worm.text;
-                    const bar = _cdChildren.worm.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('worm', () => wormCooldown, v => wormCooldown = v, () => isInitialWormCooldown, v => isInitialWormCooldown = v, MAX_COOLDOWNS.worm);
 
             // Handle Black Hole Cooldown UI ticking
-            const blackholeBtn = _dom.blackholeBtn;
-            const blackholeUi = _dom.blackholeUi;
-            if (blackholeCooldown > 0) {
-                blackholeCooldown -= deltaTime;
-                if (blackholeCooldown <= 0) {
-                    blackholeCooldown = 0;
-                    if (blackholeBtn) {
-                        blackholeBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => blackholeBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialBlackholeCooldown) {
-                        showUnlockNotification(getUnlockText('blackhole'));
-                        isInitialBlackholeCooldown = false;
-                    }
-                }
-                if (blackholeBtn) blackholeBtn.classList.add('cooldown-active');
-                if (blackholeUi) {
-                    const text = _cdChildren.blackhole.text;
-                    const bar = _cdChildren.blackhole.bar;
-                    const maxCd = isInitialBlackholeCooldown ? 240.0 : MAX_COOLDOWNS.blackhole;
-                    if (text) text.textContent = `${Math.ceil(blackholeCooldown)}s`;
-                    if (bar) bar.style.height = `${(blackholeCooldown / maxCd) * 100}%`;
-                }
-            } else {
-                if (blackholeBtn) blackholeBtn.classList.remove('cooldown-active');
-                if (blackholeUi) {
-                    const text = _cdChildren.blackhole.text;
-                    const bar = _cdChildren.blackhole.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('blackhole', () => blackholeCooldown, v => blackholeCooldown = v, () => isInitialBlackholeCooldown, v => isInitialBlackholeCooldown = v, MAX_COOLDOWNS.blackhole);
 
             // Handle Fist Cooldown UI ticking
-            const fistBtn = _dom.fistBtn;
-            const fistUi = _dom.fistUi;
-            if (!unlockedWeapons.includes('fist')) {
-                if (fistBtn) fistBtn.classList.add('cooldown-active');
-                if (fistUi) {
-                    const text = _cdChildren.fist.text;
-                    const bar = _cdChildren.fist.bar;
-                    if (text) text.textContent = getTranslation('locked');
-                    if (bar) bar.style.height = '100%';
-                }
-            }
-            else if (fistCooldown > 0) {
-                fistCooldown -= deltaTime;
-                if (fistCooldown <= 0) {
-                    fistCooldown = 0;
-                    if (fistBtn) {
-                        fistBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => fistBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialFistCooldown) {
-                        showUnlockNotification(getUnlockText('fist'));
-                        isInitialFistCooldown = false;
-                    }
-                }
-                if (fistBtn) fistBtn.classList.add('cooldown-active');
-                if (fistUi) {
-                    const text = _cdChildren.fist.text;
-                    const bar = _cdChildren.fist.bar;
-                    const maxCd = isInitialFistCooldown ? 1.25 : MAX_COOLDOWNS.fist;
-                    if (text) text.textContent = `${Math.ceil(fistCooldown)}s`;
-                    if (bar) bar.style.height = `${(fistCooldown / maxCd) * 100}%`;
-                }
-            } else {
-                if (fistBtn) fistBtn.classList.remove('cooldown-active');
-                if (fistUi) {
-                    const text = _cdChildren.fist.text;
-                    const bar = _cdChildren.fist.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('fist', () => fistCooldown, v => fistCooldown = v, () => isInitialFistCooldown, v => isInitialFistCooldown = v, MAX_COOLDOWNS.fist);
 
             // Handle Moon Cooldown UI ticking
-            const moonBtn = _dom.moonBtn;
-            const moonUi = _dom.moonUi;
-            if (moonCooldown > 0) {
-                moonCooldown -= deltaTime;
-                if (moonCooldown <= 0) {
-                    moonCooldown = 0;
-                    if (moonBtn) {
-                        moonBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => moonBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialMoonCooldown) {
-                        showUnlockNotification(getUnlockText('moon'));
-                        isInitialMoonCooldown = false;
-                    }
-                }
-                if (moonBtn) moonBtn.classList.add('cooldown-active');
-                if (moonUi) {
-                    const text = _cdChildren.moon.text;
-                    const bar = _cdChildren.moon.bar;
-                    if (text) text.textContent = `${Math.ceil(moonCooldown)}s`;
-                    if (bar) bar.style.height = `${Math.min(100, (moonCooldown / MAX_COOLDOWNS.moon) * 100)}%`;
-                }
-            } else {
-                if (moonBtn) moonBtn.classList.remove('cooldown-active');
-                if (moonUi) {
-                    const text = _cdChildren.moon.text;
-                    const bar = _cdChildren.moon.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('moon', () => moonCooldown, v => moonCooldown = v, () => isInitialMoonCooldown, v => isInitialMoonCooldown = v, MAX_COOLDOWNS.moon);
 
             // Handle Star Cooldown UI ticking
-            const starBtn = _dom.starBtn;
-            const starUi = _dom.starUi;
-            if (!unlockedWeapons.includes('star')) {
-                if (starBtn) starBtn.classList.add('cooldown-active');
-                if (starUi) {
-                    const text = _cdChildren.star.text;
-                    const bar = _cdChildren.star.bar;
-                    if (text) text.textContent = getTranslation('locked');
-                    if (bar) bar.style.height = '100%';
-                }
-            }
-            else if (starCooldown > 0) {
-                starCooldown -= deltaTime;
-                if (starCooldown <= 0) {
-                    starCooldown = 0;
-                    if (starBtn) {
-                        starBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => starBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialStarCooldown) {
-                        showUnlockNotification(getUnlockText('star'));
-                        isInitialStarCooldown = false;
-                    }
-                }
-                if (starBtn) starBtn.classList.add('cooldown-active');
-                if (starUi) {
-                    const text = _cdChildren.star.text;
-                    const bar = _cdChildren.star.bar;
-                    const maxCd = isInitialStarCooldown ? 1.25 : MAX_COOLDOWNS.star;
-                    if (text) text.textContent = `${Math.ceil(starCooldown)}s`;
-                    if (bar) bar.style.height = `${(starCooldown / maxCd) * 100}%`;
-                }
-            } else {
-                if (starBtn) starBtn.classList.remove('cooldown-active');
-                if (starUi) {
-                    const text = _cdChildren.star.text;
-                    const bar = _cdChildren.star.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('star', () => starCooldown, v => starCooldown = v, () => isInitialStarCooldown, v => isInitialStarCooldown = v, MAX_COOLDOWNS.star);
 
             // Handle Comet Cooldown UI ticking
-            const cometBtn = _dom.cometBtn;
-            const cometUi = _dom.cometUi;
-            if (!unlockedWeapons.includes('comet')) {
-                if (cometBtn) cometBtn.classList.add('cooldown-active');
-                if (cometUi) {
-                    const text = _cdChildren.comet.text;
-                    const bar = _cdChildren.comet.bar;
-                    if (text) text.textContent = getTranslation('locked');
-                    if (bar) bar.style.height = '100%';
-                }
-            }
-            else if (cometCooldown > 0) {
-                cometCooldown -= deltaTime;
-                if (cometCooldown <= 0) {
-                    cometCooldown = 0;
-                    if (cometBtn) {
-                        cometBtn.classList.add('weapon-ready-glow');
-                        setTimeout(() => cometBtn.classList.remove('weapon-ready-glow'), 600);
-                    }
-                    if (isInitialCometCooldown) {
-                        showUnlockNotification(getUnlockText('comet'));
-                        isInitialCometCooldown = false;
-                    }
-                }
-                if (cometBtn) cometBtn.classList.add('cooldown-active');
-                if (cometUi) {
-                    const text = _cdChildren.comet.text;
-                    const bar = _cdChildren.comet.bar;
-                    const maxCd = isInitialCometCooldown ? 1.25 : MAX_COOLDOWNS.comet;
-                    if (text) text.textContent = `${Math.ceil(cometCooldown)}s`;
-                    if (bar) bar.style.height = `${(cometCooldown / maxCd) * 100}%`;
-                }
-            } else {
-                if (cometBtn) cometBtn.classList.remove('cooldown-active');
-                if (cometUi) {
-                    const text = _cdChildren.comet.text;
-                    const bar = _cdChildren.comet.bar;
-                    if (text) text.textContent = '';
-                    if (bar) bar.style.height = '0%';
-                }
-            }
+            updateCooldownWeapon('comet', () => cometCooldown, v => cometCooldown = v, () => isInitialCometCooldown, v => isInitialCometCooldown = v, MAX_COOLDOWNS.comet);
 
             // Check Weapon Queues
             if (nukeCooldown <= 0 && weaponQueues['nuke']) {
@@ -1315,6 +1060,33 @@ async function run(mode) {
                 ft.life -= deltaTime;
                 if (ft.life <= 0) {
                     floatingTexts.splice(i, 1);
+                }
+            }
+
+            // ── Switch-weapon tooltip logic ──
+            if (_switchTooltip.el && !_switchTooltip.dismissed && !victoryTriggered) {
+                const marsUnlocked = unlockedPlanets.includes('mars');
+                const isMissileSelected = selectedWeapon === 'missile';
+                const nukeAmmoFull = (typeof weaponAmmo !== 'undefined' && weaponAmmo.nuke >= 18);
+                const conditionsMet = !marsUnlocked && isMissileSelected && nukeAmmoFull;
+
+                if (conditionsMet) {
+                    _switchTooltip.timer += deltaTime;
+                } else {
+                    _switchTooltip.timer = 0;
+                    if (_switchTooltip.shown) {
+                        _switchTooltip.shown = false;
+                        _switchTooltip.el.classList.remove('visible');
+                    }
+                }
+
+                if (!_switchTooltip.shown && _switchTooltip.timer >= _switchTooltip.DELAY) {
+                    _switchTooltip.shown = true;
+                    _switchTooltip.el.classList.add('visible');
+                    _updateSwitchTooltipPosition();
+                }
+                if (_switchTooltip.shown) {
+                    _updateSwitchTooltipPosition();
                 }
             }
 
@@ -3889,7 +3661,7 @@ async function run(mode) {
 
             const dxLocal = (PLANET_CANVAS_SIZE / 2) - planetCenterX;
             const dyLocal = (PLANET_CANVAS_SIZE / 2) - planetCenterY;
-            const coreRatio = initialCorePixelCount > 0 ? (currentCorePixelCount / initialCorePixelCount) : 1.0;
+            const coreRatio = initialCorePixelCount > 0 ? Math.max(0, ((currentCorePixelCount / initialCorePixelCount) - 0.05)) : 1.0;
 
             let coreImg = null;
             if (currentPlanet === 'sun') {
@@ -3899,13 +3671,10 @@ async function run(mode) {
             }
 
             if (coreImg) {
-                const pulse = 1.0 + Math.sin(performance.now() * 0.007) * 0.04;
+                const pulse = 0.925 + Math.sin(performance.now() * 0.005) * 0.05;
                 ctx.save();
                 ctx.translate(dxLocal, dyLocal);
-                let scaleFactor = coreRatio * pulse;
-                if (currentPlanet === 'mars') {
-                    scaleFactor *= 0.765;
-                }
+                let scaleFactor = coreRatio * pulse * (planetSize / 240);
                 ctx.scale(scaleFactor, scaleFactor);
                 ctx.drawImage(coreImg, -coreImg.width / 2, -coreImg.height / 2);
                 ctx.restore();
@@ -5177,6 +4946,12 @@ async function run(mode) {
             soundManager.play('sfx_ui_switch');
             soundManager.stopLoop('sfx_laser_fire');
             selectedWeapon = button.dataset.weapon;
+            // Dismiss switch-weapon tooltip when player switches away from missile
+            if (selectedWeapon !== 'missile' && _switchTooltip.el && _switchTooltip.shown) {
+                _switchTooltip.dismissed = true;
+                _switchTooltip.shown = false;
+                _switchTooltip.el.classList.remove('visible');
+            }
             document.querySelectorAll('.weapon-button').forEach(b => {
                 b.classList.remove('selected');
                 b.style.animation = '';
@@ -5447,20 +5222,20 @@ async function run(mode) {
         const optLang = document.getElementById('options-lang-label');
         const optReset = document.getElementById('options-reset-btn');
         if (optTitle) optTitle.textContent = t.options;
-        if (optSound) optSound.textContent = t.soundEffects;
-        if (optMusic) optMusic.textContent = t.music;
-        if (optLang) optLang.textContent = t.language;
+        if (optSound) optSound.textContent = '🔊 ' + t.soundEffects;
+        if (optMusic) optMusic.textContent = '🎵 ' + t.music;
+        if (optLang) optLang.textContent = '🌐 ' + t.language;
 
         const optShake = document.getElementById('options-shake-label');
         const btnNone = document.getElementById('shake-btn-none');
         const btnHalf = document.getElementById('shake-btn-half');
         const btnFull = document.getElementById('shake-btn-full');
-        if (optShake) optShake.textContent = t.screenShake || 'SCREEN SHAKE';
+        if (optShake) optShake.textContent = '📳 ' + (t.screenShake || 'SCREEN SHAKE');
         if (btnNone) btnNone.textContent = t.none || 'NONE';
         if (btnHalf) btnHalf.textContent = t.half || 'HALF';
         if (btnFull) btnFull.textContent = t.full || 'FULL';
 
-        if (optReset) optReset.textContent = t.resetProgress || 'RESET PROGRESS';
+        if (optReset) optReset.textContent = '⚠️ ' + (t.resetProgress || 'RESET PROGRESS') + ' ⚠️';
 
         // Reset Confirmation Popup translations
         const confirmTitle = document.querySelector('#confirm-popup-overlay .options-popup-title');
@@ -5515,6 +5290,10 @@ async function run(mode) {
                 if (nameEl && t.weaponNames[wid]) {
                     nameEl.innerHTML = t.weaponNames[wid];
                 }
+                const noAmmoOverlay = btn.querySelector('.no-ammo-overlay');
+                if (noAmmoOverlay) {
+                    noAmmoOverlay.textContent = t.outOfAmmo || 'NO AMMO';
+                }
             }
         });
 
@@ -5544,6 +5323,9 @@ async function run(mode) {
         // New best badge
         const bestBadge = document.getElementById('new-best-badge');
         if (bestBadge) bestBadge.innerHTML = `🏆 ${t.newBest || 'NEW BEST!'}`;
+
+        // Switch-weapon tooltip label
+        _applySwitchTooltipLabel();
 
         // Game title
         updateGameTitle();

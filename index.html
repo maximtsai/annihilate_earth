@@ -151,10 +151,12 @@
                                         <span class="cooldown-text"></span>
                                     </div>
                                 </button>
-                                <button class="weapon-button" data-weapon="sword" id="btn-sword">
-                                    <div class="weapon-icon">🗡️</div>
-                                    <div class="weapon-name">Excalibur</div>
-                                    <div class="weapon-cooldown" id="sword-cooldown-ui">
+                                <button class="weapon-button" data-weapon="mysterybox" id="btn-mysterybox">
+                                    <div class="weapon-icon">❓</div>
+                                    <div class="weapon-name">Mystery</div>
+                                    <div class="weapon-ammo" id="ammo-mysterybox">3</div>
+                                    <div class="no-ammo-overlay">NO AMMO</div>
+                                    <div class="weapon-cooldown" id="mysterybox-cooldown-ui">
                                         <div class="cooldown-bar"></div>
                                         <span class="cooldown-text"></span>
                                     </div>
@@ -171,6 +173,14 @@
                                     <div class="weapon-icon">🕳️</div>
                                     <div class="weapon-name">Black<br>Hole</div>
                                     <div class="weapon-cooldown" id="blackhole-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="sword" id="btn-sword">
+                                    <div class="weapon-icon">🗡️</div>
+                                    <div class="weapon-name">Excalibur</div>
+                                    <div class="weapon-cooldown" id="sword-cooldown-ui">
                                         <div class="cooldown-bar"></div>
                                         <span class="cooldown-text"></span>
                                     </div>
@@ -222,12 +232,6 @@
                                         <span class="cooldown-text"></span>
                                     </div>
                                 </button>
-                                <button class="weapon-button" data-weapon="mysterybox" id="btn-mysterybox">
-                                    <div class="weapon-icon">❓</div>
-                                    <div class="weapon-name">Mystery</div>
-                                    <div class="weapon-ammo" id="ammo-mysterybox">3</div>
-                                    <div class="no-ammo-overlay">NO AMMO</div>
-                                </button>
                             </div>
                         </div>
                         <button class="scroll-arrow scroll-right" id="scroll-right-btn"><span
@@ -240,21 +244,21 @@
                         <div class="options-popup-title" id="options-title">OPTIONS</div>
                         <button class="options-popup-close" id="options-close-btn">✕</button>
                         <div class="options-group">
-                            <div class="options-label" id="options-sound-label">SOUND EFFECTS</div>
+                            <div class="options-label" id="options-sound-label">🔊 SOUND EFFECTS</div>
                             <div class="options-slider-row">
                                 <input type="range" id="sfx-volume-slider" min="0" max="100" value="100">
                                 <span class="options-slider-value" id="sfx-volume-value">100%</span>
                             </div>
                         </div>
                         <div class="options-group">
-                            <div class="options-label" id="options-music-label">MUSIC</div>
+                            <div class="options-label" id="options-music-label">🎵 MUSIC</div>
                             <div class="options-slider-row">
                                 <input type="range" id="music-volume-slider" min="0" max="100" value="100">
                                 <span class="options-slider-value" id="music-volume-value">100%</span>
                             </div>
                         </div>
                         <div class="options-group">
-                            <div class="options-label" id="options-lang-label">LANGUAGE</div>
+                            <div class="options-label" id="options-lang-label">🌐 LANGUAGE</div>
                             <div class="custom-select-wrapper" id="custom-lang-wrapper">
                                 <button class="custom-select-btn" id="custom-lang-btn" type="button">
                                     <span id="custom-lang-label-text">English</span>
@@ -275,7 +279,7 @@
                             </div>
                         </div>
                         <div class="options-group">
-                            <div class="options-label" id="options-shake-label">SCREEN SHAKE</div>
+                            <div class="options-label" id="options-shake-label">📳 SCREEN SHAKE</div>
                             <div class="shake-options-row">
                                 <button class="shake-option-btn" data-value="none" id="shake-btn-none">NONE</button>
                                 <button class="shake-option-btn" data-value="half" id="shake-btn-half">HALF</button>
@@ -284,8 +288,9 @@
                             </div>
                         </div>
                         <div class="options-group" style="margin-top: 10px; display: flex; justify-content: center;">
-                            <button id="options-reset-btn" class="options-reset-button">RESET PROGRESS</button>
+                            <button id="options-reset-btn" class="options-reset-button">⚠️ RESET PROGRESS ⚠️</button>
                         </div>
+                        <div class="options-credits">Game by Maxim Tsai</div>
                     </div>
                 </div>
 
@@ -333,6 +338,12 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Switch Weapon Tooltip: shown 12s after game start if mars is locked, missile selected, nuke ammo full -->
+            <div id="switch-weapon-tooltip" aria-hidden="true">
+                <div class="tooltip-label">CLICK TO&#10;SWITCH WEAPONS</div>
+                <div class="tooltip-arrow">▶</div>
             </div>
 
             <div class="victory-screen" id="victory-screen">

@@ -261,6 +261,10 @@ html {
     .planet-btn-icon {
         font-size: calc(28px * var(--ui-scale));
     }
+
+    .lang-cjk .planet-btn {
+        font-size: calc(14.5px * var(--ui-scale));
+    }
 }
 
 .planet-btn:hover {
@@ -518,6 +522,14 @@ html {
     text-shadow: 0 0 8px rgba(0, 217, 255, 0.4);
 }
 
+.options-credits {
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    color: rgba(0, 217, 255, 0.6);
+    letter-spacing: 1px;
+}
+
 .options-popup-close {
     position: absolute;
     top: 10px;
@@ -610,7 +622,7 @@ html {
 
 .custom-select-btn {
     width: 100%;
-    padding: 14px 18px;
+    padding: 9px 18px;
     background: rgba(0, 217, 255, 0.08);
     border: 1px solid rgba(0, 217, 255, 0.4);
     border-radius: 4px;
@@ -1075,6 +1087,7 @@ html {
 .weapon-ammo {
     font-family: 'Share Tech Mono', monospace;
     font-size: calc(17px * var(--ui-scale));
+    font-weight: bold;
     color: #00d9ff;
     text-shadow: 0 0 5px rgba(0, 217, 255, 0.5);
     margin-top: calc(-3px * var(--ui-scale));
@@ -1084,6 +1097,7 @@ html {
 @media (orientation: portrait) {
     .weapon-ammo {
         font-size: calc(20px * var(--ui-scale));
+        font-weight: bold;
     }
 }
 
@@ -1140,14 +1154,14 @@ html {
 
 /* CJK language overrides: larger text, single line */
 .lang-cjk .weapon-name {
-    font-size: 16px;
+    font-size: calc(16px * var(--ui-scale));
     white-space: nowrap;
     max-width: none;
     letter-spacing: 0;
 }
 
 .lang-cjk .planet-btn {
-    font-size: 18px;
+    font-size: calc(16px * var(--ui-scale));
     letter-spacing: 0;
 }
 
@@ -1513,21 +1527,17 @@ html {
         left: 50%;
         top: calc(40px + 90px * var(--ui-scale));
         transform: translateX(-50%);
+        display: flex;
         flex-direction: row;
+        flex-wrap: wrap;
         justify-content: center;
         gap: 10px;
         width: 90%;
         max-width: 600px;
         height: auto;
-        overflow-x: auto;
         padding: 5px 0;
-        white-space: nowrap;
-        scrollbar-width: none;
         margin: 0;
-    }
-
-    .planet-selector::-webkit-scrollbar {
-        display: none;
+        overflow: visible;
     }
 
     .planet-btn {
@@ -1540,6 +1550,31 @@ html {
 
     .planet-btn-icon {
         font-size: calc(36px * var(--ui-scale));
+    }
+
+    .lang-cjk .planet-btn {
+        font-size: calc(19px * var(--ui-scale));
+    }
+
+    .planet-btn.locked::after {
+        top: calc(100% + 12px);
+        left: 50%;
+        transform: translate(-50%, 0) scale(0.85);
+    }
+
+    .planet-btn.locked:hover::after {
+        transform: translate(-50%, 0) scale(1);
+    }
+
+    .planet-btn.locked::before {
+        top: calc(100% + 4px);
+        left: 50%;
+        transform: translate(-50%, 0) scale(0.85);
+        border-color: transparent transparent #ff3377 transparent;
+    }
+
+    .planet-btn.locked:hover::before {
+        transform: translate(-50%, 0) scale(1);
     }
 
     .weapon-bar-wrapper {
@@ -1621,6 +1656,10 @@ html {
         max-width: calc(138.6px * var(--ui-scale));
     }
 
+    .lang-cjk .weapon-name {
+        font-size: calc(18.5px * var(--ui-scale));
+    }
+
     .weapon-button.selected::after {
         height: calc(2.75px * var(--ui-scale));
     }
@@ -1660,7 +1699,7 @@ html {
 
     .custom-select-btn {
         font-size: 18px;
-        padding: 10px 14px;
+        padding: 6px 14px;
     }
 
     .custom-select-option {
@@ -1670,6 +1709,10 @@ html {
 
     .weapon-button.cooldown-alert {
         animation: buttonShakeVertical 0.4s ease-in-out, buttonFlashRed 0.4s ease-in-out;
+    }
+
+    .weapon-cooldown {
+        font-size: calc(30px * var(--ui-scale));
     }
 
     .weapon-spinner-row {
@@ -2109,4 +2152,90 @@ html.no-glows *::after {
     box-shadow: none !important;
     text-shadow: none !important;
     filter: none !important;
+}
+
+/* ── Switch Weapon Tooltip ── */
+#switch-weapon-tooltip {
+    position: fixed;
+    z-index: 500;
+    pointer-events: none;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(6px * var(--ui-scale));
+    animation: switchTooltipBob 1.4s ease-in-out infinite;
+}
+
+#switch-weapon-tooltip.visible {
+    display: flex;
+}
+
+/* Landscape: tooltip sits to the LEFT of the weapon bar, arrow points RIGHT */
+#switch-weapon-tooltip.tooltip-landscape {
+    flex-direction: row;
+    align-items: center;
+    gap: calc(8px * var(--ui-scale));
+    animation: switchTooltipBobH 1.4s ease-in-out infinite;
+}
+
+#switch-weapon-tooltip .tooltip-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(16px * var(--ui-scale));
+    font-weight: 900;
+    letter-spacing: calc(1.5px * var(--ui-scale));
+    text-transform: uppercase;
+    color: #ffffff;
+    text-shadow: 0 0 12px #00d9ff, 0 0 24px rgba(0, 217, 255, 0.6);
+    background: rgba(8, 10, 28, 0.88);
+    border: 1.5px solid rgba(0, 217, 255, 0.75);
+    border-radius: calc(6px * var(--ui-scale));
+    padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+    text-align: center;
+    line-height: 1.4;
+    white-space: pre-line;
+    box-shadow: 0 0 18px rgba(0, 217, 255, 0.35), inset 0 0 8px rgba(0, 217, 255, 0.1);
+}
+
+#switch-weapon-tooltip .tooltip-arrow {
+    font-size: calc(20px * var(--ui-scale));
+    color: #00d9ff;
+    text-shadow: 0 0 10px #00d9ff;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* Portrait: label on top, arrow pointing DOWN */
+#switch-weapon-tooltip.tooltip-portrait {
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Landscape: label on left, arrow pointing RIGHT */
+#switch-weapon-tooltip.tooltip-landscape {
+    flex-direction: row;
+    align-items: center;
+}
+
+@keyframes switchTooltipBob {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes switchTooltipBobH {
+
+    0%,
+    100% {
+        transform: translateX(0px);
+    }
+
+    50% {
+        transform: translateX(-8px);
+    }
 }

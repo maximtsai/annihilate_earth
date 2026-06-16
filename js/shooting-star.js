@@ -35,7 +35,7 @@
             const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
             if (currentUnlocked.length !== lastUnlockedCount) {
                 lastUnlockedCount = currentUnlocked.length;
-                const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+                const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
                 hasLockedWeapons = allLockedWeapons.some(wid => !currentUnlocked.includes(wid));
             }
             if (!hasLockedWeapons) {
@@ -185,8 +185,12 @@
                     ctx.translate(star.x, star.y);
 
                     // Setup yellow text saying "NEW WEAPON"
-                    ctx.font = "bold 12px 'Orbitron', sans-serif";
+                    ctx.font = "bold 16px 'Orbitron', sans-serif";
                     ctx.fillStyle = "#ffe600";
+                    ctx.strokeStyle = "#000000";
+                    ctx.lineWidth = 1;
+                    ctx.shadowBlur = 0;
+                    ctx.shadowColor = 'transparent';
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
 
@@ -194,7 +198,9 @@
                     const bobY = Math.sin(star.age * 8) * 4;
                     const indicatorY = -star.size - 18 + bobY;
 
-                    ctx.fillText("NEW WEAPON", 0, indicatorY - 14);
+                    const newWeaponText = (translations[currentLanguage] || translations['en']).newWeapon || 'NEW WEAPON';
+                    ctx.strokeText(newWeaponText, 0, indicatorY - 14);
+                    ctx.fillText(newWeaponText, 0, indicatorY - 14);
 
                     // Draw downward pointer indicator (triangle)
                     ctx.beginPath();
@@ -302,7 +308,7 @@
                     // Reset and initialize the spinner inside the ad popup
                     const container = document.getElementById('star-spinner-container');
                     if (container) {
-                        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+                        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
                         const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
                         const btnContainer = document.getElementById('ad-spin-buttons-container');

@@ -1436,7 +1436,7 @@ function triggerVictory() {
         // Setup the Victory Spinner
         const container = document.getElementById('victory-spinner-container');
         if (container) {
-            const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
+            const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
             const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
             if (restartBtn) {
@@ -1487,7 +1487,7 @@ function triggerVictory() {
                         container.classList.remove('primed-pulse');
                         soundManager.play('sfx_ui_switch');
                         if (restartBtn) {
-                            restartBtn.textContent = 'Stop Spinner';
+                            restartBtn.textContent = (translations[currentLanguage] || translations['en']).stopSpinner || 'STOP SPINNER';
                             restartBtn.isSpinnerStopButton = true;
                             restartBtn.disabled = true;
                             restartBtn.style.opacity = '0.5';
@@ -1509,7 +1509,7 @@ function triggerVictory() {
                     };
                 } else {
                     if (restartBtn) {
-                        restartBtn.textContent = 'Stop Spinner';
+                        restartBtn.textContent = (translations[currentLanguage] || translations['en']).stopSpinner || 'STOP SPINNER';
                         restartBtn.isSpinnerStopButton = true;
                         restartBtn.disabled = true;
                         restartBtn.style.opacity = '0.5';
@@ -1604,7 +1604,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     if (typeof weaponAmmo !== 'undefined') {
         weaponAmmo.nuke = 18;
         weaponAmmo.bowling = 15;
-        weaponAmmo.mysterybox = 15;
+        weaponAmmo.mysterybox = 3;
         if (typeof updateAmmoUI === 'function') {
             updateAmmoUI();
         }
@@ -1650,12 +1650,14 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
         gammaBurstCooldown = 36.0;
         laserCooldown = 4.0;
         asteroidCooldown = 12.0;
-        swordCooldown = 75.0;
+        swordCooldown = 0;
+        mysteryboxCooldown = 75.0;
         moonCooldown = 150.0;
         isInitialAsteroidCooldown = true;
         isInitialLaserCooldown = true;
         isInitialGammaCooldown = true;
-        isInitialSwordCooldown = true;
+        isInitialSwordCooldown = false;
+        isInitialMysteryBoxCooldown = true;
         isInitialMoonCooldown = true;
         nukeCooldown = 0;
         missileCooldown = 0;
@@ -1727,6 +1729,17 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
         const swordBtn = document.getElementById('btn-sword');
         if (swordBtn) {
             swordBtn.classList.remove('cooldown-active');
+        }
+        const mysteryboxUi = document.getElementById('mysterybox-cooldown-ui');
+        if (mysteryboxUi) {
+            const text = mysteryboxUi.querySelector('.cooldown-text');
+            const bar = mysteryboxUi.querySelector('.cooldown-bar');
+            if (text) text.textContent = '';
+            if (bar) bar.style.height = '0%';
+        }
+        const mysteryboxBtn = document.getElementById('btn-mysterybox');
+        if (mysteryboxBtn) {
+            mysteryboxBtn.classList.remove('cooldown-active');
         }
         const bowlingUi = document.getElementById('bowling-cooldown-ui');
         if (bowlingUi) {
