@@ -4956,7 +4956,7 @@ async function run(mode) {
             ctx.shadowBlur = 10;
             ctx.shadowColor = ft.color.endsWith(',') ? `${ft.color}0.5)` : ft.color;
             ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
-            ctx.lineWidth = 4.5;
+            ctx.lineWidth = ft.strokeWidth !== undefined ? ft.strokeWidth : 4.5;
             ctx.strokeText(ft.text, ft.x, ft.startY + yOffset);
             ctx.fillText(ft.text, ft.x, ft.startY + yOffset);
             ctx.restore();

@@ -16,7 +16,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             const now = Date.now();
             if (now - lastCooldownTextTime >= 1100) {
                 const outOfAmmoText = (translations[currentLanguage] || translations['en']).outOfAmmo || "OUT OF AMMO";
-                addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 120, 180,', 1.3, 45, isMobile ? 36 : 30);
+                addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 120, 180,', 1.3, 45, isMobile ? 36 : 30, 5.5);
                 soundManager.play('sfx_error');
                 lastCooldownTextTime = now;
             }
@@ -59,7 +59,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
                 if (defaultCd > 2.5) {
                     const now = Date.now();
                     if (now - lastCooldownTextTime >= 1100) {
-                        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 120, 180,', 1.3, 45, isMobile ? 36 : 30);
+                        addFloatingText(clickX, clickY, (translations[currentLanguage] || translations['en']).cooldown || "COOLDOWN", 'rgba(255, 120, 180,', 1.3, 45, isMobile ? 36 : 30, 5.5);
                         soundManager.play('sfx_error');
                         lastCooldownTextTime = now;
                     }

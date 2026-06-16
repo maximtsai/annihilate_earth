@@ -116,7 +116,7 @@ function cubicEaseIn(t) {
     return t * t * t;
 }
 
-function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5, maxOffset = 50, fontSize = 28) {
+function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5, maxOffset = 50, fontSize = 28, strokeWidth = 4.5) {
     floatingTexts.push({
         x: x,
         y: y,
@@ -126,7 +126,8 @@ function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5
         life: duration,
         maxLife: duration,
         maxOffset: maxOffset,
-        fontSize: fontSize
+        fontSize: fontSize,
+        strokeWidth: strokeWidth
     });
 }
 
