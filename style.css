@@ -2216,6 +2216,10 @@ html.no-glows *::after {
     align-items: center;
 }
 
+#switch-weapon-tooltip.tooltip-portrait .tooltip-label {
+    font-size: calc(22px * var(--ui-scale));
+}
+
 /* Landscape: label on left, arrow pointing RIGHT */
 #switch-weapon-tooltip.tooltip-landscape {
     flex-direction: row;

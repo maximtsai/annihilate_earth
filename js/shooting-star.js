@@ -3,8 +3,9 @@
     let star = null;
     let spawnTime = 0;
     let spawned = false;
-    let secondAttemptAttempted = false;
+    let firstAttemptFired = false;
     let lastRetryTime = 0;
+    let starClaimedThisLevel = false;
     let clickStars = [];
     let lastSpawnTimestamp = 0;
     let lastUnlockedCount = -1;
@@ -19,8 +20,9 @@
                 spawnTime = 14 + Math.random() * 6; // 14 to 20 seconds
             }
             spawned = false;
-            secondAttemptAttempted = false;
+            firstAttemptFired = false;
             lastRetryTime = 0;
+            starClaimedThisLevel = false;
             star = null;
             clickStars = [];
             lastUnlockedCount = -1;
@@ -49,22 +51,16 @@
             const now = Date.now();
             const adCooldownActive = (now - (window.lastAdPlayTime || 0) < 30000);
 
-            if (!spawned && planetTimeSpent >= spawnTime) {
-                if (!adCooldownActive && (now - lastSpawnTimestamp >= 100000)) {
+            if (!starClaimedThisLevel && !firstAttemptFired && planetTimeSpent >= spawnTime) {
+                firstAttemptFired = true;
+                if (!adCooldownActive && (now - lastSpawnTimestamp >= 20000)) {
                     this.spawn();
                 }
             }
 
-            if (!isEarth && !spawned && planetTimeSpent >= 35 && !secondAttemptAttempted) {
-                secondAttemptAttempted = true;
-                if (!adCooldownActive && (now - lastSpawnTimestamp >= 100000)) {
-                    this.spawn();
-                }
-            }
-
-            if (!spawned && planetTimeSpent >= lastRetryTime + 75) {
-                lastRetryTime += 75;
-                if (!adCooldownActive && (now - lastSpawnTimestamp >= 100000)) {
+            if (!starClaimedThisLevel && !star && planetTimeSpent >= lastRetryTime + 65) {
+                lastRetryTime += 65;
+                if (!adCooldownActive && (now - lastSpawnTimestamp >= 20000)) {
                     this.spawn();
                 }
             }
@@ -80,6 +76,7 @@
                 if (dist > 1000) {
                     console.log("[ShootingStar] Left screen, deactivating.");
                     star = null;
+                    spawned = false;
                 } else {
                     // Spawn particle trail (reduced spawn rate by 20% more)
                     if (typeof particles !== 'undefined' && Math.random() < 0.3) {
@@ -363,6 +360,11 @@
                 return true;
             }
             return false;
+        },
+
+        onWeaponClaimed: function () {
+            starClaimedThisLevel = true;
+            spawned = true;
         }
     };
 })();

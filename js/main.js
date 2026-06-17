@@ -5457,6 +5457,9 @@ async function run(mode) {
             if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
                 window.PlatformBridge.showRewardedAd(() => {
                     console.log("[ShootingStar] Ad finished. Spinner reward granted.");
+                    if (window.ShootingStarManager && ShootingStarManager.onWeaponClaimed) {
+                        ShootingStarManager.onWeaponClaimed();
+                    }
                     if (window.starSelectedWeapon) {
                         unlockSpecificWeapon(window.starSelectedWeapon);
                         window.starSelectedWeapon = null;
@@ -5464,6 +5467,9 @@ async function run(mode) {
                 });
             } else {
                 // Fallback unlock if PlatformBridge isn't available
+                if (window.ShootingStarManager && ShootingStarManager.onWeaponClaimed) {
+                    ShootingStarManager.onWeaponClaimed();
+                }
                 if (window.starSelectedWeapon) {
                     unlockSpecificWeapon(window.starSelectedWeapon);
                     window.starSelectedWeapon = null;
