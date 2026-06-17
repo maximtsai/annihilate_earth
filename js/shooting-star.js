@@ -4,6 +4,7 @@
     let spawnTime = 0;
     let spawned = false;
     let secondAttemptAttempted = false;
+    let thirdAttemptAttempted = false;
     let clickStars = [];
     let lastSpawnTimestamp = 0;
     let lastUnlockedCount = -1;
@@ -55,6 +56,13 @@
 
             if (!isEarth && !spawned && planetTimeSpent >= 35 && !secondAttemptAttempted) {
                 secondAttemptAttempted = true;
+                if (!adCooldownActive && (now - lastSpawnTimestamp >= 100000)) {
+                    this.spawn();
+                }
+            }
+
+            if (!spawned && currentPlanet === 'neutron_star' && planetTimeSpent >= 70 && !thirdAttemptAttempted) {
+                thirdAttemptAttempted = true;
                 if (!adCooldownActive && (now - lastSpawnTimestamp >= 100000)) {
                     this.spawn();
                 }
