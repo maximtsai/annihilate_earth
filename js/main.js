@@ -239,7 +239,7 @@ const soundIds = [
     'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
     'sfx_mystical_moon_explosion', 'sfx_holy_shine',
     'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error'
+    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error', 'sfx_void_body'
 ];
 soundIds.forEach(id => soundManager.load(id));
 

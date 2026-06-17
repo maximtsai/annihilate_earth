@@ -1,5 +1,25 @@
 // Mystery Box Update Loop Logic & Extensible Effects Registry
 
+// Spawn 4-6 smoke/dust particles at the box screen position when it disappears
+function spawnMysteryBoxDissipateSmoke(x, y) {
+    const count = 4 + Math.floor(Math.random() * 3); // 4-6
+    for (let s = 0; s < count; s++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 1.5 + 0.4;
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1.0,
+            maxLife: Math.random() * 0.7 + 0.5,
+            size: Math.random() * 8 + 5,
+            color: '#aaaaaa',
+            type: 'smoke'
+        });
+    }
+}
+
 // A registry of arbitrary effects that can be randomly triggered
 const mysteryBoxEffects = [
     {
@@ -150,6 +170,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
                 if (!othersShooting) {
                     soundManager.stopLoop('sfx_laser_fire');
                 }
+                spawnMysteryBoxDissipateSmoke(box);
                 activeMysteryBoxes.splice(i, 1);
             }
             continue;
@@ -354,6 +375,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
 
                     if (box.missilesFiredCount >= 18 && box.missileTimer >= 0.1) {
                         // Done firing!
+                        spawnMysteryBoxDissipateSmoke(box.x, box.y);
                         activeMysteryBoxes.splice(i, 1);
                     }
                 } else if (box.state === 'flying_up_nukes') {
@@ -391,6 +413,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
 
                     if (box.nukesDroppedCount >= 6 && box.nukeTimer >= 0.1) {
                         // Done dropping nukes!
+                        spawnMysteryBoxDissipateSmoke(box.x, box.y);
                         activeMysteryBoxes.splice(i, 1);
                     }
                 } else if (box.state === 'flying_up_worm') {
@@ -413,6 +436,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
                     });
 
                     // Disappear immediately
+                    spawnMysteryBoxDissipateSmoke(box.x, box.y);
                     activeMysteryBoxes.splice(i, 1);
                 } else if (box.state === 'flying_up_blackhole') {
                     // Summon a black hole
@@ -443,6 +467,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
                     });
 
                     // Disappear immediately
+                    spawnMysteryBoxDissipateSmoke(box.x, box.y);
                     activeMysteryBoxes.splice(i, 1);
                 } else if (box.state === 'flying_up_excalibur') {
                     // Summon Excalibur in orbit, pointing towards center of planet
@@ -472,11 +497,13 @@ function updateMysteryBoxes(deltaTime, dt60) {
                     });
 
                     // Disappear immediately
+                    spawnMysteryBoxDissipateSmoke(box.x, box.y);
                     activeMysteryBoxes.splice(i, 1);
                 } else if (box.state === 'flying_up_cthulhu') {
                     // Summon Cthulhu (identical behavior to Cthulhu / Kraken weapon spawn)
                     const angle = Math.atan2(box.y - CENTER_Y, box.x - CENTER_X);
                     soundManager.play('sfx_gamma_charge');
+                    soundManager.play('sfx_void_body');
                     activeKrakens.push({
                         portalX: box.x,
                         portalY: box.y,
@@ -491,6 +518,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
                     });
 
                     // Disappear immediately
+                    spawnMysteryBoxDissipateSmoke(box.x, box.y);
                     activeMysteryBoxes.splice(i, 1);
                 } else if (box.state === 'flying_up_lasers') {
                     box.state = 'spinning_lasers';

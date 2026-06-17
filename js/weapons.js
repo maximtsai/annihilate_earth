@@ -175,6 +175,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
         const krakenSpawnY = CENTER_Y + Math.sin(angle) * spawnDistance;
 
         soundManager.play('sfx_gamma_charge');
+        soundManager.play('sfx_void_body');
         activeKrakens.push({
             portalX: krakenSpawnX,
             portalY: krakenSpawnY,
@@ -412,7 +413,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'mysterybox') {
         // Unlocked and ammo check is handled at the beginning of spawnWeapon
-        const playVol = 0.7 + Math.random() * 0.15;
+        const playVol = (0.7 + Math.random() * 0.15) * 0.2;
         const detune = (Math.random() - 0.5) * 300;
         soundManager.play('sfx_launch_heavy', false, playVol, detune);
 

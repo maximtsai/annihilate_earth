@@ -252,6 +252,10 @@ const assets = {
     "sfx_error": {
         "url": "./assets/error_bleep.mp3",
         "type": "audio"
+    },
+    "sfx_void_body": {
+        "url": "./assets/void_body.mp3",
+        "type": "audio"
     }
 };
 

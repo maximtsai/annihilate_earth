@@ -1724,6 +1724,12 @@ html {
     }
 }
 
+@media (orientation: landscape) {
+    #weapon-unlock-notification {
+        bottom: calc(78px * var(--ui-scale));
+    }
+}
+
 @media (max-width: 660px) {
     .game-title {
         font-size: calc(20px * var(--ui-scale));
