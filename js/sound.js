@@ -71,7 +71,7 @@ class SoundManager {
                 }
 
                 const gainNode = this.context.createGain();
-                gainNode.gain.value = volume;
+                gainNode.gain.value = window.gamePausedForAd ? volume * 0.001 : volume;
                 source.connect(gainNode);
                 const targetGain = id.startsWith('bgm_') ? this.bgmGain : this.sfxGain;
                 gainNode.connect(targetGain);
