@@ -2,10 +2,10 @@
 
 // Spawn 4-6 smoke/dust particles at the box screen position when it disappears
 function spawnMysteryBoxDissipateSmoke(x, y) {
-    const count = 4 + Math.floor(Math.random() * 3); // 4-6
+    const count = 6 + Math.floor(Math.random() * 3); // 6-8
     for (let s = 0; s < count; s++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 1.5 + 0.4;
+        const speed = (Math.random() * 3.3 + 0.8);
         particles.push({
             x: x,
             y: y,

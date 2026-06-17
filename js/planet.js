@@ -896,6 +896,28 @@ function popConnectedIce(seedX, seedY) {
                             data[idx + 1] = cg;
                             data[idx + 2] = cb;
                             data[idx + 3] = 255;
+                        } else if (currentPlanet === 'neutron_star') {
+                            const rad = planetSize / 2;
+                            const nx = dxCenter / rad;
+                            const ny = dyCenter / rad;
+                            const nsNoiseX = nx * 3.6 + seedX;
+                            const nsNoiseY = ny * 3.6 + seedY;
+                            const nsNoiseVal = fbm(nsNoiseX, nsNoiseY, 4);
+                            let nr = 230, ng = 240, nb = 255;
+                            if (nsNoiseVal < 0.38) {
+                                nr = 230; ng = 240; nb = 255;
+                            } else if (nsNoiseVal < 0.65) {
+                                const t = (nsNoiseVal - 0.38) / 0.27;
+                                nr = Math.floor(230 + t * 25);
+                                ng = Math.floor(240 + t * 15);
+                                nb = 255;
+                            } else {
+                                nr = 255; ng = 255; nb = 255;
+                            }
+                            data[idx] = nr;
+                            data[idx + 1] = ng;
+                            data[idx + 2] = nb;
+                            data[idx + 3] = 255;
                         } else {
                             // Pop normal crust or pop core itself
                             data[idx + 3] = 0;
@@ -1120,7 +1142,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     const lifeScale = getConfigValue(`weapons.${weaponType}.particleLifeScale`, 1.0);
 
     if (weaponType === 'mysterybox') {
-        const dustCount = particleCount + 7;
+        const dustCount = particleCount + 2;
         for (let i = 0; i < dustCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = (Math.random() * 5 + 3) * speedScale;
