@@ -23,10 +23,17 @@ async function build() {
     console.log("Starting build process...");
 
     // 1. Recreate clean dist directory
-    if (fs.existsSync(DIST_DIR)) {
-        fs.rmSync(DIST_DIR, { recursive: true, force: true });
+    try {
+        if (fs.existsSync(DIST_DIR)) {
+            fs.rmSync(DIST_DIR, { recursive: true, force: true });
+        }
+        fs.mkdirSync(DIST_DIR, { recursive: true });
+    } catch (e) {
+        console.warn("Warning: Could not recreate dist directory cleanly, proceeding with overwrite:", e.message);
+        if (!fs.existsSync(DIST_DIR)) {
+            fs.mkdirSync(DIST_DIR, { recursive: true });
+        }
     }
-    fs.mkdirSync(DIST_DIR);
 
     // 2. Bundle JavaScript files
     console.log("Bundling JavaScript files...");

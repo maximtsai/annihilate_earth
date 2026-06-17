@@ -2442,10 +2442,10 @@ async function run(mode) {
                 }
 
                 // Asteroid fire exhaust particles
-                if (w.type === 'asteroid' && Math.random() > 0.25) {
+                if (w.type === 'asteroid' && Math.random() > 0.28) {
                     particles.push({
-                        x: w.x - w.vx * 0.8 + (Math.random() - 0.5) * 8,
-                        y: w.y - w.vy * 0.8 + (Math.random() - 0.5) * 8,
+                        x: w.x - w.vx * 0.8 + (Math.random() - 0.5) * 16,
+                        y: w.y - w.vy * 0.8 + (Math.random() - 0.5) * 16,
                         vx: (Math.random() - 0.5) * 1.5 - w.vx * 0.2,
                         vy: (Math.random() - 0.5) * 1.5 - w.vy * 0.2,
                         life: 1.0,

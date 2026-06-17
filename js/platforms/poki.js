@@ -212,10 +212,13 @@ window.PlatformBridge = {
             document.head.appendChild(style);
             document.body.appendChild(overlay);
         }
+        overlay.style.display = 'block';
         overlay.className = '';
+        overlay.style.transform = 'skewX(-20deg) translateX(-100%)'; // reset to start position
         overlay.offsetHeight; // trigger reflow
         overlay.classList.add('ad-transition-in');
         setTimeout(() => {
+            overlay.style.display = 'none'; // Hide during the ad break so Poki ad is visible
             if (onMidpoint) onMidpoint();
         }, 420);
     },
@@ -223,7 +226,9 @@ window.PlatformBridge = {
     _runTransitionOut: function() {
         const overlay = document.getElementById('ad-transition-overlay');
         if (!overlay) return;
+        overlay.style.display = 'block';
         overlay.className = '';
+        overlay.style.transform = 'skewX(-20deg) translateX(0%)';
         overlay.offsetHeight; // trigger reflow
         overlay.classList.add('ad-transition-out');
         setTimeout(() => {
