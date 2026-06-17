@@ -203,7 +203,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             return;
         }
 
-        const playVol = 0.7 + Math.random() * 0.15;
+        const playVol = (0.7 + Math.random() * 0.15) * 0.5;
         const detune = (Math.random() - 0.5) * 300;
         soundManager.play('sfx_launch_heavy', false, playVol, detune);
         activeBowlingBalls.push({

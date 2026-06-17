@@ -79,7 +79,7 @@ window.gameConfig = {
     },
     "gameplay": {
         "spawnDistance": 300,
-        "victoryThreshold": 1.75
+        "victoryThreshold": 1.5
     },
     "visual": {
         "backgroundColor": "#0a0a15",

@@ -978,7 +978,8 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
         }
     }
     if (currentPlanet === 'neutron_star') {
-        finalRadius *= 0.225;
+        finalRadius -= 3;
+        finalRadius *= 0.23;
     } else {
         finalRadius *= 0.94;
     }
@@ -1005,7 +1006,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
             }
         } else if (weaponType === 'missile') {
             const detune = (Math.random() - 0.5) * 400; // +/- 200 cents
-            soundManager.play('sfx_explosion_small', false, 1.0, detune);
+            soundManager.play('sfx_explosion_small', false, 0.6 + Math.random() * 0.35, detune);
         } else if (weaponType === 'nuke') {
             const detune = (Math.random() - 0.5) * 1200; // +/- 600 cents
             soundManager.play('sfx_explosion_medium', false, 1.0, detune);
@@ -1247,7 +1248,8 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
         }
     }
     if (currentPlanet === 'neutron_star') {
-        finalRadius *= 0.225;
+        finalRadius -= 3;
+        finalRadius *= 0.23;
     } else {
         finalRadius *= 0.94;
     }

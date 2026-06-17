@@ -239,7 +239,7 @@ const soundIds = [
     'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
     'sfx_mystical_moon_explosion', 'sfx_holy_shine',
     'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error', 'sfx_void_body'
+    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error'
 ];
 soundIds.forEach(id => soundManager.load(id));
 
@@ -3652,7 +3652,27 @@ async function run(mode) {
         const planetSize = getPlanetSize();
         const radius = planetSize / 2;
 
-        // Draw Glowing Core at center (drawn behind the planet silhouette, so it's hidden until breached)
+        // Planet atmospheric glow (drawn behind silhouette and core glow, fades with mass)
+        if (currentPixelCount > 0 && !victoryTriggered) {
+            let glowImg = null;
+            if (currentPlanet === 'earth') glowImg = earthGlow;
+            else if (currentPlanet === 'mars') glowImg = marsGlow;
+            else if (currentPlanet === 'neptune') glowImg = neptuneGlow;
+            else if (currentPlanet === 'jupiter') glowImg = jupiterGlow;
+            else if (currentPlanet === 'neutron_star') glowImg = neutronStarGlow;
+
+            if (glowImg) {
+                const intRatio = Math.min(1, currentPixelCount / Math.max(1, initialPixelCount));
+                ctx.save();
+                ctx.translate(CENTER_X, CENTER_Y);
+                ctx.scale(planetScale, planetScale);
+                ctx.globalAlpha = intRatio;
+                ctx.drawImage(glowImg, -glowImg.width / 2, -glowImg.height / 2);
+                ctx.restore();
+            }
+        }
+
+        // Draw Glowing Core at center (drawn above atmospheric glow but behind the planet silhouette)
         if (currentPixelCount > 0 && !victoryTriggered && currentCorePixelCount > 0) {
             ctx.save();
             ctx.translate(CENTER_X, CENTER_Y);
@@ -3661,7 +3681,7 @@ async function run(mode) {
 
             const dxLocal = (PLANET_CANVAS_SIZE / 2) - planetCenterX;
             const dyLocal = (PLANET_CANVAS_SIZE / 2) - planetCenterY;
-            const coreRatio = initialCorePixelCount > 0 ? Math.max(0, ((currentCorePixelCount / initialCorePixelCount) - 0.05)) : 1.0;
+            const coreRatio = initialCorePixelCount > 0 ? ((currentCorePixelCount / initialCorePixelCount) + 0.15) : 1.0;
 
             let coreImg = null;
             if (currentPlanet === 'sun') {
@@ -3671,7 +3691,7 @@ async function run(mode) {
             }
 
             if (coreImg) {
-                const pulse = 0.925 + Math.sin(performance.now() * 0.005) * 0.05;
+                const pulse = 0.7 + Math.sin(performance.now() * 0.005) * 0.05;
                 ctx.save();
                 ctx.translate(dxLocal, dyLocal);
                 let scaleFactor = coreRatio * pulse * (planetSize / 240);
@@ -3730,26 +3750,6 @@ async function run(mode) {
                 ctx.restore();
             }
         });
-
-        // Planet atmospheric glow (drawn behind silhouette, fades with mass)
-        if (currentPixelCount > 0 && !victoryTriggered) {
-            let glowImg = null;
-            if (currentPlanet === 'earth') glowImg = earthGlow;
-            else if (currentPlanet === 'mars') glowImg = marsGlow;
-            else if (currentPlanet === 'neptune') glowImg = neptuneGlow;
-            else if (currentPlanet === 'jupiter') glowImg = jupiterGlow;
-            else if (currentPlanet === 'neutron_star') glowImg = neutronStarGlow;
-
-            if (glowImg) {
-                const intRatio = Math.min(1, currentPixelCount / Math.max(1, initialPixelCount));
-                ctx.save();
-                ctx.translate(CENTER_X, CENTER_Y);
-                ctx.scale(planetScale * 0.95, planetScale * 0.95);
-                ctx.globalAlpha = intRatio;
-                ctx.drawImage(glowImg, -glowImg.width / 2, -glowImg.height / 2);
-                ctx.restore();
-            }
-        }
 
         // Draw Planet Silhouette
         if (currentPixelCount > 0) {
