@@ -239,7 +239,7 @@ const soundIds = [
     'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
     'sfx_mystical_moon_explosion', 'sfx_holy_shine',
     'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error'
+    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error', 'sfx_void_body'
 ];
 soundIds.forEach(id => soundManager.load(id));
 
@@ -516,7 +516,7 @@ async function run(mode) {
         bowling: 0.35,
         kraken: 8.5,
         worm: 35.0,
-        blackhole: 40.0,
+        blackhole: 45.0,
         laser: 11.0,
         fist: 20.0,
         star: 15.0,
@@ -2246,7 +2246,7 @@ async function run(mode) {
 
                             // Calculate growing explosion scale (start +40% bigger, grow to +170% by end of active phase)
                             const scale = 2 + Math.min(1.0, bh.time / 5.0) * 1.3;
-                            let radius = 8 * scale;
+                            let radius = 8 * scale - 2;
                             if (currentPlanet === 'neutron_star') {
                                 radius *= 0.22;
                             } else {

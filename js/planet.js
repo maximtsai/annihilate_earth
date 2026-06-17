@@ -750,7 +750,7 @@ function freezeArea(localX, localY, radius) {
                 data[idx] = Math.floor(r * 0.2);
                 data[idx + 1] = Math.floor(g * 0.5 + 80);
                 data[idx + 2] = Math.min(255, Math.floor(b * 0.3 + 190));
-                data[idx + 3] = 224;
+                data[idx + 3] = 211;
 
                 iceGrid[gridIdx] = iceType;
                 if (typeof detailedIceGrid !== 'undefined') {
