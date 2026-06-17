@@ -117,6 +117,8 @@ function registerMysteryBoxEffect(name, triggerFn) {
     mysteryBoxEffects.push({ name: name, trigger: triggerFn });
 }
 
+let hasSpawnedBlackHoleFromMysteryBox = false;
+
 function updateMysteryBoxes(deltaTime, dt60) {
     const sharedPlanetData = getSharedPlanetData();
     if (!sharedPlanetData) return;
@@ -191,10 +193,22 @@ function updateMysteryBoxes(deltaTime, dt60) {
 
             if (triggered) {
                 // Trigger one of the registered effects at random!
-                const effectIndex = Math.floor(Math.random() * mysteryBoxEffects.length);
-                const selectedEffect = mysteryBoxEffects[effectIndex];
+                let effectIndex = Math.floor(Math.random() * mysteryBoxEffects.length);
+                let selectedEffect = mysteryBoxEffects[effectIndex];
+
+                if (selectedEffect && selectedEffect.name === 'blackhole_summon' && !hasSpawnedBlackHoleFromMysteryBox) {
+                    const otherEffects = mysteryBoxEffects.filter(e => e.name !== 'blackhole_summon');
+                    if (otherEffects.length > 0) {
+                        const altIndex = Math.floor(Math.random() * otherEffects.length);
+                        selectedEffect = otherEffects[altIndex];
+                    }
+                }
+
                 if (selectedEffect && typeof selectedEffect.trigger === 'function') {
                     console.log(`[MysteryBox] Triggered effect: ${selectedEffect.name}`);
+                    if (selectedEffect.name === 'blackhole_summon') {
+                        hasSpawnedBlackHoleFromMysteryBox = true;
+                    }
                     selectedEffect.trigger(box);
                 }
             }
@@ -517,7 +531,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
                 if (!box.hasExploded) {
                     box.hasExploded = true;
                     box.firstLandTime = performance.now();
-                    createExplosion(local.x, local.y, 18, 6, 'mysterybox', false, true);
+                    createExplosion(local.x, local.y, 14, 6, 'mysterybox', false, true);
                 } else if (performance.now() - box.firstLandTime >= 200) {
                     // 0.2s after landing once, the next time it comes in contact, it becomes stuck!
                     box.state = 'stuck';

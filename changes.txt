@@ -1,0 +1,51 @@
+Major Changes Since First Commit
+=================================
+
+1. Responsive & Resizable UI
+   - Vertical/portrait mode with full orientation detection
+   - UI scaling via CSS custom property (--ui-scale) proportional to viewport width
+   - Planet selector, weapon bar, HUD header reposition for portrait layout
+   - UI aligns correctly across all resolutions
+
+2. Platform Integration (Poki)
+   - Platform bridge system with Poki SDK support
+   - Ad break hooks at strategic moments
+   - Game loading/finished lifecycle reporting to platform
+
+3. Weapon System Expansion
+   - Lightning weapon with charge/hold mechanic and chain visuals
+   - Fist weapon with ram/drag physics chain explosions
+   - Mystery Box weapon with random drops
+   - Ammo system per weapon
+   - Cooldown framework with visual indicators and queueing
+
+4. Engagement & Retention Features
+   - Shooting star event (triggers ad-watch spinner for weapon unlock)
+   - Weapon unlock spinner wheel (canvas-based, 16-slot wheel)
+   - Victory spinner after planet destruction
+   - Best time tracking per planet with "NEW BEST" badge
+   - Star/nuke projectile weapons with special variants
+
+5. Audio & Visual Polish
+   - Full sound manager with volume sliders for SFX and music
+   - Lightning sounds, audio rebalance pass
+   - Glow effects optimized for low-end devices
+   - Screen shake, shockwave rings, explosion particle systems
+   - Atlas refactor for sprite rendering
+
+6. Translation System
+   - Full i18n with 8 languages (en, zh-CN, zh-TW, es, fr, ru, ja, ar)
+   - Dynamic language switching via dropdown in options
+   - CJK font sizing adjustments
+
+7. Progression & Persistence
+   - Planet unlock progression (Earth -> Mars -> Neptune -> Jupiter -> Sun -> Neutron Star)
+   - Weapon unlock state saved across sessions
+   - Best times saved per planet
+   - Claimed spinner state persistence
+
+8. Optimization
+   - Radial gradient canvas caching
+   - Shared planet pixel data for collision detection
+   - Optimized projectile updates
+   - Build pipeline with Terser minification

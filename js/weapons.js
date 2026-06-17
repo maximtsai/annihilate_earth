@@ -468,7 +468,7 @@ function executeSpawn(type, clickX, clickY) {
 
     const speed = getConfigValue(`weapons.${type}.speed`, type === 'missile' ? 7 : (type === 'nuke' || type === 'asteroid' || type === 'comet') ? (type === 'nuke' ? 4.6 : 4) : type === 'moon' ? 1.8 : 2);
     const size = getConfigValue(`weapons.${type}.size`, type === 'missile' ? 5 : type === 'nuke' ? 9 : type === 'moon' ? 25 : type === 'comet' ? 20 : 15);
-    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 11.0 : type === 'nuke' ? 20 : type === 'sword' ? 24 : type === 'moon' ? 102 : type === 'comet' ? 92 : 41);
+    const explosionRadius = getConfigValue(`weapons.${type}.explosionRadius`, type === 'missile' ? 10.5 : type === 'nuke' ? 20 : type === 'sword' ? 24 : type === 'moon' ? 102 : type === 'comet' ? 92 : 41);
     const shakeIntensity = getConfigValue(`weapons.${type}.shakeIntensity`, type === 'missile' ? 4.5 : type === 'nuke' ? 12 : type === 'moon' ? 32 : type === 'comet' ? 8 : 22);
 
     let vx = (dirX / dist) * speed;

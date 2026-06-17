@@ -313,13 +313,13 @@ async function loadUnlockedPlanets() {
                     weaponOrder.splice(newBowlingIdx + 1, 0, 'lightning');
                 }
             }
-             if (response.state.unlockedWeapons) {
-                 unlockedWeapons = response.state.unlockedWeapons;
-                 if (!unlockedWeapons.includes('mysterybox')) {
-                     unlockedWeapons.push('mysterybox');
-                 }
-                 initiallyUnlockedWeapons = new Set(unlockedWeapons);
-             }
+            if (response.state.unlockedWeapons) {
+                unlockedWeapons = response.state.unlockedWeapons;
+                if (!unlockedWeapons.includes('mysterybox')) {
+                    unlockedWeapons.push('mysterybox');
+                }
+                initiallyUnlockedWeapons = new Set(unlockedWeapons);
+            }
             if (response.state.unlockedPlanets) {
                 unlockedPlanets = response.state.unlockedPlanets;
                 initiallyUnlockedPlanets = new Set(unlockedPlanets);
@@ -452,18 +452,27 @@ function updateAmmoUI(type) {
     }
 }
 
-let asteroidCooldown = 12.0;
-let moonCooldown = 160.0;
+const STARTING_COOLDOWNS = {
+    asteroid: 12.0,
+    moon: 165.0,
+    gammaBurst: 35.0,
+    laser: 4.5,
+    mysterybox: 85.0,
+    blackhole: 255.0
+};
+
+let asteroidCooldown = STARTING_COOLDOWNS.asteroid;
+let moonCooldown = STARTING_COOLDOWNS.moon;
 let nukeCooldown = 0;
 let missileCooldown = 0;
-let gammaBurstCooldown = 35.0;
-let laserCooldown = 4.0;
+let gammaBurstCooldown = STARTING_COOLDOWNS.gammaBurst;
+let laserCooldown = STARTING_COOLDOWNS.laser;
 let swordCooldown = 0;
-let mysteryboxCooldown = 80.0;
+let mysteryboxCooldown = STARTING_COOLDOWNS.mysterybox;
 let bowlingCooldown = 0;
 let krakenCooldown = 0;
 let wormCooldown = 0.0;
-let blackholeCooldown = 240.0;
+let blackholeCooldown = STARTING_COOLDOWNS.blackhole;
 let fistCooldown = 0;
 let starCooldown = 0;
 let cometCooldown = 0;

@@ -577,7 +577,7 @@ async function run(mode) {
         timer: 0,           // seconds elapsed since conditions first met
         shown: false,       // currently visible
         dismissed: false,   // permanently dismissed this session
-        DELAY: 12           // seconds before showing
+        DELAY: 13.5           // seconds before showing
     };
     if (_switchTooltip.el) {
         _switchTooltip.arrowEl = _switchTooltip.el.querySelector('.tooltip-arrow');
@@ -2187,7 +2187,7 @@ async function run(mode) {
                 // Spawn invisible rain particles during growing phase (0 to 5s)
                 if (bh.time <= 5.0) {
                     const progress = Math.min(1.0, bh.time / 5.0);
-                    const spawnChance = (0.10 + progress * 0.35) * 0.9; // 10% fewer overall
+                    const spawnChance = (0.12 + progress * 0.35) * 0.8;
 
                     // Current behavior: rain falling from outer orbit
                     if (Math.random() < spawnChance) {
@@ -3744,7 +3744,7 @@ async function run(mode) {
                 const intRatio = Math.min(1, currentPixelCount / Math.max(1, initialPixelCount));
                 ctx.save();
                 ctx.translate(CENTER_X, CENTER_Y);
-                ctx.scale(planetScale, planetScale);
+                ctx.scale(planetScale * 0.95, planetScale * 0.95);
                 ctx.globalAlpha = intRatio;
                 ctx.drawImage(glowImg, -glowImg.width / 2, -glowImg.height / 2);
                 ctx.restore();
@@ -4813,11 +4813,7 @@ async function run(mode) {
             spawnWeapon(x, y);
         }
     });
-
     gameWorld.addEventListener('mousemove', (e) => {
-        // if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
-        //     return;
-        // }
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -4865,9 +4861,6 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchmove', (e) => {
-        // if (e.target.closest('.ui-overlay') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
-        //     return;
-        // }
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -5420,8 +5413,8 @@ async function run(mode) {
             initiallyUnlockedPlanets = new Set(['earth']);
             bestTimes = {};
             claimedPlanetSpinners = [];
-            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'mysterybox'];
-            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'sword', 'moon', 'blackhole', 'mysterybox'];
+            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
+            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
             saveWeaponOrder();
             saveUnlockedWeapons();
@@ -5665,6 +5658,12 @@ async function run(mode) {
         }, delay);
     }
 
+    function beginGameplay() {
+        flickerIn(weaponBarWrapper, 300, 200);
+        flickerIn(hudHeaderWrapper, 500, 750);
+        flickerIn(planetSelector, 500, 450);
+    }
+
     // Hide UI elements initially
     const weaponBarWrapper = document.querySelector('.weapon-bar-wrapper');
     const hudHeaderWrapper = document.querySelector('.hud-header-wrapper');
@@ -5691,10 +5690,12 @@ async function run(mode) {
                 loadingScreen.style.display = 'none';
             }, 600);
 
-            // Staggered flicker-in: weapons first (fast), then header, then planet selector
-            flickerIn(weaponBarWrapper, 300, 200);
-            flickerIn(hudHeaderWrapper, 500, 750);
-            flickerIn(planetSelector, 500, 450);
+            // Call intro sequence instead of going straight to gameplay
+            if (typeof window.startIntro === 'function') {
+                window.startIntro(beginGameplay);
+            } else {
+                beginGameplay();
+            }
         }, 400);
     }, 600);
 

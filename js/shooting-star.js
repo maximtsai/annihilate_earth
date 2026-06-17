@@ -13,7 +13,7 @@
         init: function () {
             // Pick a random spawn time based on the planet
             if (typeof currentPlanet !== 'undefined' && currentPlanet === 'earth') {
-                spawnTime = 26 + Math.random() * 6; // 24 to 30 seconds
+                spawnTime = 31 + Math.random() * 4; // 31 to 35 seconds
             } else {
                 spawnTime = 14 + Math.random() * 6; // 14 to 20 seconds
             }

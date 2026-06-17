@@ -74,8 +74,9 @@ window.PlatformBridge = {
                 }
                 if (onComplete) onComplete();
                 
-                // Transition away once everything is completed
-                this._runTransitionOut();
+                // Defer transition-out by one frame so game DOM updates (hiding
+                // victory screen, loading next planet) flush before the overlay sweeps away
+                requestAnimationFrame(() => this._runTransitionOut());
             }
         };
 
@@ -130,8 +131,9 @@ window.PlatformBridge = {
                 }
                 if (rewardGranted && onComplete) onComplete();
                 
-                // Transition away once everything is completed
-                this._runTransitionOut();
+                // Defer transition-out by one frame so game DOM updates flush
+                // before the overlay sweeps away
+                requestAnimationFrame(() => this._runTransitionOut());
             }
         };
 
@@ -213,6 +215,7 @@ window.PlatformBridge = {
             document.body.appendChild(overlay);
         }
         overlay.className = '';
+        overlay.style.transform = 'skewX(-20deg) translateX(-100%)'; // reset to start position
         overlay.offsetHeight; // trigger reflow
         overlay.classList.add('ad-transition-in');
         setTimeout(() => {

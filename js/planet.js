@@ -1074,26 +1074,28 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     }
 
     // Create two circles representing the explosion (orange slightly larger, yellow slightly smaller)
-    particles.push({
-        x: impactScreenX,
-        y: impactScreenY,
-        vx: 0, vy: 0,
-        life: 1.0,
-        maxLife: 0.41,
-        size: finalRadius * 1.3,
-        color: 'rgba(255, 120, 0, 0.85)',
-        type: 'explosion_ring'
-    });
-    particles.push({
-        x: impactScreenX,
-        y: impactScreenY,
-        vx: 0, vy: 0,
-        life: 1.0,
-        maxLife: 0.185,
-        size: finalRadius * 0.95,
-        color: 'rgba(255, 255, 120, 0.98)',
-        type: 'explosion_ring'
-    });
+    if (weaponType !== 'mysterybox') {
+        particles.push({
+            x: impactScreenX,
+            y: impactScreenY,
+            vx: 0, vy: 0,
+            life: 1.0,
+            maxLife: 0.41,
+            size: finalRadius * 1.3,
+            color: 'rgba(255, 120, 0, 0.85)',
+            type: 'explosion_ring'
+        });
+        particles.push({
+            x: impactScreenX,
+            y: impactScreenY,
+            vx: 0, vy: 0,
+            life: 1.0,
+            maxLife: 0.185,
+            size: finalRadius * 0.95,
+            color: 'rgba(255, 255, 120, 0.98)',
+            type: 'explosion_ring'
+        });
+    }
     if (weaponType === 'nuke' || weaponType === 'asteroid' || weaponType === 'bowling') {
         particles.push({
             x: impactScreenX,
@@ -1116,20 +1118,39 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     const speedScale = getConfigValue(`weapons.${weaponType}.particleSpeedScale`, 1.0);
     const lifeScale = getConfigValue(`weapons.${weaponType}.particleLifeScale`, 1.0);
 
-    for (let i = 0; i < particleCount; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = (Math.random() * 5 + 3) * speedScale;
-        particles.push({
-            x: impactScreenX,
-            y: impactScreenY,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: 1.0,
-            maxLife: (Math.random() * 0.8 + 0.6) * lifeScale,
-            size: Math.random() * 5 + 3,
-            color: `hsl(${Math.random() * 45 + 10}, 100%, ${Math.random() * 30 + 55}%)`,
-            type: Math.random() > 0.45 ? 'fire' : 'smoke'
-        });
+    if (weaponType === 'mysterybox') {
+        const dustCount = particleCount + 7;
+        for (let i = 0; i < dustCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (Math.random() * 5 + 3) * speedScale;
+            particles.push({
+                x: impactScreenX,
+                y: impactScreenY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1.0,
+                maxLife: (Math.random() * 0.8 + 0.6) * lifeScale,
+                size: Math.random() * 5 + 3,
+                color: `rgba(${Math.random() * 40 + 120}, ${Math.random() * 30 + 110}, ${Math.random() * 30 + 100}, ${0.5 + Math.random() * 0.4})`,
+                type: 'smoke'
+            });
+        }
+    } else {
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (Math.random() * 5 + 3) * speedScale;
+            particles.push({
+                x: impactScreenX,
+                y: impactScreenY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1.0,
+                maxLife: (Math.random() * 0.8 + 0.6) * lifeScale,
+                size: Math.random() * 5 + 3,
+                color: `hsl(${Math.random() * 45 + 10}, 100%, ${Math.random() * 30 + 55}%)`,
+                type: Math.random() > 0.45 ? 'fire' : 'smoke'
+            });
+        }
     }
 
     // Check victory condition
@@ -1641,18 +1662,21 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     activeStars = [];
     activeStarProjectiles = [];
     activeMysteryBoxes = [];
+    if (typeof hasSpawnedBlackHoleFromMysteryBox !== 'undefined') {
+        hasSpawnedBlackHoleFromMysteryBox = false;
+    }
     if (iceGrid) iceGrid.fill(0);
     fistStuckCount = 0;
 
     for (const key in weaponQueues) delete weaponQueues[key];
 
     if (!keepCooldowns) {
-        gammaBurstCooldown = 36.0;
-        laserCooldown = 4.0;
-        asteroidCooldown = 12.0;
+        gammaBurstCooldown = STARTING_COOLDOWNS.gammaBurst;
+        laserCooldown = STARTING_COOLDOWNS.laser;
+        asteroidCooldown = STARTING_COOLDOWNS.asteroid;
         swordCooldown = 0;
-        mysteryboxCooldown = 75.0;
-        moonCooldown = 150.0;
+        mysteryboxCooldown = STARTING_COOLDOWNS.mysterybox;
+        moonCooldown = STARTING_COOLDOWNS.moon;
         isInitialAsteroidCooldown = true;
         isInitialLaserCooldown = true;
         isInitialGammaCooldown = true;
@@ -1665,7 +1689,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
         krakenCooldown = 0;
         wormCooldown = 0.0;
         isInitialWormCooldown = false;
-        blackholeCooldown = 240.0;
+        blackholeCooldown = STARTING_COOLDOWNS.blackhole;
         isInitialBlackholeCooldown = true;
         fistCooldown = 0;
         starCooldown = 0;
