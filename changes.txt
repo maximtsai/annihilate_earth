@@ -33,18 +33,54 @@ Major Changes Since First Commit
    - Screen shake, shockwave rings, explosion particle systems
    - Atlas refactor for sprite rendering
 
-6. Translation System
+6. File Architecture & Site Locking
+   - Extracted util.js (flickerIn, beginGameplay with site lock) and site-lock.js as standalone files
+   - Not bundled into game.js for independent obfuscation via jsDefender
+   - Poki site lock integrated into spinner, planet initialization, and gameplay startup
+   - Intro sequence extracted into intro.js with callback pattern
+
+7. Translation System
    - Full i18n with 8 languages (en, zh-CN, zh-TW, es, fr, ru, ja, ar)
    - Dynamic language switching via dropdown in options
    - CJK font sizing adjustments
 
-7. Progression & Persistence
+8. Progression & Persistence
    - Planet unlock progression (Earth -> Mars -> Neptune -> Jupiter -> Sun -> Neutron Star)
    - Weapon unlock state saved across sessions
    - Best times saved per planet
    - Claimed spinner state persistence
+   - Star ad reward claim locks further spawns (unclaimed stars can retry)
 
-8. Optimization
+9. Mystery Box
+   - Random weapon drop system from floating box
+   - Mystery box cooldown (starts at 85s), landing dust, dissipate smoke particles
+   - Cthulhu summon via mystery box with void_body sound integration
+   - Mystery box firing sound volume reduced 80%
+
+10. Shooting Star Repeating Timer
+    - Initial spawn window (14-20s non-Earth, 31-35s Earth)
+    - Repeating spawn attempt every 65s (20s minimum gap between spawns)
+    - Retries if star flies off unclicked; only blocks future spawns after ad reward claimed
+    - Works on all planets
+
+11. Balance Adjustments
+    - Victory threshold reduced from 1.75% to 1.5%
+    - Missile explosion radius reduced (12.5→10.5)
+    - Black hole explosion radius reduced 2 units, max cooldown 45s
+    - Star weapon projectile speed +25%, explosion radius +2
+    - Earth/Mars planet size increased (230→242, 195→201)
+    - Bowling ball firing sound halved
+    - Asteroid particle spawn 72% chance, jitter doubled
+    - Ice/frozen pixel alpha 211 (more transparent)
+    - Neutron star frozen pixels resistant (restored on pop, not erased)
+
+12. Audio & Ad Integration
+    - Sounds muted during ads (volume × 0.001)
+    - void_body.mp3 integrated for Cthulhu weapon
+    - Missile explosion volume varies (0.55 + Math.random() * 0.75)
+    - Error beep for out-of-ammo attempts
+
+13. Optimization
    - Radial gradient canvas caching
    - Shared planet pixel data for collision detection
    - Optimized projectile updates
