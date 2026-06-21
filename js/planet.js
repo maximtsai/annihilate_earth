@@ -83,11 +83,11 @@ function initializePlanet() {
                     }
 
                     // Cloud Layer fBm overlay
-                    const cloudX = nx * 4.2 + cloudSeedX;
-                    const cloudY = ny * 4.2 + cloudSeedY;
+                    const cloudX = nx * 6.0 + cloudSeedX;
+                    const cloudY = ny * 6.0 + cloudSeedY;
                     const cloudVal = fbm(cloudX, cloudY, 4);
-                    if (cloudVal > 0.52) {
-                        const cloudOpacity = Math.min((cloudVal - 0.52) / 0.18, 0.85);
+                    if (cloudVal > 0.55) {
+                        const cloudOpacity = Math.min((cloudVal - 0.55) / 0.18, 0.85);
                         r = Math.floor(r * (1 - cloudOpacity) + 255 * cloudOpacity);
                         g = Math.floor(g * (1 - cloudOpacity) + 255 * cloudOpacity);
                         b = Math.floor(b * (1 - cloudOpacity) + 255 * cloudOpacity);
@@ -1683,6 +1683,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     activeWorms = [];
     activeBlackHoles = [];
     activeFists = [];
+    activeFistVisualExplosions = [];
     activeStars = [];
     activeStarProjectiles = [];
     activeMysteryBoxes = [];

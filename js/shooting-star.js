@@ -10,6 +10,7 @@
     let lastSpawnTimestamp = 0;
     let lastUnlockedCount = -1;
     let hasLockedWeapons = true;
+    let adBlockCount = 0;
 
     window.ShootingStarManager = {
         init: function () {
@@ -26,6 +27,7 @@
             star = null;
             clickStars = [];
             lastUnlockedCount = -1;
+            adBlockCount = 0;
             console.log("[ShootingStar] Initialized. Spawn scheduled at " + spawnTime.toFixed(2) + "s");
         },
 
@@ -51,16 +53,30 @@
             const now = Date.now();
             const adCooldownActive = (now - (window.lastAdPlayTime || 0) < 30000);
 
-            if (!starClaimedThisLevel && !firstAttemptFired && planetTimeSpent >= spawnTime) {
-                firstAttemptFired = true;
-                if (!adCooldownActive && (now - lastSpawnTimestamp >= 20000)) {
-                    this.spawn();
+            let shouldAttemptSpawn = false;
+            if (!starClaimedThisLevel) {
+                if (!firstAttemptFired && planetTimeSpent >= spawnTime) {
+                    firstAttemptFired = true;
+                    if (now - lastSpawnTimestamp >= 20000) {
+                        shouldAttemptSpawn = true;
+                    }
+                } else if (!star && planetTimeSpent >= lastRetryTime + 65) {
+                    lastRetryTime += 65;
+                    if (now - lastSpawnTimestamp >= 24000) {
+                        shouldAttemptSpawn = true;
+                    }
                 }
             }
 
-            if (!starClaimedThisLevel && !star && planetTimeSpent >= lastRetryTime + 65) {
-                lastRetryTime += 65;
-                if (!adCooldownActive && (now - lastSpawnTimestamp >= 20000)) {
+            if (shouldAttemptSpawn) {
+                if (adCooldownActive) {
+                    adBlockCount++;
+                    console.log("[ShootingStar] Spawn blocked by ad cooldown. Block count: " + adBlockCount);
+                    if (adBlockCount % 2 === 0) {
+                        console.log("[ShootingStar] Ignoring ad cooldown block (every second time). Spawning anyway.");
+                        this.spawn();
+                    }
+                } else {
                     this.spawn();
                 }
             }
