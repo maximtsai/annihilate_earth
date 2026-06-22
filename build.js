@@ -7,6 +7,7 @@ const DIST_DIR = path.join(__dirname, 'dist');
 // Order of JS files to bundle
 const JS_FILES = [
     path.join(__dirname, 'js', 'platforms', 'poki.js'),
+    path.join(__dirname, 'js', 'utils', 'system.js'),
     path.join(__dirname, 'js', 'config.js'),
     path.join(__dirname, 'js', 'sound.js'),
     path.join(__dirname, 'js', 'translations.js'),
@@ -100,6 +101,7 @@ async function build() {
     } else {
         // Fallback replacement case by case if block is formatted differently
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/platform-bridge\.js["']><\/script>/i, '<script src="js/planet.js"></script>\n    <script src="game.js"></script>');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/utils\/system\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/config\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/sound\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/translations\.js["']><\/script>\s*/gi, '');

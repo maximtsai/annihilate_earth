@@ -1,43 +1,4 @@
 // Core Game Engine & Main Loop
-function detectGlowSupport() {
-    // Heuristic for extremely low-end devices: return false early if single-core or RAM < 1GB
-    if (typeof navigator !== 'undefined') {
-        if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 2) {
-            return false;
-        }
-        if (navigator.deviceMemory && navigator.deviceMemory < 1) {
-            return false;
-        }
-    }
-
-    const testCanvas = document.createElement('canvas');
-    testCanvas.width = 10;
-    testCanvas.height = 10;
-    const testCtx = testCanvas.getContext('2d');
-    if (!testCtx) return false;
-
-    // Set up a shadow/glow
-    testCtx.shadowColor = 'rgba(255, 0, 0, 1)';
-    testCtx.shadowBlur = 4;
-    testCtx.shadowOffsetX = 10; // Draw offscreen to isolate the shadow
-    testCtx.shadowOffsetY = 0;
-
-    // Draw a 1x1 solid rectangle that casts the shadow onto the visible canvas area
-    testCtx.fillStyle = 'black';
-    testCtx.fillRect(-10, 4, 1, 1);
-
-    try {
-        // Read pixel data from the shadow area (which should have semi-transparent pixels)
-        const imgData = testCtx.getImageData(2, 4, 1, 1).data;
-        const alpha = imgData[3];
-
-        // If alpha is 255 (fully opaque) or 0 (fully transparent), 
-        // the smooth shadow gradient failed to render.
-        return alpha > 0 && alpha < 255;
-    } catch (e) {
-        return false;
-    }
-}
 supportsGlow = detectGlowSupport();
 console.log("[Glow Detection] Smooth gradient support:", supportsGlow);
 
@@ -1745,6 +1706,16 @@ async function run(mode) {
                 }
             }
 
+            // Update active fist visual explosions
+            for (let i = activeFistVisualExplosions.length - 1; i >= 0; i--) {
+                const p = activeFistVisualExplosions[i];
+                p.life -= deltaTime / p.maxLife;
+                p.radius = 5 + (p.maxRadius - 5) * (1 - p.life);
+                if (p.life <= 0) {
+                    activeFistVisualExplosions.splice(i, 1);
+                }
+            }
+
             // Update active fists
             for (let i = activeFists.length - 1; i >= 0; i--) {
                 const w = activeFists[i];
@@ -1787,6 +1758,18 @@ async function run(mode) {
                         soundManager.play('sfx_fist_impact');
                         screenShake = { x: 0, y: 0, intensity: 30, duration: 200 };
 
+                        // Create a shockwave spreading out from the contact point
+                        shockwaves.push({
+                            x: w.x,
+                            y: w.y,
+                            radius: 0,
+                            maxRadius: 280,
+                            life: 1.0,
+                            maxLife: 0.8,
+                            isOval: true,
+                            angle: w.angle
+                        });
+
                         w.state = 'sinking';
                         w.timer = 0.0;
                         w.contactX = w.x;
@@ -1822,9 +1805,42 @@ async function run(mode) {
                             const offset = (Math.random() - 0.5) * w.width * 0.75;
                             const ex = w.x + Math.cos(perpAngle) * offset;
                             const ey = w.y + Math.sin(perpAngle) * offset;
-                            const localHit = screenToLocal(ex, ey, CENTER_X, CENTER_Y, planetRotation);
+                            const exShifted = ex - Math.cos(w.angle) * 10;
+                            const eyShifted = ey - Math.sin(w.angle) * 10;
+                            const localHit = screenToLocal(exShifted, eyShifted, CENTER_X, CENTER_Y, planetRotation);
 
-                            createExplosion(localHit.x, localHit.y, 17, 8, 'missile', false, true); // small explosion (now size 17)
+                            createExplosion(localHit.x, localHit.y, 19.4, 8, 'missile', false, true);
+
+                            // Create dust particles flying far (away from impact zone)
+                            const dustCount = 4;
+                            for (let d = 0; d < dustCount; d++) {
+                                const angle = w.angle + Math.PI + (Math.random() - 0.5) * 1.75;
+                                const speed = (Math.random() * 14 + 12);
+                                particles.push({
+                                    x: ex,
+                                    y: ey,
+                                    vx: Math.cos(angle) * speed,
+                                    vy: Math.sin(angle) * speed,
+                                    life: 1.0,
+                                    maxLife: Math.random() * 0.5 + 0.35,
+                                    size: Math.random() * 4 + 2.5,
+                                    color: `rgba(${Math.random() * 40 + 130}, ${Math.random() * 30 + 100}, ${Math.random() * 30 + 80}, 0.8)`,
+                                    type: 'smoke'
+                                });
+                            }
+
+                            // Create a few visual only orange-red circles that look like explosions at lower depth than the fist
+                            const circlesCount = Math.floor(Math.random() * 2) + 2; // 2 to 3 circles
+                            for (let c = 0; c < circlesCount; c++) {
+                                activeFistVisualExplosions.push({
+                                    x: ex - Math.cos(w.angle) * 1 + (Math.random() - 0.5) * 18,
+                                    y: ey - Math.sin(w.angle) * 1 + (Math.random() - 0.5) * 18,
+                                    radius: 5,
+                                    maxRadius: Math.random() * 15 + 30,
+                                    life: 1.0,
+                                    maxLife: Math.random() * 0.25 + 0.22
+                                });
+                            }
                         }
                     });
 
@@ -3798,6 +3814,28 @@ async function run(mode) {
         // Draw active Fists
         activeFists.forEach(drawFist);
 
+        // Draw active Fist Visual Explosions (drawn in front of the fist)
+        activeFistVisualExplosions.forEach(p => {
+            ctx.save();
+            ctx.globalAlpha = p.life;
+            const drawRadius = p.radius * 1.4;
+
+
+            // 2. Translucent filled orange circle
+            ctx.fillStyle = 'rgba(255, 120, 0, 0.45)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, drawRadius * 0.65, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3. Smaller yellow circle in front of the orange circle
+            ctx.fillStyle = 'rgba(255, 230, 0, 0.65)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, drawRadius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        });
+
         // Draw active Stars & Star Projectiles
         activeStarProjectiles.forEach(drawStarProjectile);
         activeStars.forEach(drawStar);
@@ -4199,7 +4237,8 @@ async function run(mode) {
             });
         });
 
-        // Draw faint spawn orbit ring when hovering
+        // Draw faint spawn orbit ring when hovering (hidden)
+        /*
         if (!victoryTriggered && mode === 'play') {
             const orbitRadius = getConfigValue('gameplay.spawnDistance', 300) + 10;
             ctx.save();
@@ -4212,6 +4251,7 @@ async function run(mode) {
             ctx.stroke();
             ctx.restore();
         }
+        */
 
         // Draw Glowing Spawn Indicator Triangle (hollow, pointing inward, offset further back)
         if (showPointer && !victoryTriggered && mode === 'play') {
@@ -4571,13 +4611,21 @@ async function run(mode) {
             ctx.strokeStyle = `rgba(255, 255, 255, ${sw.life * 0.4})`;
             ctx.lineWidth = 2 + sw.life * 4;
             ctx.beginPath();
-            ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+            if (sw.isOval) {
+                ctx.ellipse(sw.x, sw.y, sw.radius * 0.25, sw.radius, sw.angle, 0, Math.PI * 2);
+            } else {
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+            }
             ctx.stroke();
             // Optional: inner faint ring
             ctx.strokeStyle = `rgba(0, 217, 255, ${sw.life * 0.2})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(sw.x, sw.y, sw.radius * 0.85, 0, Math.PI * 2);
+            if (sw.isOval) {
+                ctx.ellipse(sw.x, sw.y, sw.radius * 0.85 * 0.25, sw.radius * 0.85, sw.angle, 0, Math.PI * 2);
+            } else {
+                ctx.arc(sw.x, sw.y, sw.radius * 0.85, 0, Math.PI * 2);
+            }
             ctx.stroke();
             ctx.restore();
         });
@@ -5228,6 +5276,9 @@ async function run(mode) {
         if (btnHalf) btnHalf.textContent = t.half || 'HALF';
         if (btnFull) btnFull.textContent = t.full || 'FULL';
 
+        const optFullscreen = document.getElementById('fullscreen-label-text');
+        if (optFullscreen) optFullscreen.textContent = '🖥️ ' + (t.fullScreen || 'FULL SCREEN');
+
         if (optReset) optReset.textContent = '⚠️ ' + (t.resetProgress || 'RESET PROGRESS') + ' ⚠️';
 
         // Reset Confirmation Popup translations
@@ -5577,6 +5628,28 @@ async function run(mode) {
             soundManager.play('sfx_ui_switch');
         });
     });
+
+    // Fullscreen Option Logic
+
+    const fsCheckbox = document.getElementById('fullscreen-checkbox');
+    if (fsCheckbox) {
+        fsCheckbox.addEventListener('change', (e) => {
+            toggleFullscreen(fsCheckbox.checked);
+            soundManager.play('sfx_ui_switch');
+        });
+    }
+
+    function updateFullscreenCheckbox() {
+        const isCurrentlyFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        if (fsCheckbox) {
+            fsCheckbox.checked = isCurrentlyFullscreen;
+        }
+    }
+
+    document.addEventListener('fullscreenchange', updateFullscreenCheckbox);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenCheckbox);
+    document.addEventListener('mozfullscreenchange', updateFullscreenCheckbox);
+    document.addEventListener('MSFullscreenChange', updateFullscreenCheckbox);
 
     // Setup scene
     updatePlanetButtons();

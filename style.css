@@ -727,6 +727,76 @@ html {
     font-weight: bold;
 }
 
+/* Custom Cyber Checkbox */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 20px;
+    color: rgba(0, 217, 255, 0.85);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    user-select: none;
+    padding-left: 36px;
+    height: 28px;
+    margin-top: 6px;
+}
+
+.checkbox-container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkbox-custom {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    height: 22px;
+    width: 22px;
+    background: rgba(0, 217, 255, 0.08);
+    border: 1px solid rgba(0, 217, 255, 0.4);
+    border-radius: 4px;
+    transition: all 200ms ease;
+}
+
+.checkbox-container:hover input ~ .checkbox-custom {
+    border-color: #00d9ff;
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+    background: rgba(0, 217, 255, 0.15);
+}
+
+.checkbox-container input:checked ~ .checkbox-custom {
+    background: rgba(0, 217, 255, 0.22);
+    border: 1.5px solid #00d9ff;
+    box-shadow: 0 0 12px rgba(0, 217, 255, 0.4);
+}
+
+.checkbox-custom::after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 7px;
+    top: 3px;
+    width: 5px;
+    height: 10px;
+    border: solid #00d9ff;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-container input:checked ~ .checkbox-custom::after {
+    display: block;
+}
+
+.checkbox-label-text {
+    vertical-align: middle;
+}
+
 .mass-display {
     font-family: 'Share Tech Mono', monospace;
     font-size: calc(18px * var(--ui-scale));

@@ -1,12 +1,6 @@
 var canvas, ctx, hiddenCanvas, hiddenCtx, bgCanvas, bgCtx, soundManager, fistImage;
 var spriteOrange, spriteBrightYellow, spriteSmokeStandard, spriteSmokeMissile, spriteVermillionRed, spriteLightOrange, spriteWhiteGold;
 var supportsGlow = true;
-var isMobile = (function () {
-    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
-    var uaMatch = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
-    var smallScreen = typeof window !== 'undefined' && window.innerWidth <= 768;
-    return uaMatch || smallScreen;
-})();
 var earthGlow, marsGlow, neptuneGlow, jupiterGlow, neutronStarGlow, sunCorona, sunCoreGlow, magmaCoreGlow;
 var SCREEN_W = 1600;
 var SCREEN_H = 900;
@@ -498,6 +492,7 @@ let activeKrakens = [];
 let activeWorms = [];
 let activeBlackHoles = [];
 let activeFists = [];
+let activeFistVisualExplosions = [];
 let activeStars = [];
 let activeStarProjectiles = [];
 let activeMysteryBoxes = [];

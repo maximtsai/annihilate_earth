@@ -261,36 +261,3 @@ const assets = {
 
 // Asset lookup helper (fallback when lib is not present)
 const getAsset = (id) => (typeof assets !== 'undefined' ? assets[id] : null);
-
-// Local state storage helpers (fallback when lib is not present)
-const saveGameState = async (state) => {
-    try {
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
-        return { success: true };
-    } catch (e) {
-        console.error('Failed to save to local storage', e);
-        return { success: false };
-    }
-};
-
-const getGameState = async () => {
-    try {
-        const saved = localStorage.getItem('annihilate_earth_save');
-        return { state: saved ? JSON.parse(saved) : null, success: true };
-    } catch (e) {
-        console.error('Failed to load from local storage', e);
-        return { state: null, success: false };
-    }
-};
-
-// Config value fetch with fallback defaults
-function getConfigValue(path, defaultValue) {
-    if (!window.gameConfig) return defaultValue;
-    const parts = path.split('.');
-    let current = window.gameConfig;
-    for (const part of parts) {
-        if (current[part] === undefined) return defaultValue;
-        current = current[part];
-    }
-    return current;
-}

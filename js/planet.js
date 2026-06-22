@@ -55,31 +55,31 @@ function initializePlanet() {
                 if (currentPlanet === 'earth') {
                     if (noiseVal < 0.49) {
                         // Deep Ocean (lightened to a vibrant royal blue)
-                        r = 28; g = 64; b = 135;
+                        r = 30; g = 70; b = 145;
                     } else if (noiseVal < 0.53) {
                         // Shallow Waters / Coastlines (lightened to a gorgeous tropical cyan)
                         const t = (noiseVal - 0.49) / 0.04;
-                        r = Math.floor(28 + t * 37);
-                        g = Math.floor(64 + t * 111);
-                        b = Math.floor(135 + t * 105);
+                        r = Math.floor(30 + t * 40);
+                        g = Math.floor(70 + t * 112);
+                        b = Math.floor(145 + t * 98);
                     } else if (noiseVal < 0.55) {
                         // Sandy Beach
-                        r = 215; g = 188; b = 138;
+                        r = 220; g = 195; b = 145;
                     } else if (noiseVal < 0.67) {
                         // Lush Land / Forest
                         const t = (noiseVal - 0.55) / 0.12;
-                        r = Math.floor(32 + t * 22);
-                        g = Math.floor(118 + t * -24);
-                        b = Math.floor(48 + t * -12);
+                        r = Math.floor(35 + t * 23);
+                        g = Math.floor(126 + t * -24);
+                        b = Math.floor(51 + t * -12);
                     } else if (noiseVal < 0.77) {
                         // Mountain Ridges
                         const t = (noiseVal - 0.67) / 0.10;
-                        r = Math.floor(92 - t * 16);
-                        g = Math.floor(78 - t * 16);
-                        b = Math.floor(66 - t * 16);
+                        r = Math.floor(97 - t * 16);
+                        g = Math.floor(82 - t * 16);
+                        b = Math.floor(71 - t * 16);
                     } else {
                         // Polar Ice / Snow Peaks
-                        r = 245; g = 245; b = 250;
+                        r = 250; g = 250; b = 252;
                     }
 
                     // Cloud Layer fBm overlay
