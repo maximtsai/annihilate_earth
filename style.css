@@ -57,12 +57,14 @@ html {
     --font-adjust: 0px;
     --weapon-font-adjust: 0px;
     --planet-font-adjust: 0px;
+    --title-font-adjust: 0px;
 }
 
 #game-world.lang-cjk {
     --font-adjust: 3px;
-    --weapon-font-adjust: 4px;
-    --planet-font-adjust: 2px;
+    --weapon-font-adjust: 8px;
+    --planet-font-adjust: 8px;
+    --title-font-adjust: 8px;
 }
 
 #background-canvas {
@@ -402,7 +404,7 @@ html {
 
 .game-title {
     font-family: 'Orbitron', sans-serif;
-    font-size: calc(28px * var(--ui-scale));
+    font-size: calc((28px + var(--title-font-adjust)) * var(--ui-scale));
     font-weight: 900;
     color: #ffffff;
     text-shadow: 0 0 10px rgba(0, 217, 255, 0.4);
@@ -1826,7 +1828,7 @@ html {
 
 @media (max-width: 660px) {
     .game-title {
-        font-size: calc(20px * var(--ui-scale));
+        font-size: calc((20px + var(--title-font-adjust)) * var(--ui-scale));
     }
 }
 
