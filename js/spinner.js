@@ -82,6 +82,8 @@ class WeaponSpinner {
         // Create a horizontal row for side previews and the canvas
         const row = document.createElement('div');
         row.className = 'weapon-spinner-row';
+        row.style.cursor = 'pointer';
+        this.row = row;
         this.container.appendChild(row);
 
         // Left preview element
@@ -122,7 +124,7 @@ class WeaponSpinner {
             this.stop();
         });
 
-        this.canvas.addEventListener('click', (e) => {
+        row.addEventListener('click', (e) => {
             e.stopPropagation();
             this.stop();
         });
@@ -234,6 +236,9 @@ class WeaponSpinner {
     stop() {
         if (!this.isSpinning || this.isStopping || this.spinPhase !== 'running') return;
         this.isStopping = true;
+        if (this.row) {
+            this.row.style.cursor = '';
+        }
         this.stopButton.disabled = true;
         this.stopButton.classList.add('disabled');
         this.setClickable(false);
@@ -663,6 +668,9 @@ class WeaponSpinner {
         this.isDestroyed = true;
         this.isSpinning = false;
         this.isStopping = false;
+        if (this.row) {
+            this.row.style.cursor = '';
+        }
         if (window.activeWeaponSpinner === this) {
             window.activeWeaponSpinner = null;
         }

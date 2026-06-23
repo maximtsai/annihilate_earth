@@ -347,23 +347,23 @@
                             if (msg) msg.textContent = (translations[currentLanguage] || translations['en']).shootingStarMessage || 'SPIN THE WHEEL TO DISCOVER A WEAPON!';
                             window.starSelectedWeapon = null;
 
-                            const spinner = new WeaponSpinner(container, {
-                                isStar: true,
-                                onStop: (weaponToUnlock) => {
-                                    window.starSelectedWeapon = weaponToUnlock;
-                                    if (adSpinYes) {
-                                        adSpinYes.disabled = false;
-                                        adSpinYes.classList.add('glow-shine');
-                                    }
-                                    if (adSpinNo) adSpinNo.disabled = false;
+                             const spinner = new WeaponSpinner(container, {
+                                 isStar: true,
+                                 onStop: (weaponToUnlock) => {
+                                     window.starSelectedWeapon = weaponToUnlock;
+                                     if (adSpinYes) {
+                                         adSpinYes.disabled = false;
+                                         adSpinYes.classList.add('glow-shine');
+                                     }
+                                     if (adSpinNo) adSpinNo.disabled = false;
 
-                                    const btn = document.getElementById(`btn-${weaponToUnlock}`);
-                                    const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : weaponToUnlock.toUpperCase();
-                                    const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
-                                    if (msg) msg.textContent = (translations[currentLanguage] || translations['en']).watchAdToUnlock.replace('{name}', `${icon} ${name}`);
-                                }
-                            });
-                            spinner.start();
+                                     const btn = document.getElementById(`btn-${weaponToUnlock}`);
+                                     const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : weaponToUnlock.toUpperCase();
+                                     const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
+                                     if (msg) msg.textContent = (translations[currentLanguage] || translations['en']).watchAdToUnlock.replace('{name}', `${icon} ${name}`);
+                                 }
+                             });
+                             spinner.start();
                         } else {
                             // Show disabled greyed out spinner, disable watch/cancel buttons
                             if (adSpinYes) adSpinYes.disabled = true;

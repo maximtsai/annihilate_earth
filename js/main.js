@@ -538,7 +538,7 @@ async function run(mode) {
         timer: 0,           // seconds elapsed since conditions first met
         shown: false,       // currently visible
         dismissed: false,   // permanently dismissed this session
-        DELAY: 13.5           // seconds before showing
+        DELAY: 14.5           // seconds before showing
     };
     if (_switchTooltip.el) {
         _switchTooltip.arrowEl = _switchTooltip.el.querySelector('.tooltip-arrow');
@@ -550,6 +550,84 @@ async function run(mode) {
         _switchTooltip.labelEl.textContent = t.switchWeapons || 'CLICK TO\nSWITCH WEAPONS';
     }
     _applySwitchTooltipLabel();
+
+    // ── New-weapon tooltip state ──
+    const _newWeaponTooltip = {
+        el: document.getElementById('new-weapon-tooltip'),
+        arrowEl: null,
+        shown: false,
+        timer: 0,
+        DURATION: 9 // seconds to display
+    };
+    if (_newWeaponTooltip.el) {
+        _newWeaponTooltip.arrowEl = _newWeaponTooltip.el.querySelector('.tooltip-arrow');
+    }
+
+    window.showNewWeaponUnlockTooltip = function () {
+        if (!_newWeaponTooltip.el) return;
+        _newWeaponTooltip.shown = true;
+        _newWeaponTooltip.timer = 0;
+        _newWeaponTooltip.el.classList.add('visible');
+        _updateNewWeaponTooltipPosition();
+    };
+
+    window.dismissNewWeaponTooltip = function () {
+        if (!_newWeaponTooltip.shown) return;
+        _newWeaponTooltip.shown = false;
+        if (_newWeaponTooltip.el) {
+            _newWeaponTooltip.el.classList.remove('visible');
+        }
+    };
+
+    function _updateNewWeaponTooltipPosition() {
+        const tip = _newWeaponTooltip.el;
+        if (!tip) return;
+        const weaponBar = document.querySelector('.weapon-bar-wrapper');
+        if (!weaponBar) return;
+        const rect = weaponBar.getBoundingClientRect();
+        const isPortrait = window.innerHeight > window.innerWidth;
+        tip.classList.remove('tooltip-portrait', 'tooltip-landscape');
+        if (isPortrait) {
+            // Portrait: above the weapon bar, arrow pointing DOWN
+            tip.classList.add('tooltip-portrait');
+            if (_newWeaponTooltip.arrowEl) _newWeaponTooltip.arrowEl.textContent = '▼';
+            const tipW = tip.offsetWidth || 160;
+            const tipH = tip.offsetHeight || 70;
+
+            const scrollBtn = document.getElementById('scroll-right-btn');
+            let left = rect.left + rect.width / 2 - tipW / 2; // Default fallback
+            if (scrollBtn) {
+                const scrollRect = scrollBtn.getBoundingClientRect();
+                if (scrollRect.left > 0) {
+                    left = scrollRect.left + scrollRect.width / 2 - tipW / 2;
+                }
+            }
+            // Clamp so it's not off screen horizontally
+            left = Math.max(8, Math.min(left, window.innerWidth - tipW - 8));
+
+            const top = rect.top - tipH - 18;
+            tip.style.left = left + 'px';
+            tip.style.top = Math.max(8, top) + 'px';
+        } else {
+            // Landscape: left of the weapon bar, arrow pointing RIGHT
+            tip.classList.add('tooltip-landscape');
+            if (_newWeaponTooltip.arrowEl) _newWeaponTooltip.arrowEl.textContent = '▶';
+            const tipW = tip.offsetWidth || 180;
+            const tipH = tip.offsetHeight || 54;
+            const left = rect.left - tipW - 18;
+
+            const scrollBtn = document.getElementById('scroll-right-btn');
+            let top = rect.top + rect.height / 2 - tipH / 2; // Default fallback
+            if (scrollBtn) {
+                const scrollRect = scrollBtn.getBoundingClientRect();
+                if (scrollRect.top > 0) {
+                    top = scrollRect.top + scrollRect.height / 2 - tipH / 2;
+                }
+            }
+            tip.style.left = Math.max(8, left) + 'px';
+            tip.style.top = Math.max(8, top) + 'px';
+        }
+    }
 
     function _updateSwitchTooltipPosition() {
         const tip = _switchTooltip.el;
@@ -1048,6 +1126,16 @@ async function run(mode) {
                 }
                 if (_switchTooltip.shown) {
                     _updateSwitchTooltipPosition();
+                }
+            }
+
+            // ── New-weapon tooltip logic ──
+            if (_newWeaponTooltip.el && _newWeaponTooltip.shown && !victoryTriggered) {
+                _newWeaponTooltip.timer += deltaTime;
+                if (_newWeaponTooltip.timer >= _newWeaponTooltip.DURATION) {
+                    window.dismissNewWeaponTooltip();
+                } else {
+                    _updateNewWeaponTooltipPosition();
                 }
             }
 
@@ -4993,6 +5081,11 @@ async function run(mode) {
                 _switchTooltip.shown = false;
                 _switchTooltip.el.classList.remove('visible');
             }
+            // Dismiss new-weapon tooltip if player clicks on any unlocked (but initially locked) weapons
+            const initiallyLocked = ['sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
+            if (initiallyLocked.includes(selectedWeapon) && isWeaponUnlocked(selectedWeapon)) {
+                window.dismissNewWeaponTooltip();
+            }
             document.querySelectorAll('.weapon-button').forEach(b => {
                 b.classList.remove('selected');
                 b.style.animation = '';
@@ -5225,6 +5318,15 @@ async function run(mode) {
                 e.currentTarget.style.cursor = 'default';
             }
             return;
+        }
+
+        if (window.shouldShowUnlockTooltipOnNextPlanet) {
+            window.shouldShowUnlockTooltipOnNextPlanet = false;
+            setTimeout(() => {
+                if (typeof window.showNewWeaponUnlockTooltip === 'function') {
+                    window.showNewWeaponUnlockTooltip();
+                }
+            }, 800);
         }
 
         const nextPlanetVal = getNextPlanet(currentPlanet);
@@ -5502,6 +5604,10 @@ async function run(mode) {
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
             saveWeaponOrder();
             saveUnlockedWeapons();
+            unlockedTooltipShown = false;
+            if (typeof saveUnlockedTooltipShown === 'function') {
+                saveUnlockedTooltipShown();
+            }
 
             // Update UI/Locks
             updatePlanetButtons();

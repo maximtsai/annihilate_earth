@@ -204,6 +204,8 @@ let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox'
 let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 let claimedPlanetSpinners = [];
+let unlockedTooltipShown = false;
+window.shouldShowUnlockTooltipOnNextPlanet = false;
 
 function saveClaimedPlanetSpinners() {
     queueSaveState(state => {
@@ -229,6 +231,20 @@ function saveUnlockedWeapons() {
     }
 }
 
+function saveUnlockedTooltipShown() {
+    queueSaveState(state => {
+        state.unlockedTooltipShown = unlockedTooltipShown;
+    });
+    try {
+        const saved = localStorage.getItem('annihilate_earth_save');
+        const state = saved ? JSON.parse(saved) : {};
+        state.unlockedTooltipShown = unlockedTooltipShown;
+        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+    } catch (e) {
+        console.warn('Failed to save unlocked tooltip state:', e);
+    }
+}
+
 function unlockRandomWeapon() {
     const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
     const lockedRemaining = allLockedWeapons.filter(wid => !unlockedWeapons.includes(wid));
@@ -248,6 +264,19 @@ function unlockSpecificWeapon(wid) {
         saveUnlockedWeapons();
         updateWeaponOrderOnUnlock();
         refreshWeaponLocks();
+
+        if (!unlockedTooltipShown) {
+            unlockedTooltipShown = true;
+            saveUnlockedTooltipShown();
+            const isVictoryScreen = document.getElementById('victory-screen') && document.getElementById('victory-screen').classList.contains('show');
+            if (isVictoryScreen || (typeof victoryTriggered !== 'undefined' && victoryTriggered)) {
+                window.shouldShowUnlockTooltipOnNextPlanet = true;
+            } else {
+                if (typeof window.showNewWeaponUnlockTooltip === 'function') {
+                    window.showNewWeaponUnlockTooltip();
+                }
+            }
+        }
 
         const btn = document.getElementById(`btn-${wid}`);
         const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : wid.toUpperCase();
@@ -328,6 +357,9 @@ async function loadUnlockedPlanets() {
             }
             if (response.state.claimedPlanetSpinners) {
                 claimedPlanetSpinners = response.state.claimedPlanetSpinners;
+            }
+            if (response.state.unlockedTooltipShown !== undefined) {
+                unlockedTooltipShown = response.state.unlockedTooltipShown;
             }
         }
         updateWeaponOrderOnUnlock();

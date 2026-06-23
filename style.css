@@ -1630,15 +1630,15 @@ html {
     }
 
     .planet-btn {
-        font-size: calc((17px + var(--planet-font-adjust)) * var(--ui-scale));
-        width: calc(116px * var(--ui-scale));
-        height: calc(91px * var(--ui-scale));
-        padding: calc(10px * var(--ui-scale)) calc(14px * var(--ui-scale));
+        font-size: calc((20px + var(--planet-font-adjust)) * var(--ui-scale));
+        width: calc(140px * var(--ui-scale));
+        height: calc(108px * var(--ui-scale));
+        padding: calc(12px * var(--ui-scale)) calc(17px * var(--ui-scale));
         flex-shrink: 0;
     }
 
     .planet-btn-icon {
-        font-size: calc((36px + var(--planet-font-adjust)) * var(--ui-scale));
+        font-size: calc((44px + var(--planet-font-adjust)) * var(--ui-scale));
     }
 
     .lang-cjk .planet-btn {
@@ -2282,7 +2282,7 @@ html.no-glows *::after {
 
 #switch-weapon-tooltip .tooltip-label {
     font-family: 'Orbitron', sans-serif;
-    font-size: calc(16px * var(--ui-scale));
+    font-size: calc(28px * var(--ui-scale));
     font-weight: 900;
     letter-spacing: calc(1.5px * var(--ui-scale));
     text-transform: uppercase;
@@ -2313,7 +2313,7 @@ html.no-glows *::after {
 }
 
 #switch-weapon-tooltip.tooltip-portrait .tooltip-label {
-    font-size: calc(22px * var(--ui-scale));
+    font-size: calc(34px * var(--ui-scale));
 }
 
 /* Landscape: label on left, arrow pointing RIGHT */
@@ -2344,4 +2344,99 @@ html.no-glows *::after {
     50% {
         transform: translateX(-8px);
     }
+}
+
+/* ── New Weapon Unlocked Tooltip ── */
+#new-weapon-tooltip {
+    position: fixed;
+    z-index: 150;
+    pointer-events: none;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(6px * var(--ui-scale));
+    animation: newWeaponTooltipBob 1.4s ease-in-out infinite;
+}
+
+#new-weapon-tooltip.visible {
+    display: flex;
+}
+
+#new-weapon-tooltip.tooltip-landscape {
+    flex-direction: row;
+    align-items: center;
+    gap: calc(8px * var(--ui-scale));
+    animation: newWeaponTooltipBobH 1.4s ease-in-out infinite;
+}
+
+#new-weapon-tooltip .tooltip-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(24px * var(--ui-scale));
+    font-weight: 900;
+    letter-spacing: calc(1.5px * var(--ui-scale));
+    text-transform: uppercase;
+    color: #ffffff;
+    text-shadow: 0 0 12px #ffe600, 0 0 24px rgba(255, 230, 0, 0.6);
+    background: rgba(12, 10, 2, 0.9);
+    border: 1.5px solid rgba(255, 230, 0, 0.85);
+    border-radius: calc(6px * var(--ui-scale));
+    padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+    text-align: center;
+    line-height: 1.4;
+    white-space: pre-line;
+    box-shadow: 0 0 18px rgba(255, 230, 0, 0.35), inset 0 0 8px rgba(255, 230, 0, 0.1);
+}
+
+#new-weapon-tooltip .tooltip-arrow {
+    font-size: calc(20px * var(--ui-scale));
+    color: #ffe600;
+    text-shadow: 0 0 10px #ffe600;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* Portrait: label on top, arrow pointing DOWN */
+#new-weapon-tooltip.tooltip-portrait {
+    flex-direction: column;
+    align-items: center;
+}
+
+#new-weapon-tooltip.tooltip-portrait .tooltip-label {
+    font-size: calc(30px * var(--ui-scale));
+}
+
+/* Landscape: label on left, arrow pointing RIGHT */
+#new-weapon-tooltip.tooltip-landscape {
+    flex-direction: row;
+    align-items: center;
+}
+
+@keyframes newWeaponTooltipBob {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes newWeaponTooltipBobH {
+
+    0%,
+    100% {
+        transform: translateX(0px);
+    }
+
+    50% {
+        transform: translateX(-8px);
+    }
+}
+
+/* Scoped button font size increase for special spin popup */
+#ad-spin-popup-overlay .options-reset-button,
+#ad-spin-popup-overlay .ad-spin-cancel-btn {
+    font-size: 18px;
 }
