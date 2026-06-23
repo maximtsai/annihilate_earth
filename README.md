@@ -116,3 +116,11 @@ window.PlatformBridge = {
 };
 ```
 Once created, you can swap it into `js/platform-bridge.js` using the copy commands above!
+
+---
+
+## Development Constraints
+
+> [!IMPORTANT]
+> **Do NOT run `node build.js`** under any circumstances in this project.
+

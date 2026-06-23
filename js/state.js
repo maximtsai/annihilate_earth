@@ -290,6 +290,9 @@ function updateWeaponOrderOnUnlock() {
     weaponOrder = [...unlocked, ...locked];
     saveWeaponOrder();
     applyWeaponOrderToDOM();
+    if (typeof window.updateWeaponScrollButtons === 'function') {
+        window.updateWeaponScrollButtons();
+    }
 }
 
 async function loadUnlockedPlanets() {

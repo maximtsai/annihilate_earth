@@ -256,6 +256,10 @@ const assets = {
     "sfx_void_body": {
         "url": "./assets/void_body.mp3",
         "type": "audio"
+    },
+    "sfx_quack": {
+        "url": "./assets/quack.mp3",
+        "type": "audio"
     }
 };
 

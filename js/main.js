@@ -200,7 +200,7 @@ const soundIds = [
     'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
     'sfx_mystical_moon_explosion', 'sfx_holy_shine',
     'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error', 'sfx_void_body'
+    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error', 'sfx_void_body', 'sfx_quack'
 ];
 soundIds.forEach(id => soundManager.load(id));
 
@@ -5069,6 +5069,39 @@ async function run(mode) {
             }
         });
     }
+
+    // Scroll buttons limit/grey-out logic
+    function updateWeaponScrollButtons() {
+        if (!scrollWrapper || !scrollLeftBtn || !scrollRightBtn) return;
+        const panelInner = document.getElementById('weapon-panel-inner');
+        const isHorizontal = panelInner ? window.getComputedStyle(panelInner).flexDirection === 'row' : false;
+
+        if (isHorizontal) {
+            const scrollLeft = scrollWrapper.scrollLeft;
+            const scrollWidth = scrollWrapper.scrollWidth;
+            const clientWidth = scrollWrapper.clientWidth;
+
+            scrollLeftBtn.disabled = scrollLeft <= 1.5;
+            scrollRightBtn.disabled = (scrollLeft + clientWidth) >= (scrollWidth - 1.5);
+        } else {
+            const scrollTop = scrollWrapper.scrollTop;
+            const scrollHeight = scrollWrapper.scrollHeight;
+            const clientHeight = scrollWrapper.clientHeight;
+
+            scrollLeftBtn.disabled = scrollTop <= 1.5;
+            scrollRightBtn.disabled = (scrollTop + clientHeight) >= (scrollHeight - 1.5);
+        }
+    }
+
+    if (scrollWrapper) {
+        scrollWrapper.addEventListener('scroll', updateWeaponScrollButtons);
+        window.addEventListener('resize', updateWeaponScrollButtons);
+        window.updateWeaponScrollButtons = updateWeaponScrollButtons;
+        updateWeaponScrollButtons();
+        setTimeout(updateWeaponScrollButtons, 100);
+        setTimeout(updateWeaponScrollButtons, 500);
+    }
+
     // Keyboard shortcut hooks
     window.addEventListener('keydown', (e) => {
         if (window.gamePausedForAd) return;
@@ -5326,7 +5359,7 @@ async function run(mode) {
         });
 
         // Weapon button names
-        const weaponIds = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'kraken', 'bowling', 'worm', 'fist', 'blackhole', 'star', 'comet'];
+        const weaponIds = ['missile', 'nuke', 'asteroid', 'laser', 'gamma', 'sword', 'moon', 'kraken', 'bowling', 'worm', 'fist', 'blackhole', 'star', 'comet', 'mysterybox', 'lightning'];
         weaponIds.forEach(wid => {
             const btn = document.getElementById(`btn-${wid}`);
             if (btn) {
