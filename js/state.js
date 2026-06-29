@@ -201,7 +201,7 @@ function saveOptions(options) {
 
 let initiallyUnlockedPlanets = new Set(['earth']);
 let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
-let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'drill'];
+let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 let claimedPlanetSpinners = [];
 let unlockedTooltipShown = false;
@@ -347,9 +347,6 @@ async function loadUnlockedPlanets() {
                 if (!unlockedWeapons.includes('mysterybox')) {
                     unlockedWeapons.push('mysterybox');
                 }
-                if (!unlockedWeapons.includes('drill')) {
-                    unlockedWeapons.push('drill');
-                }
                 initiallyUnlockedWeapons = new Set(unlockedWeapons);
             }
             if (response.state.unlockedPlanets) {
@@ -382,7 +379,9 @@ function refreshWeaponLocks() {
         { id: 'fist', getCd: () => fistCooldown, setCd: (v) => fistCooldown = v, getInitCd: () => isInitialFistCooldown, setInitCd: (v) => isInitialFistCooldown = v },
         { id: 'star', getCd: () => starCooldown, setCd: (v) => starCooldown = v, getInitCd: () => isInitialStarCooldown, setInitCd: (v) => isInitialStarCooldown = v },
         { id: 'comet', getCd: () => cometCooldown, setCd: (v) => cometCooldown = v, getInitCd: () => isInitialCometCooldown, setInitCd: (v) => isInitialCometCooldown = v },
-        { id: 'sword', getCd: () => swordCooldown, setCd: (v) => swordCooldown = v, getInitCd: () => isInitialSwordCooldown, setInitCd: (v) => isInitialSwordCooldown = v }
+        { id: 'sword', getCd: () => swordCooldown, setCd: (v) => swordCooldown = v, getInitCd: () => isInitialSwordCooldown, setInitCd: (v) => isInitialSwordCooldown = v },
+        { id: 'drill', getCd: () => drillCooldown, setCd: (v) => drillCooldown = v, getInitCd: () => isInitialDrillCooldown, setInitCd: (v) => isInitialDrillCooldown = v },
+        { id: 'bowling', getCd: () => bowlingCooldown, setCd: (v) => bowlingCooldown = v, getInitCd: () => isInitialBowlingCooldown, setInitCd: (v) => isInitialBowlingCooldown = v }
     ];
 
     weaponsInfo.forEach(w => {
@@ -528,6 +527,7 @@ let isInitialBlackholeCooldown = true;
 let isInitialStarCooldown = false;
 let isInitialCometCooldown = false;
 let isInitialLightningCooldown = false;
+let isInitialDrillCooldown = false;
 let iceGrid = new Uint8Array(115 * 115);
 let activeGammaBursts = [];
 let activeSwords = [];

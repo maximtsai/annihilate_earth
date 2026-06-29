@@ -469,7 +469,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
         }
 
         // Set cooldown
-        drillCooldown = 1.5;
+        drillCooldown = MAX_COOLDOWNS.drill;
         return;
     }
 

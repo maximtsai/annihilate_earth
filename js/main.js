@@ -482,7 +482,8 @@ async function run(mode) {
         fist: 20.0,
         star: 15.0,
         comet: 2.0,
-        lightning: 1.0
+        lightning: 1.0,
+        drill: 1.5
     };
 
     // ── Cached DOM references (avoids per-frame getElementById / querySelector) ──
@@ -515,6 +516,8 @@ async function run(mode) {
         cometUi: document.getElementById('comet-cooldown-ui'),
         lightningBtn: document.getElementById('btn-lightning'),
         lightningUi: document.getElementById('lightning-cooldown-ui'),
+        drillBtn: document.getElementById('btn-drill'),
+        drillUi: document.getElementById('drill-cooldown-ui'),
         uiOverlay: document.querySelector('.ui-overlay'),
         massText: document.getElementById('mass-text'),
         massBar: document.getElementById('mass-bar'),
@@ -523,7 +526,7 @@ async function run(mode) {
     };
     // Pre-resolve child elements for cooldown UIs
     const _cdChildren = {};
-    ['gamma', 'laser', 'lightning', 'asteroid', 'sword', 'mysterybox', 'bowling', 'kraken', 'worm', 'blackhole', 'fist', 'moon', 'star', 'comet'].forEach(name => {
+    ['gamma', 'laser', 'lightning', 'asteroid', 'sword', 'mysterybox', 'bowling', 'kraken', 'worm', 'blackhole', 'fist', 'moon', 'star', 'comet', 'drill'].forEach(name => {
         const ui = _dom[name + 'Ui'];
         _cdChildren[name] = ui ? {
             text: ui.querySelector('.cooldown-text'),
@@ -919,11 +922,8 @@ async function run(mode) {
                 if (nukeCooldown < 0) nukeCooldown = 0;
             }
 
-            // Handle Drill Cooldown
-            if (drillCooldown > 0) {
-                drillCooldown -= deltaTime;
-                if (drillCooldown < 0) drillCooldown = 0;
-            }
+            // Handle Drill Cooldown UI ticking
+            updateCooldownWeapon('drill', () => drillCooldown, v => drillCooldown = v, () => isInitialDrillCooldown, v => isInitialDrillCooldown = v, MAX_COOLDOWNS.drill);
 
             // Handle Missile Cooldown
             if (missileCooldown > 0) {
@@ -941,16 +941,7 @@ async function run(mode) {
             updateCooldownWeapon('mysterybox', () => mysteryboxCooldown, v => mysteryboxCooldown = v, () => isInitialMysteryBoxCooldown, v => isInitialMysteryBoxCooldown = v, MAX_COOLDOWNS.mysterybox);
 
             // Handle Bowling Cooldown UI ticking
-            const bowlingBtn = _dom.bowlingBtn;
-            if (!unlockedWeapons.includes('bowling')) {
-                if (bowlingBtn) bowlingBtn.classList.add('locked-active');
-            } else {
-                if (bowlingBtn) bowlingBtn.classList.remove('locked-active');
-                if (bowlingCooldown > 0) {
-                    bowlingCooldown -= deltaTime;
-                    if (bowlingCooldown < 0) bowlingCooldown = 0;
-                }
-            }
+            updateCooldownWeapon('bowling', () => bowlingCooldown, v => bowlingCooldown = v, () => isInitialBowlingCooldown, v => isInitialBowlingCooldown = v, MAX_COOLDOWNS.bowling);
 
             // Handle Kraken (Cthulhu) Cooldown UI ticking
             updateCooldownWeapon('kraken', () => krakenCooldown, v => krakenCooldown = v, () => isInitialKrakenCooldown, v => isInitialKrakenCooldown = v, MAX_COOLDOWNS.kraken);
@@ -5668,7 +5659,7 @@ async function run(mode) {
             bestTimes = {};
             claimedPlanetSpinners = [];
             weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
-            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'drill'];
+            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
             saveWeaponOrder();
             saveUnlockedWeapons();
