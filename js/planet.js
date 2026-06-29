@@ -682,10 +682,15 @@ function eraseTerrain(localX, localY, radius, isCollision, weaponType) {
         }
         hiddenCtx.putImageData(imgData, startX, startY);
 
+        let icePopped = false;
         for (let h = 0; h < iceHits.length; h++) {
-            popConnectedIce(iceHits[h].x, iceHits[h].y);
+            if (popConnectedIce(iceHits[h].x, iceHits[h].y)) {
+                icePopped = true;
+            }
         }
+        return icePopped;
     }
+    return false;
 }
 
 // Transform solid planet crust into ice
@@ -813,7 +818,7 @@ function popConnectedIce(seedX, seedY) {
     const startGridY = Math.floor(seedY / gridScale);
     const seedIdx = startGridY * gridSize + startGridX;
 
-    if (iceGrid[seedIdx] === 0) return;
+    if (iceGrid[seedIdx] === 0) return false;
 
     // Use a visited array to track BFS nodes so iceGrid data is preserved for erasure checks
     const visited = new Uint8Array(115 * 115);
@@ -1012,7 +1017,9 @@ function popConnectedIce(seedX, seedY) {
                 type: 'fire'
             });
         }
+        return true;
     }
+    return false;
 }
 
 // Explosion logic
@@ -1045,8 +1052,8 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     }
 
     // Erase using centralized core-aware terrain logic
-    eraseTerrain(localX, localY, finalRadius, isCollision, weaponType);
-
+    const icePopped = eraseTerrain(localX, localY, finalRadius, isCollision, weaponType);
+ 
     // Play explosion sound
     if (!silent) {
         if (weaponType === 'laser') {
@@ -1080,8 +1087,8 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
         }
     }
 
-    if (dist < radius) {
-        // Overlaps the core: do a full 360-degree collapse
+    if (dist < radius || icePopped) {
+        // Overlaps the core or ice was popped: do a full 360-degree collapse
         collapseTerrain();
     } else {
         // Calculate the angle to the center
