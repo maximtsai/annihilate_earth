@@ -367,7 +367,7 @@ function calculateCenterOfMass() {
 }
 
 // Polar-coordinate radial terrain collapse gravity simulation (Optimized DDA stepping)
-function collapseTerrain() {
+function collapseTerrain(startAngle = 0, endAngle = Math.PI * 2) {
     const cx = PLANET_CANVAS_SIZE / 2;
     const cy = PLANET_CANVAS_SIZE / 2;
     const d = getPlanetSize();
@@ -380,8 +380,14 @@ function collapseTerrain() {
     const srcData32 = new Uint32Array(srcData.data.buffer);
     const destData32 = new Uint32Array(destData.data.buffer);
 
+    // If this is a partial/sliced collapse, copy the original terrain first
+    const isFullCollapse = (startAngle === 0 && endAngle === Math.PI * 2);
+    if (!isFullCollapse) {
+        destData32.set(srcData32);
+    }
+
     // Dynamically scale the number of rays based on planet size to prevent Moire/scanline spacing patterns on larger bodies
-    const numRays = Math.max(720, Math.ceil(2 * Math.PI * (d / 2) * 1.5));
+    const numRays = Math.max(720, Math.ceil(2 * Math.PI * (d / 2) * 1));
     const stepSize = 0.5;
     const maxSteps = maxRadius / stepSize;
 
@@ -392,6 +398,7 @@ function collapseTerrain() {
         for (let i = 0; i < numRays; i++) {
             const theta = (i * Math.PI * 2) / numRays;
             collapseRayCache.push({
+                angle: theta,
                 stepX: stepSize * Math.cos(theta),
                 stepY: stepSize * Math.sin(theta)
             });
@@ -401,8 +408,20 @@ function collapseTerrain() {
     // Reuse a flat Uint32Array buffer for solid pixels to avoid GC churn
     const solidPixels = new Uint32Array(Math.ceil(maxSteps));
 
+    // Helper to check if a ray's angle is within the target slice
+    const isAngleInSlice = (angle) => {
+        if (isFullCollapse) return true;
+        if (startAngle <= endAngle) {
+            return angle >= startAngle && angle <= endAngle;
+        } else {
+            return angle >= startAngle || angle <= endAngle;
+        }
+    };
+
     for (let i = 0; i < numRays; i++) {
         const ray = collapseRayCache[i];
+        if (!isAngleInSlice(ray.angle)) continue;
+
         const stepX = ray.stepX;
         const stepY = ray.stepY;
 
@@ -426,6 +445,25 @@ function collapseTerrain() {
 
             if (color !== 0) {
                 solidPixels[solidCount++] = color;
+            }
+        }
+
+        // If doing a partial collapse, clear the ray path in the destination buffer first
+        if (!isFullCollapse) {
+            lastX = -1; lastY = -1;
+            rx = cx; ry = cy;
+            for (let s = 0; s < maxSteps; s++) {
+                const px = (rx + 0.5) | 0;
+                const py = (ry + 0.5) | 0;
+                rx += stepX;
+                ry += stepY;
+
+                if (px < 0 || px >= PLANET_CANVAS_SIZE || py < 0 || py >= PLANET_CANVAS_SIZE) continue;
+                if (px === lastX && py === lastY) continue;
+                lastX = px; lastY = py;
+
+                const destIdx32 = py * PLANET_CANVAS_SIZE + px;
+                destData32[destIdx32] = 0;
             }
         }
 
@@ -1042,8 +1080,27 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
         }
     }
 
-    // Collapse terrain inward to fill craters and merge floating islands
-    collapseTerrain();
+    if (dist < radius) {
+        // Overlaps the core: do a full 360-degree collapse
+        collapseTerrain();
+    } else {
+        // Calculate the angle to the center
+        const angle = Math.atan2(dy, dx);
+
+        // Calculate the angular width of the explosion slice
+        // We add a safety margin of 0.15 radians (~8.5 degrees) to cover the edges cleanly
+        const angleWidth = (radius / dist) + 0.15;
+
+        let startAngle = angle - angleWidth;
+        let endAngle = angle + angleWidth;
+
+        // Normalize angles to [0, 2*PI]
+        const TWO_PI = Math.PI * 2;
+        startAngle = (startAngle % TWO_PI + TWO_PI) % TWO_PI;
+        endAngle = (endAngle % TWO_PI + TWO_PI) % TWO_PI;
+
+        collapseTerrain(startAngle, endAngle);
+    }
 
     // Recalculate dynamic center of mass
     const remainingPixels = calculateCenterOfMass();
