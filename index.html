@@ -49,6 +49,15 @@
         </div>
 
         <div id="ui-container">
+            <!-- Level Select Button (Mirrors Options Button on Top Left) -->
+            <div class="level-select-toggle-wrapper" id="level-select-btn-wrapper" style="display: none;">
+                <button class="level-select-toggle" id="level-select-btn" title="Level Select">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z" />
+                    </svg>
+                </button>
+            </div>
+
             <!-- Options Button (Direct child so it stays on top of Main Menu and gameplay) -->
             <div class="options-toggle-wrapper" id="options-btn-wrapper" style="display: none;">
                 <button class="options-toggle" id="options-btn" title="Options">
@@ -146,6 +155,42 @@
                     <div class="options-group" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; align-items: center; width: 100%;">
                         <button id="options-menu-btn" class="options-menu-button">🏠 MAIN MENU</button>
                         <button id="options-reset-btn" class="options-reset-button">⚠️ RESET PROGRESS ⚠️</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Level Select Popup Overlay -->
+            <div class="options-popup-overlay" id="level-select-popup-overlay" style="display: none;">
+                <div class="options-popup" style="max-width: 420px;">
+                    <div class="options-popup-title" id="level-select-title">SELECT PLANET</div>
+                    <button class="options-popup-close" id="level-select-close-btn">✕</button>
+                    
+                    <div class="level-select-grid" id="level-select-grid">
+                        <button class="level-select-btn" data-planet="earth">
+                            <span class="level-select-icon">🌍</span>
+                            <span class="level-select-name">Earth</span>
+                            <span class="level-select-lock-status"></span>
+                        </button>
+                        <button class="level-select-btn" data-planet="mars">
+                            <span class="level-select-icon">🔴</span>
+                            <span class="level-select-name">Mars</span>
+                            <span class="level-select-lock-status"></span>
+                        </button>
+                        <button class="level-select-btn" data-planet="neptune">
+                            <span class="level-select-icon">🔵</span>
+                            <span class="level-select-name">Neptune</span>
+                            <span class="level-select-lock-status"></span>
+                        </button>
+                        <button class="level-select-btn" data-planet="jupiter">
+                            <span class="level-select-icon">🪐</span>
+                            <span class="level-select-name">Jupiter</span>
+                            <span class="level-select-lock-status"></span>
+                        </button>
+                        <button class="level-select-btn" data-planet="sun">
+                            <span class="level-select-icon">☀️</span>
+                            <span class="level-select-name">Sun</span>
+                            <span class="level-select-lock-status"></span>
+                        </button>
                     </div>
                 </div>
             </div>

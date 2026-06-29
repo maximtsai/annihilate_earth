@@ -5260,6 +5260,13 @@ async function run(mode) {
         if (window.gamePausedForAd) return;
 
         if (e.key === 'Escape') {
+            const levelSelectOverlay = document.getElementById('level-select-popup-overlay');
+            if (levelSelectOverlay && levelSelectOverlay.classList.contains('show')) {
+                const closeBtn = document.getElementById('level-select-close-btn');
+                if (closeBtn) closeBtn.click();
+                return;
+            }
+
             const optionsOverlay = document.getElementById('options-popup-overlay');
             if (optionsOverlay) {
                 if (optionsOverlay.classList.contains('show')) {
@@ -5671,6 +5678,77 @@ async function run(mode) {
         });
     }
 
+    // Level Select Popup Logic
+    const levelSelectBtn = document.getElementById('level-select-btn');
+    const levelSelectOverlay = document.getElementById('level-select-popup-overlay');
+    const levelSelectCloseBtn = document.getElementById('level-select-close-btn');
+
+    function updateLevelSelectPopup() {
+        document.querySelectorAll('.level-select-btn').forEach(btn => {
+            const planet = btn.dataset.planet;
+            // Mark selected
+            if (planet === currentPlanet) {
+                btn.classList.add('selected');
+            } else {
+                btn.classList.remove('selected');
+            }
+            
+            // Mark locked
+            if (unlockedPlanets.includes(planet)) {
+                btn.classList.remove('locked');
+            } else {
+                btn.classList.add('locked');
+            }
+        });
+    }
+
+    if (levelSelectBtn) {
+        levelSelectBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            updateLevelSelectPopup();
+            if (levelSelectOverlay) levelSelectOverlay.classList.add('show');
+        });
+    }
+
+    if (levelSelectCloseBtn) {
+        levelSelectCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            if (levelSelectOverlay) levelSelectOverlay.classList.remove('show');
+        });
+    }
+
+    if (levelSelectOverlay) {
+        levelSelectOverlay.addEventListener('click', (e) => {
+            if (e.target === levelSelectOverlay) {
+                levelSelectOverlay.classList.remove('show');
+            }
+        });
+    }
+
+    document.querySelectorAll('.level-select-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const planet = btn.dataset.planet;
+            if (!unlockedPlanets.includes(planet)) {
+                try { soundManager.play('sfx_ui_switch', false, 1.0, -800); } catch (sfxErr) { }
+                return;
+            }
+            
+            // Close Level Select popup immediately
+            if (levelSelectOverlay) levelSelectOverlay.classList.remove('show');
+            
+            if (planet === currentPlanet) return;
+            
+            // Trigger click on the corresponding bottom selector button to reuse its transition/BGM logic
+            const targetBtn = document.getElementById('btn-planet-' + planet);
+            if (targetBtn) {
+                targetBtn.click();
+            }
+        });
+    });
+
     // Main Menu Screen Buttons
     const mainMenu = document.getElementById('main-menu');
     const menuNewGameBtn = document.getElementById('menu-new-game-btn');
@@ -5695,6 +5773,8 @@ async function run(mode) {
 
             const optBtnWrapper = document.getElementById('options-btn-wrapper');
             if (optBtnWrapper) optBtnWrapper.style.display = 'block';
+            const lvlBtnWrapper = document.getElementById('level-select-btn-wrapper');
+            if (lvlBtnWrapper) lvlBtnWrapper.style.display = 'block';
 
             if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
                 window.PlatformBridge.gameplayStart();
@@ -5728,6 +5808,8 @@ async function run(mode) {
 
             const optBtnWrapper = document.getElementById('options-btn-wrapper');
             if (optBtnWrapper) optBtnWrapper.style.display = 'block';
+            const lvlBtnWrapper = document.getElementById('level-select-btn-wrapper');
+            if (lvlBtnWrapper) lvlBtnWrapper.style.display = 'block';
 
             if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
                 window.PlatformBridge.gameplayStart();
@@ -5779,6 +5861,8 @@ async function run(mode) {
         // Hide top-right options button wrapper
         const optBtnWrapper = document.getElementById('options-btn-wrapper');
         if (optBtnWrapper) optBtnWrapper.style.display = 'none';
+        const lvlBtnWrapper = document.getElementById('level-select-btn-wrapper');
+        if (lvlBtnWrapper) lvlBtnWrapper.style.display = 'none';
 
         // Ensure gameplay UI elements are hidden initially and non-interactive
         const weaponBar = document.querySelector('.weapon-bar-wrapper');
