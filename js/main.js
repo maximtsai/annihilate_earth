@@ -4934,7 +4934,7 @@ async function run(mode) {
 
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
-        if (e.target.closest('#main-menu') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -4978,7 +4978,7 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchstart', (e) => {
-        if (e.target.closest('#main-menu') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -5645,6 +5645,31 @@ async function run(mode) {
             optionsOverlay.classList.remove('show');
         }
     });
+
+    const optionsMenuBtn = document.getElementById('options-menu-btn');
+    if (optionsMenuBtn) {
+        optionsMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            optionsOverlay.classList.remove('show');
+
+            const bridge = window.PlatformBridge;
+            if (bridge && typeof bridge._runTransitionIn === 'function' && typeof bridge._runTransitionOut === 'function') {
+                bridge._runTransitionIn(() => {
+                    showMainMenu();
+                    soundManager.stopLoop('sfx_laser_fire');
+                    soundManager.stopLoop('sfx_laser_hum');
+                    setTimeout(() => {
+                        bridge._runTransitionOut();
+                    }, 50);
+                });
+            } else {
+                showMainMenu();
+                soundManager.stopLoop('sfx_laser_fire');
+                soundManager.stopLoop('sfx_laser_hum');
+            }
+        });
+    }
 
     // Main Menu Screen Buttons
     const mainMenu = document.getElementById('main-menu');
