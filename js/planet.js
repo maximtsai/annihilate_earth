@@ -1339,6 +1339,7 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
 
 // Trigger Victory splash
 function triggerVictory() {
+    if (typeof isMainMenuActive !== 'undefined' && isMainMenuActive) return;
     const previousBest = bestTimes[currentPlanet];
     victoryTriggered = true;
     soundManager.play('sfx_victory');

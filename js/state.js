@@ -95,6 +95,7 @@ let totalCratersMade = 0; // (User feature 4: Stats tracking)
 let planetTimeSpent = 0;
 let bestTimes = {};
 let gameplayStarted = false;
+let isMainMenuActive = true;
 let planetRotation = 0;
 let planetScale = 1.0;
 let isPlanetSwitching = false;

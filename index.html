@@ -49,15 +49,154 @@
         </div>
 
         <div id="ui-container">
-            <div class="ui-overlay">
-                <div class="options-toggle-wrapper">
-                    <button class="options-toggle" id="options-btn" title="Options">
-                        <svg viewBox="0 0 24 24">
-                            <path
-                                d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-                        </svg>
-                    </button>
+            <!-- Options Button (Direct child so it stays on top of Main Menu and gameplay) -->
+            <div class="options-toggle-wrapper" id="options-btn-wrapper" style="display: none;">
+                <button class="options-toggle" id="options-btn" title="Options">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Main Menu Screen -->
+            <div class="main-menu-container" id="main-menu">
+                <h1 class="main-menu-title">ANNIHILATE EARTH</h1>
+                <div class="main-menu-content">
+                    <div class="main-menu-buttons">
+                        <button class="menu-btn" id="menu-new-game-btn">NEW GAME</button>
+                        <button class="menu-btn" id="menu-level-select-btn">LEVEL SELECT</button>
+                        <button class="menu-btn disabled-stub" id="menu-builder-btn" title="Coming Soon">PLANET BUILDER</button>
+                        <button class="menu-btn" id="menu-options-btn">OPTIONS</button>
+                        <button class="menu-btn" id="menu-credits-btn">CREDITS</button>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Credits Popup -->
+            <div class="options-popup-overlay" id="credits-popup-overlay" style="display: none; z-index: 500;">
+                <div class="options-popup" style="border-color: #00d9ff; box-shadow: 0 0 40px rgba(0, 217, 255, 0.25);">
+                    <div class="options-popup-title">CREDITS</div>
+                    <button class="options-popup-close" id="credits-close-btn">✕</button>
+                    <div class="credits-content" style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 14px; text-align: center; line-height: 1.8; margin: 20px 0; letter-spacing: 1px;">
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">GAME DESIGN & DEVELOPMENT</strong><br>Maxim Tsai</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">ART & PROCEDURAL SHADERS</strong><br>Maxim Tsai</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">AUDIO & SOUND EFFECTS</strong><br>Maxim Tsai</p>
+                        <p style="margin: 20px 0 10px 0; font-size: 11px; color: #888888;">© 2026 MAXGAMES. ALL RIGHTS RESERVED.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Options Popup -->
+            <div class="options-popup-overlay" id="options-popup-overlay">
+                <div class="options-popup">
+                    <div class="options-popup-title" id="options-title">OPTIONS</div>
+                    <button class="options-popup-close" id="options-close-btn">✕</button>
+                    <div class="options-group">
+                        <div class="options-label" id="options-sound-label">🔊 SOUND EFFECTS</div>
+                        <div class="options-slider-row">
+                            <input type="range" id="sfx-volume-slider" min="0" max="100" value="100">
+                            <span class="options-slider-value" id="sfx-volume-value">100%</span>
+                        </div>
+                    </div>
+                    <div class="options-group">
+                        <div class="options-label" id="options-music-label">🎵 MUSIC</div>
+                        <div class="options-slider-row">
+                            <input type="range" id="music-volume-slider" min="0" max="100" value="100">
+                            <span class="options-slider-value" id="music-volume-value">100%</span>
+                        </div>
+                    </div>
+                    <div class="options-group">
+                        <div class="options-label" id="options-lang-label">🌐 LANGUAGE</div>
+                        <div class="custom-select-wrapper" id="custom-lang-wrapper">
+                            <button class="custom-select-btn" id="custom-lang-btn" type="button">
+                                <span id="custom-lang-label-text">English</span>
+                                <svg class="select-arrow" viewBox="0 0 12 12" fill="#00d9ff">
+                                    <path d="M6 8L1 3h10z" />
+                                </svg>
+                            </button>
+                            <div class="custom-select-dropdown" id="custom-lang-dropdown">
+                                <div class="custom-select-option selected" data-value="en">English</div>
+                                <div class="custom-select-option" data-value="zh-CN">简体中文</div>
+                                <div class="custom-select-option" data-value="zh-TW">繁體中文</div>
+                                <div class="custom-select-option" data-value="es">Español</div>
+                                <div class="custom-select-option" data-value="fr">Français</div>
+                                <div class="custom-select-option" data-value="ru">Русский</div>
+                                <div class="custom-select-option" data-value="ja">日本語</div>
+                                <div class="custom-select-option" data-value="ar">العربية</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="options-group">
+                        <div class="options-label" id="options-shake-label">📳 SCREEN SHAKE</div>
+                        <div class="shake-options-row">
+                            <button class="shake-option-btn" data-value="none" id="shake-btn-none">NONE</button>
+                            <button class="shake-option-btn" data-value="half" id="shake-btn-half">HALF</button>
+                            <button class="shake-option-btn selected" data-value="full"
+                                id="shake-btn-full">FULL</button>
+                        </div>
+                    </div>
+                    <div class="options-group" style="margin-top: 5px;">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="fullscreen-checkbox">
+                            <span class="checkbox-custom"></span>
+                            <span class="checkbox-label-text" id="fullscreen-label-text">🖥️ FULL SCREEN</span>
+                        </label>
+                    </div>
+                    <div class="options-group" style="margin-top: 10px; display: flex; justify-content: center;">
+                        <button id="options-reset-btn" class="options-reset-button">⚠️ RESET PROGRESS ⚠️</button>
+                    </div>
+                    <div class="options-credits">Game by Maxim Tsai</div>
+                </div>
+            </div>
+
+            <!-- Reset Confirmation Popup -->
+            <div class="options-popup-overlay" id="confirm-popup-overlay"
+                style="display: none; z-index: 300; background: rgba(2, 2, 8, 0.85);">
+                <div class="options-popup"
+                    style="border-color: rgba(255, 30, 80, 0.85); box-shadow: 0 0 40px rgba(255, 30, 80, 0.25);">
+                    <div class="options-popup-title"
+                        style="color: #ff3e6c; font-size: 22px; text-shadow: 0 0 8px rgba(255, 30, 80, 0.4);">RESET
+                        PROGRESS?</div>
+                    <div class="confirm-message"
+                        style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 14px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
+                        ARE YOU SURE YOU WANT TO RESET ALL PLANET AND WEAPON PROGRESS?
+                    </div>
+                    <div style="display: flex; gap: 15px; justify-content: center; width: 100%;">
+                        <button id="confirm-reset-yes" class="options-reset-button"
+                            style="margin: 0; width: 50%; height: 38px;">YES, RESET</button>
+                        <button id="confirm-reset-no" class="confirm-cancel-button"
+                            style="margin: 0; width: 50%; height: 38px;">CANCEL</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ad Spin Popup -->
+            <div class="options-popup-overlay" id="ad-spin-popup-overlay"
+                style="display: none; z-index: 400; background: rgba(2, 2, 8, 0.85);">
+                <div class="ad-spin-popup"
+                    style="border-color: #ffe600; box-shadow: 0 0 40px rgba(255, 230, 0, 0.25); position: relative;">
+                    <div class="close-x" id="ad-spin-close">X</div>
+                    <div class="options-popup-title"
+                        style="color: #ffe600; font-size: 22px; text-shadow: 0 0 8px rgba(255, 230, 0, 0.4);">
+                        SPECIAL
+                        SPIN!</div>
+                    <div class="confirm-message" id="ad-spin-message"
+                        style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 18px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
+                        SPIN TO DISCOVER A WEAPON!
+                    </div>
+                    <div id="star-spinner-container"
+                        style="margin: 10px 0; display: flex; justify-content: center; width: 100%;"></div>
+                    <div id="ad-spin-buttons-container"
+                        style="display: flex; justify-content: center; width: 100%;">
+                        <button id="ad-spin-yes" class="options-reset-button" disabled
+                            style="margin: 0; width: 80%; max-width: 220px; height: 38px; background: rgba(255, 230, 0, 0.08); border-color: rgba(255, 230, 0, 0.4); color: #ffe600;">
+                            ACQUIRE</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ui-overlay">
                 <div class="hud-top-group">
                     <div class="hud-header-wrapper">
                         <div class="hud-header">
@@ -240,112 +379,7 @@
                     </div>
                 </div>
 
-                <div class="options-popup-overlay" id="options-popup-overlay">
-                    <div class="options-popup">
-                        <div class="options-popup-title" id="options-title">OPTIONS</div>
-                        <button class="options-popup-close" id="options-close-btn">✕</button>
-                        <div class="options-group">
-                            <div class="options-label" id="options-sound-label">🔊 SOUND EFFECTS</div>
-                            <div class="options-slider-row">
-                                <input type="range" id="sfx-volume-slider" min="0" max="100" value="100">
-                                <span class="options-slider-value" id="sfx-volume-value">100%</span>
-                            </div>
-                        </div>
-                        <div class="options-group">
-                            <div class="options-label" id="options-music-label">🎵 MUSIC</div>
-                            <div class="options-slider-row">
-                                <input type="range" id="music-volume-slider" min="0" max="100" value="100">
-                                <span class="options-slider-value" id="music-volume-value">100%</span>
-                            </div>
-                        </div>
-                        <div class="options-group">
-                            <div class="options-label" id="options-lang-label">🌐 LANGUAGE</div>
-                            <div class="custom-select-wrapper" id="custom-lang-wrapper">
-                                <button class="custom-select-btn" id="custom-lang-btn" type="button">
-                                    <span id="custom-lang-label-text">English</span>
-                                    <svg class="select-arrow" viewBox="0 0 12 12" fill="#00d9ff">
-                                        <path d="M6 8L1 3h10z" />
-                                    </svg>
-                                </button>
-                                <div class="custom-select-dropdown" id="custom-lang-dropdown">
-                                    <div class="custom-select-option selected" data-value="en">English</div>
-                                    <div class="custom-select-option" data-value="zh-CN">简体中文</div>
-                                    <div class="custom-select-option" data-value="zh-TW">繁體中文</div>
-                                    <div class="custom-select-option" data-value="es">Español</div>
-                                    <div class="custom-select-option" data-value="fr">Français</div>
-                                    <div class="custom-select-option" data-value="ru">Русский</div>
-                                    <div class="custom-select-option" data-value="ja">日本語</div>
-                                    <div class="custom-select-option" data-value="ar">العربية</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="options-group">
-                            <div class="options-label" id="options-shake-label">📳 SCREEN SHAKE</div>
-                            <div class="shake-options-row">
-                                <button class="shake-option-btn" data-value="none" id="shake-btn-none">NONE</button>
-                                <button class="shake-option-btn" data-value="half" id="shake-btn-half">HALF</button>
-                                <button class="shake-option-btn selected" data-value="full"
-                                    id="shake-btn-full">FULL</button>
-                            </div>
-                        </div>
-                        <div class="options-group" style="margin-top: 5px;">
-                            <label class="checkbox-container">
-                                <input type="checkbox" id="fullscreen-checkbox">
-                                <span class="checkbox-custom"></span>
-                                <span class="checkbox-label-text" id="fullscreen-label-text">🖥️ FULL SCREEN</span>
-                            </label>
-                        </div>
-                        <div class="options-group" style="margin-top: 10px; display: flex; justify-content: center;">
-                            <button id="options-reset-btn" class="options-reset-button">⚠️ RESET PROGRESS ⚠️</button>
-                        </div>
-                        <div class="options-credits">Game by Maxim Tsai</div>
-                    </div>
-                </div>
 
-                <div class="options-popup-overlay" id="confirm-popup-overlay"
-                    style="display: none; z-index: 300; background: rgba(2, 2, 8, 0.85);">
-                    <div class="options-popup"
-                        style="border-color: rgba(255, 30, 80, 0.85); box-shadow: 0 0 40px rgba(255, 30, 80, 0.25);">
-                        <div class="options-popup-title"
-                            style="color: #ff3e6c; font-size: 22px; text-shadow: 0 0 8px rgba(255, 30, 80, 0.4);">RESET
-                            PROGRESS?</div>
-                        <div class="confirm-message"
-                            style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 14px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
-                            ARE YOU SURE YOU WANT TO RESET ALL PLANET AND WEAPON PROGRESS?
-                        </div>
-                        <div style="display: flex; gap: 15px; justify-content: center; width: 100%;">
-                            <button id="confirm-reset-yes" class="options-reset-button"
-                                style="margin: 0; width: 50%; height: 38px;">YES, RESET</button>
-                            <button id="confirm-reset-no" class="confirm-cancel-button"
-                                style="margin: 0; width: 50%; height: 38px;">CANCEL</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="options-popup-overlay" id="ad-spin-popup-overlay"
-                    style="display: none; z-index: 400; background: rgba(2, 2, 8, 0.85);">
-                    <div class="ad-spin-popup"
-                        style="border-color: #ffe600; box-shadow: 0 0 40px rgba(255, 230, 0, 0.25); position: relative;">
-                        <div class="close-x" id="ad-spin-close">X</div>
-                        <div class="options-popup-title"
-                            style="color: #ffe600; font-size: 22px; text-shadow: 0 0 8px rgba(255, 230, 0, 0.4);">
-                            SPECIAL
-                            SPIN!</div>
-                        <div class="confirm-message" id="ad-spin-message"
-                            style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 18px; text-align: center; line-height: 1.6; margin: 10px 0; letter-spacing: 1px;">
-                            SPIN TO DISCOVER A WEAPON!
-                        </div>
-                        <div id="star-spinner-container"
-                            style="margin: 10px 0; display: flex; justify-content: center; width: 100%;"></div>
-                        <div id="ad-spin-buttons-container"
-                            style="display: flex; gap: 15px; justify-content: center; width: 100%;">
-                            <button id="ad-spin-no" class="ad-spin-cancel-btn" disabled>NEVERMIND</button>
-                            <button id="ad-spin-yes" class="options-reset-button" disabled
-                                style="margin: 0; width: 40%; height: 38px; background: rgba(255, 230, 0, 0.08); border-color: rgba(255, 230, 0, 0.4); color: #ffe600;">
-                                SPIN!</button>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Switch Weapon Tooltip: shown 12s after game start if mars is locked, missile selected, nuke ammo full -->
                 <div id="switch-weapon-tooltip" aria-hidden="true">

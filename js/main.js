@@ -664,6 +664,8 @@ async function run(mode) {
         deltaTime = Math.min(deltaTime, 0.11);
         dt60 = deltaTime * 60;
 
+
+
         function updateCooldownWeapon(id, getCd, setCd, getInitCd, setInitCd, defaultMaxCd) {
             const btn = _dom[id + 'Btn'];
             const ui = _dom[id + 'Ui'];
@@ -713,7 +715,7 @@ async function run(mode) {
             }
         }
 
-        if (!victoryTriggered) {
+        if (!victoryTriggered && !isMainMenuActive) {
             planetTimeSpent += deltaTime;
         }
 
@@ -1103,7 +1105,7 @@ async function run(mode) {
             }
 
             // ── Switch-weapon tooltip logic ──
-            if (_switchTooltip.el && !_switchTooltip.dismissed && !victoryTriggered) {
+            if (_switchTooltip.el && !_switchTooltip.dismissed && !victoryTriggered && !isMainMenuActive) {
                 const marsUnlocked = unlockedPlanets.includes('mars');
                 const isMissileSelected = selectedWeapon === 'missile';
                 const nukeAmmoFull = (typeof weaponAmmo !== 'undefined' && weaponAmmo.nuke >= 18);
@@ -1126,6 +1128,12 @@ async function run(mode) {
                 }
                 if (_switchTooltip.shown) {
                     _updateSwitchTooltipPosition();
+                }
+            } else if (isMainMenuActive) {
+                _switchTooltip.timer = 0;
+                if (_switchTooltip.shown) {
+                    _switchTooltip.shown = false;
+                    _switchTooltip.el.classList.remove('visible');
                 }
             }
 
@@ -5195,14 +5203,54 @@ async function run(mode) {
         setTimeout(updateWeaponScrollButtons, 500);
     }
 
-    // Keyboard shortcuts
+    // Photo Mode / Cinematic HUD Toggle
+    let uiHidden = false;
+    let uiNotificationTimeout = null;
+
+    function toggleUI() {
+        const uiContainer = document.getElementById('ui-container');
+        if (!uiContainer) return;
+
+        uiHidden = !uiHidden;
+        if (uiHidden) {
+            uiContainer.classList.add('ui-hidden-mode');
+            
+            // Remove existing notification if any
+            const oldNotif = document.getElementById('ui-hidden-notification');
+            if (oldNotif) oldNotif.remove();
+            if (uiNotificationTimeout) clearTimeout(uiNotificationTimeout);
+
+            // Create new notification
+            const notif = document.createElement('div');
+            notif.id = 'ui-hidden-notification';
+            notif.textContent = 'UI Hidden with "H"';
+            
+            // Append to game-world so it's visible even when ui-container is hidden
+            const gameWorld = document.getElementById('game-world') || document.body;
+            gameWorld.appendChild(notif);
+
+            // Trigger fade out after a short delay (so transition works)
+            requestAnimationFrame(() => {
+                // Force reflow
+                notif.offsetHeight;
+                notif.classList.add('ui-hidden-fade');
+            });
+
+            // Remove element after 3 seconds
+            uiNotificationTimeout = setTimeout(() => {
+                notif.remove();
+            }, 3000);
+        } else {
+            uiContainer.classList.remove('ui-hidden-mode');
+            const notif = document.getElementById('ui-hidden-notification');
+            if (notif) notif.remove();
+            if (uiNotificationTimeout) clearTimeout(uiNotificationTimeout);
+        }
+    }
+
+    // Keyboard shortcut hooks
     window.addEventListener('keydown', (e) => {
         if (window.gamePausedForAd) return;
-
-        // Prevent hotkeys if typing in input/textarea
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-            return;
-        }
 
         if (e.key === 'Escape') {
             const optionsOverlay = document.getElementById('options-popup-overlay');
@@ -5215,6 +5263,13 @@ async function run(mode) {
                     if (optionsBtn) optionsBtn.click();
                 }
             }
+        }
+
+        // Toggle UI / Photo Mode (only during gameplay)
+        if (e.key === 'h' || e.key === 'H') {
+            if (isMainMenuActive) return;
+            toggleUI();
+            return;
         }
 
         if (mode === 'play') {
@@ -5522,7 +5577,7 @@ async function run(mode) {
         if (adSpinClose) adSpinClose.textContent = t.close || 'X';
         if (adSpinMsg) adSpinMsg.textContent = t.spinToDiscover || 'SPIN TO DISCOVER A WEAPON!';
         if (adSpinNo) adSpinNo.textContent = t.nevermind || 'NEVERMIND';
-        if (adSpinYes) adSpinYes.textContent = t.watch || 'WATCH!';
+        if (adSpinYes) adSpinYes.textContent = t.acquire || 'ACQUIRE';
 
         // New best badge
         const bestBadge = document.getElementById('new-best-badge');
@@ -5584,6 +5639,137 @@ async function run(mode) {
             optionsOverlay.classList.remove('show');
         }
     });
+
+    // Main Menu Screen Buttons
+    const mainMenu = document.getElementById('main-menu');
+    const menuNewGameBtn = document.getElementById('menu-new-game-btn');
+    const menuLevelSelectBtn = document.getElementById('menu-level-select-btn');
+    const menuCreditsBtn = document.getElementById('menu-credits-btn');
+    
+    const menuOptionsBtn = document.getElementById('menu-options-btn');
+    
+    // Credits Popup
+    const creditsOverlay = document.getElementById('credits-popup-overlay');
+    const creditsCloseBtn = document.getElementById('credits-close-btn');
+
+    if (menuNewGameBtn) {
+        menuNewGameBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            startBGM();
+            
+            isMainMenuActive = false;
+            gameplayStarted = true;
+            if (mainMenu) mainMenu.classList.add('hidden');
+
+            const optBtnWrapper = document.getElementById('options-btn-wrapper');
+            if (optBtnWrapper) optBtnWrapper.style.display = 'block';
+
+            if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+                window.PlatformBridge.gameplayStart();
+            }
+
+            const hasProgress = unlockedPlanets && unlockedPlanets.length > 1;
+            if (!hasProgress) {
+                // Reset to Earth for New Game
+                currentPlanet = 'earth';
+                document.querySelectorAll('.planet-btn').forEach(b => {
+                    if (b.dataset.planet === 'earth') b.classList.add('selected');
+                    else b.classList.remove('selected');
+                });
+                updateGameTitle();
+            }
+            resetGame(false);
+
+            beginGameplay();
+        });
+    }
+
+    if (menuLevelSelectBtn) {
+        menuLevelSelectBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            startBGM();
+
+            isMainMenuActive = false;
+            gameplayStarted = true;
+            if (mainMenu) mainMenu.classList.add('hidden');
+
+            const optBtnWrapper = document.getElementById('options-btn-wrapper');
+            if (optBtnWrapper) optBtnWrapper.style.display = 'block';
+
+            if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+                window.PlatformBridge.gameplayStart();
+            }
+
+            resetGame(false);
+            beginGameplay();
+        });
+    }
+
+    if (menuOptionsBtn) {
+        menuOptionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            if (optionsOverlay) optionsOverlay.classList.add('show');
+        });
+    }
+
+    if (menuCreditsBtn) {
+        menuCreditsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            if (creditsOverlay) creditsOverlay.classList.add('show');
+        });
+    }
+
+    if (creditsCloseBtn) {
+        creditsCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            if (creditsOverlay) creditsOverlay.classList.remove('show');
+        });
+    }
+
+    if (creditsOverlay) {
+        creditsOverlay.addEventListener('click', (e) => {
+            if (e.target === creditsOverlay) {
+                creditsOverlay.classList.remove('show');
+            }
+        });
+    }
+
+    // Helper to initialize/refresh Main Menu state
+    function showMainMenu() {
+        isMainMenuActive = true;
+        gameplayStarted = false;
+        if (mainMenu) mainMenu.classList.remove('hidden');
+
+        // Hide top-right options button wrapper
+        const optBtnWrapper = document.getElementById('options-btn-wrapper');
+        if (optBtnWrapper) optBtnWrapper.style.display = 'none';
+
+        // Ensure gameplay UI elements are hidden initially
+        const weaponBar = document.querySelector('.weapon-bar-wrapper');
+        const hudHeader = document.querySelector('.hud-header-wrapper');
+        const selector = document.querySelector('.planet-selector');
+        if (weaponBar) weaponBar.style.opacity = '0';
+        if (hudHeader) hudHeader.style.opacity = '0';
+        if (selector) selector.style.opacity = '0';
+
+        // Change "New Game" button text based on progress
+        if (menuNewGameBtn) {
+            const hasProgress = unlockedPlanets && unlockedPlanets.length > 1;
+            menuNewGameBtn.textContent = hasProgress ? 'CONTINUE' : 'NEW GAME';
+        }
+
+        // Disable level select if only Earth is available
+        if (menuLevelSelectBtn) {
+            const hasMultiplePlanets = unlockedPlanets && unlockedPlanets.length > 1;
+            menuLevelSelectBtn.disabled = !hasMultiplePlanets;
+        }
+    }
+    window.showMainMenu = showMainMenu;
 
     // Reset Progress custom popup logic
     const optionsResetBtn = document.getElementById('options-reset-btn');
@@ -5647,8 +5833,8 @@ async function run(mode) {
             }
 
             // Reset game state and reload planet
-            gameplayStarted = true;
             resetGame(false);
+            showMainMenu();
 
             // Hide popups
             if (confirmOverlay) confirmOverlay.style.display = 'none';
@@ -5933,12 +6119,8 @@ async function run(mode) {
                 loadingScreen.style.display = 'none';
             }, 600);
 
-            // Call intro sequence instead of going straight to gameplay
-            if (typeof window.startIntro === 'function') {
-                window.startIntro(beginGameplay);
-            } else {
-                beginGameplay();
-            }
+            // Show Main Menu on load finish
+            showMainMenu();
         }, 400);
     }, 600);
 

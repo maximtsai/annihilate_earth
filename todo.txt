@@ -41,7 +41,7 @@ ANNIHILATE EARTH - STEAM $1.99 RELEASE TODO LIST
 
 [ ] 4. QUALITY OF LIFE & POLISH
     [x] Remove any remaining web portal references (e.g., Poki references in comments, unused CSS rules for mobile taps).
-    [ ] Create a polished Main Menu / Title Screen (warp-speed background, "START SIMULATION", "SETTINGS", "EXIT").
+    [x] Create a polished Main Menu / Title Screen (New Game, Level Select, Planet Builder stub, Credits, Options overlay integration).
     [x] Implement robust offline error handling for audio contexts and save states.
 
 
@@ -53,7 +53,7 @@ NICE TO HAVES (STRETCH GOALS / FUTURE UPDATES)
     - Or let players import a PNG image, which the game procedurally converts into a destructible sphere.
 
 [ ] Photo Mode / Cinematic HUD Toggle:
-    - Press a key (e.g., 'H') to completely hide the UI.
+    - [x] Press a key (e.g., 'H') to completely hide the UI. Displays "UI Hidden with 'H'" and fades out over 3 seconds.
     - Add a "Slow Motion" slider (0.25x, 0.5x, 1.0x speed) to watch massive impacts in detail.
 
 [ ] Detailed Stats Screen:
