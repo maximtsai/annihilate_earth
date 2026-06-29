@@ -1,0 +1,77 @@
+ANNIHILATE EARTH - STEAM $1.99 RELEASE TODO LIST
+================================================
+
+[ ] 1. STEAMWORKS INTEGRATION
+    [ ] Select a desktop wrapper (NW.js, Electron, or NeutralinoJS) to package the HTML5 files into a standalone executable.
+    [ ] Integrate a Steamworks wrapper (e.g., greenworks or steamworks.js).
+    [ ] Initialize the Steamworks API in `js/platforms/steam.js` (on failure, show a warning or run in offline/stub mode).
+    [ ] Implement Steam Achievements:
+        - "First Contact" (Annihilate Earth)
+        - "Red Dust" (Annihilate Mars)
+        - "Extinguished" (Annihilate the Sun)
+        - "Armory" (Unlock all weapons)
+        - "Trigger Happy" (Fire 5,000 projectiles)
+        - "Speed Demon" (Annihilate any planet in under 30 seconds)
+    [ ] Implement Steam Cloud Saves:
+        - Route the game's save state from localStorage to a local JSON file that Steam Cloud can track (e.g., in AppData).
+    [ ] Implement Steam Leaderboards:
+        - Sync the "Best Times" (speedrun times) for each planet to Steam Leaderboards so players can compete.
+
+[ ] 2. DESKTOP / PC UX OPTIMIZATIONS
+    [ ] Add keyboard hotkeys for weapons:
+        - Keys 1 to 9 and 0 to select specific weapons.
+        - Q and E to scroll the weapon bar left and right.
+        - Spacebar to pause/resume physics simulation (or pause menu).
+        - Esc to open/close the Options menu.
+    [ ] Add window & graphics settings:
+        - Resolution selector (1080p, 1440p, 4K, native).
+        - Windowed vs. Borderless Fullscreen toggle.
+        - V-Sync toggle.
+    [ ] Optimize mouse/pointer controls:
+        - Support mouse wheel to zoom in/out on the planet.
+        - Add a custom, high-tech sci-fi cursor.
+
+[ ] 3. CONTENT EXPANSION (1-2 New Levels & 1-2 New Weapons)
+    [ ] Add New Planet Levels:
+        - PLANET 1: Saturn / Uranus (with a ring system).
+          * Mechanic: The rings should have their own pixel/physics collision and can be destroyed or disrupted before reaching the planet.
+        - PLANET 2: Venus (Acidic Greenhouse).
+          * Mechanic: A dense, corrosive atmosphere that slowly dissolves incoming physical projectiles, requiring energy weapons (laser/lightning) to penetrate efficiently.
+    [ ] Add New Weapons:
+        - WEAPON 1: Bio-Plague (Corrosive Spores).
+          * Mechanic: Fires a projectile that infects a pixel; the infection slowly spreads pixel-by-pixel to adjacent terrain, changing their color and eating them away over time.
+        - WEAPON 2: Gravity Singularity (Warp Field).
+          * Mechanic: Distorts the planet's shape locally, pulling pixels into a spiral swirl rather than just blowing them up, creating cool visual distortions.
+
+[ ] 4. QUALITY OF LIFE & POLISH
+    [ ] Remove any remaining web portal references (e.g., Poki references in comments, unused CSS rules for mobile taps).
+    [ ] Create a polished Main Menu / Title Screen (warp-speed background, "START SIMULATION", "SETTINGS", "EXIT").
+    [ ] Implement robust offline error handling for audio contexts and save states.
+
+
+NICE TO HAVES (STRETCH GOALS / FUTURE UPDATES)
+==============================================
+
+[ ] Sandbox / Custom Mode:
+    - Add a panel allowing players to toggle:
+      * Infinite Ammo (no ammo limits for Nuke, Bowling, Mystery Box).
+      * Adjustable Planet Size and Core Radius.
+      * Custom Gravity Strength (speed of terrain collapse).
+
+[ ] Planet Painter / Custom Planet Loader:
+    - A simple editor where players can paint custom pixel-art planets.
+    - Or let players import a PNG image, which the game procedurally converts into a destructible sphere.
+
+[ ] Photo Mode / Cinematic HUD Toggle:
+    - Press a key (e.g., 'H') to completely hide the UI.
+    - Add a "Slow Motion" slider (0.25x, 0.5x, 1.0x speed) to watch massive impacts in detail.
+
+[ ] Detailed Stats Screen:
+    - A menu showing lifetime stats:
+      * Total planets destroyed.
+      * Most used weapon.
+      * Total pixels annihilated.
+      * History of best speedrun times per planet.
+
+[ ] Discord Rich Presence:
+    - Show "Annihilating Earth - 45% Integrity" or "Speedrunning Mars" on the player's Discord profile.

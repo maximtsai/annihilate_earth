@@ -177,12 +177,6 @@ class WeaponSpinner {
     start() {
         if (this.lockedWeapons.length === 0) return;
 
-        // Site lock check: allow local dev, otherwise check if the word "poki" is in the URL/referrer
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '';
-        const hasPoki = window.location.href.includes('poki') || (document.referrer && document.referrer.includes('poki'));
-        if (!isLocal && !hasPoki) {
-            return;
-        }
 
         this.isSpinning = true;
         this.isStopping = false;

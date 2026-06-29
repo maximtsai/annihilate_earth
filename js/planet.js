@@ -1515,7 +1515,7 @@ function triggerVictory() {
                     overlay.className = 'spinner-claimed-overlay';
                     overlay.innerHTML = `
                         <div class="claimed-text">${t.claimed || 'CLAIMED'}</div>
-                        <button class="restart-button ad-spin-btn" style="width: auto; height: 50px; font-size: 16px; margin-top: 15px; padding: 0 20px; letter-spacing: 2px;">🎬 ${t.watchAdToSpin || 'WATCH AD TO SPIN'}</button>
+                        <button class="restart-button ad-spin-btn" style="width: auto; height: 50px; font-size: 16px; margin-top: 15px; padding: 0 20px; letter-spacing: 2px;">🔄 ${t.watchAdToSpin || 'SPIN AGAIN'}</button>
                     `;
                     container.appendChild(overlay);
 
