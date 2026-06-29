@@ -2361,7 +2361,7 @@ html.no-glows *::after {
     flex-direction: column;
     align-items: center;
     gap: calc(6px * var(--ui-scale));
-    animation: switchTooltipBob 1.4s ease-in-out infinite;
+    animation: tooltipBounceIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, switchTooltipBob 1.4s ease-in-out infinite 0.35s;
 }
 
 #switch-weapon-tooltip.visible {
@@ -2373,7 +2373,7 @@ html.no-glows *::after {
     flex-direction: row;
     align-items: center;
     gap: calc(8px * var(--ui-scale));
-    animation: switchTooltipBobH 1.4s ease-in-out infinite;
+    animation: tooltipBounceIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, switchTooltipBobH 1.4s ease-in-out infinite 0.35s;
 }
 
 #switch-weapon-tooltip .tooltip-label {
@@ -2451,7 +2451,7 @@ html.no-glows *::after {
     flex-direction: column;
     align-items: center;
     gap: calc(6px * var(--ui-scale));
-    animation: newWeaponTooltipBob 1.4s ease-in-out infinite;
+    animation: tooltipBounceIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, newWeaponTooltipBob 1.4s ease-in-out infinite 0.35s;
 }
 
 #new-weapon-tooltip.visible {
@@ -2462,7 +2462,7 @@ html.no-glows *::after {
     flex-direction: row;
     align-items: center;
     gap: calc(8px * var(--ui-scale));
-    animation: newWeaponTooltipBobH 1.4s ease-in-out infinite;
+    animation: tooltipBounceIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, newWeaponTooltipBobH 1.4s ease-in-out infinite 0.35s;
 }
 
 #new-weapon-tooltip .tooltip-label {
@@ -2528,6 +2528,19 @@ html.no-glows *::after {
 
     50% {
         transform: translateX(-8px);
+    }
+}
+
+/* Tooltip entrance bounce animation */
+@keyframes tooltipBounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
     }
 }
 

@@ -481,7 +481,7 @@ async function run(mode) {
         laser: 11.0,
         fist: 20.0,
         star: 15.0,
-        comet: 2.0,
+        comet: 1.5,
         lightning: 1.0,
         drill: 1.5
     };
