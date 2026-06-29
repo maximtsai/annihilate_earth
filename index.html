@@ -354,7 +354,10 @@
                                     <div class="weapon-name">Bowling</div>
                                     <div class="weapon-ammo" id="ammo-bowling">15</div>
                                     <div class="no-ammo-overlay">NO AMMO</div>
-                                    <div class="locked-overlay">LOCKED</div>
+                                    <div class="weapon-cooldown" id="bowling-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
                                 </button>
                                 <button class="weapon-button" data-weapon="star" id="btn-star">
                                     <div class="weapon-icon">⭐</div>
@@ -368,6 +371,16 @@
                                     <div class="weapon-icon">❄️</div>
                                     <div class="weapon-name">Comet</div>
                                     <div class="weapon-cooldown" id="comet-cooldown-ui">
+                                        <div class="cooldown-bar"></div>
+                                        <span class="cooldown-text"></span>
+                                    </div>
+                                </button>
+                                <button class="weapon-button" data-weapon="drill" id="btn-drill">
+                                    <div class="weapon-icon">🌀</div>
+                                    <div class="weapon-name">Drill</div>
+                                    <div class="weapon-ammo" id="ammo-drill">5</div>
+                                    <div class="no-ammo-overlay">NO AMMO</div>
+                                    <div class="weapon-cooldown" id="drill-cooldown-ui">
                                         <div class="cooldown-bar"></div>
                                         <span class="cooldown-text"></span>
                                     </div>
@@ -437,6 +450,7 @@
     <script src="js/spinner.js"></script>
     <script src="js/shooting-star.js"></script>
     <script src="js/mystery-box.js"></script>
+    <script src="js/drill.js"></script>
     <script src="js/intro.js"></script>
     <script src="js/main.js"></script>
 </body>

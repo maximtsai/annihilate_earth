@@ -69,6 +69,13 @@ window.gameConfig = {
             "particleCount": 85,
             "particleSpeedScale": 1.25,
             "particleLifeScale": 1.25
+        },
+        "drill": {
+            "speed": 8,
+            "drillDuration": 3.5,
+            "explosionInterval": 0.165,
+            "explosionSize": 9,
+            "particleCount": 12
         }
     },
     "planet": {
