@@ -17,16 +17,12 @@ ANNIHILATE EARTH - STEAM $1.99 RELEASE TODO LIST
     [ ] Implement Steam Leaderboards:
         - Sync the "Best Times" (speedrun times) for each planet to Steam Leaderboards so players can compete.
 
-[ ] 2. DESKTOP / PC UX OPTIMIZATIONS
-    [ ] Add keyboard hotkeys for weapons:
+[x] 2. DESKTOP / PC UX OPTIMIZATIONS
+    [x] Add keyboard hotkeys for weapons:
         - Keys 1 to 9 and 0 to select specific weapons.
         - Q and E to scroll the weapon bar left and right.
-        - Spacebar to pause/resume physics simulation (or pause menu).
+        - Spacebar to fire selected weapon.
         - Esc to open/close the Options menu.
-    [ ] Add window & graphics settings:
-        - Resolution selector (1080p, 1440p, 4K, native).
-        - Windowed vs. Borderless Fullscreen toggle.
-        - V-Sync toggle.
     [ ] Optimize mouse/pointer controls:
         - Support mouse wheel to zoom in/out on the planet.
         - Add a custom, high-tech sci-fi cursor.
@@ -44,19 +40,13 @@ ANNIHILATE EARTH - STEAM $1.99 RELEASE TODO LIST
           * Mechanic: Distorts the planet's shape locally, pulling pixels into a spiral swirl rather than just blowing them up, creating cool visual distortions.
 
 [ ] 4. QUALITY OF LIFE & POLISH
-    [ ] Remove any remaining web portal references (e.g., Poki references in comments, unused CSS rules for mobile taps).
+    [x] Remove any remaining web portal references (e.g., Poki references in comments, unused CSS rules for mobile taps).
     [ ] Create a polished Main Menu / Title Screen (warp-speed background, "START SIMULATION", "SETTINGS", "EXIT").
-    [ ] Implement robust offline error handling for audio contexts and save states.
+    [x] Implement robust offline error handling for audio contexts and save states.
 
 
 NICE TO HAVES (STRETCH GOALS / FUTURE UPDATES)
 ==============================================
-
-[ ] Sandbox / Custom Mode:
-    - Add a panel allowing players to toggle:
-      * Infinite Ammo (no ammo limits for Nuke, Bowling, Mystery Box).
-      * Adjustable Planet Size and Core Radius.
-      * Custom Gravity Strength (speed of terrain collapse).
 
 [ ] Planet Painter / Custom Planet Loader:
     - A simple editor where players can paint custom pixel-art planets.
@@ -70,7 +60,6 @@ NICE TO HAVES (STRETCH GOALS / FUTURE UPDATES)
     - A menu showing lifetime stats:
       * Total planets destroyed.
       * Most used weapon.
-      * Total pixels annihilated.
       * History of best speedrun times per planet.
 
 [ ] Discord Rich Presence:

@@ -72,9 +72,42 @@ function toggleFullscreen(enable) {
 }
 
 // 4. Configuration & State Persistence Helpers
+const localStorageMock = {};
+window.safeLocalStorage = {
+    getItem: (key) => {
+        try {
+            return window.localStorage ? window.localStorage.getItem(key) : localStorageMock[key];
+        } catch (e) {
+            return localStorageMock[key];
+        }
+    },
+    setItem: (key, value) => {
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(key, value);
+            } else {
+                localStorageMock[key] = value;
+            }
+        } catch (e) {
+            localStorageMock[key] = value;
+        }
+    },
+    removeItem: (key) => {
+        try {
+            if (window.localStorage) {
+                window.localStorage.removeItem(key);
+            } else {
+                delete localStorageMock[key];
+            }
+        } catch (e) {
+            delete localStorageMock[key];
+        }
+    }
+};
+
 const saveGameState = async (state) => {
     try {
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
         return { success: true };
     } catch (e) {
         console.error('Failed to save to local storage', e);
@@ -84,7 +117,7 @@ const saveGameState = async (state) => {
 
 const getGameState = async () => {
     try {
-        const saved = localStorage.getItem('annihilate_earth_save');
+        const saved = safeLocalStorage.getItem('annihilate_earth_save');
         return { state: saved ? JSON.parse(saved) : null, success: true };
     } catch (e) {
         console.error('Failed to load from local storage', e);

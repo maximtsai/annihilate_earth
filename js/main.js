@@ -5195,16 +5195,28 @@ async function run(mode) {
         setTimeout(updateWeaponScrollButtons, 500);
     }
 
-    // Keyboard shortcut hooks
+    // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
         if (window.gamePausedForAd) return;
+
+        // Prevent hotkeys if typing in input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            return;
+        }
+
         if (e.key === 'Escape') {
-            const optionsOverlay = document.getElementById('options-overlay');
-            if (optionsOverlay && optionsOverlay.classList.contains('show')) {
-                const closeBtn = document.getElementById('options-close-button');
-                if (closeBtn) closeBtn.click();
+            const optionsOverlay = document.getElementById('options-popup-overlay');
+            if (optionsOverlay) {
+                if (optionsOverlay.classList.contains('show')) {
+                    const closeBtn = document.getElementById('options-close-btn');
+                    if (closeBtn) closeBtn.click();
+                } else {
+                    const optionsBtn = document.getElementById('options-btn');
+                    if (optionsBtn) optionsBtn.click();
+                }
             }
         }
+
         if (mode === 'play') {
             // Handle restart shortcut on victory screen
             if (e.key === 'r' || e.key === 'R') {
@@ -5215,32 +5227,44 @@ async function run(mode) {
             }
 
             const buttons = Array.from(document.querySelectorAll('.weapon-button'));
-            const keyToIdx = {
-                '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8, '0': 9,
-                'q': 10, 'w': 11, 'e': 12, 'r': 13, 't': 14,
-                'Q': 10, 'W': 11, 'E': 12, 'R': 13, 'T': 14
+
+            // Map 1-9 and 0 to the first 10 weapon slots
+            const digitKeys = {
+                '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8, '0': 9
             };
-            const idx = keyToIdx[e.key];
+            const idx = digitKeys[e.key];
             if (idx !== undefined && idx < buttons.length) {
                 const btn = buttons[idx];
-                selectedWeapon = btn.getAttribute('data-weapon');
                 btn.click();
-            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            } else if (e.key === 'q' || e.key === 'Q') {
+                // Q to scroll left
+                const btn = document.getElementById('scroll-left-btn');
+                if (btn && !btn.disabled) btn.click();
+            } else if (e.key === 'e' || e.key === 'E') {
+                // E to scroll right
+                const btn = document.getElementById('scroll-right-btn');
+                if (btn && !btn.disabled) btn.click();
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
                 e.preventDefault();
                 if (buttons.length > 0) {
                     const currentIndex = buttons.findIndex(btn => btn.classList.contains('selected'));
-                    let nextIndex = currentIndex;
-                    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                        nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-                    } else {
-                        nextIndex = (currentIndex + 1) % buttons.length;
-                    }
+                    const nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                    buttons[nextIndex].click();
+                }
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (buttons.length > 0) {
+                    const currentIndex = buttons.findIndex(btn => btn.classList.contains('selected'));
+                    const nextIndex = (currentIndex + 1) % buttons.length;
                     buttons[nextIndex].click();
                 }
             } else if (e.key === ' ' || e.code === 'Space') {
                 e.preventDefault();
-                isHolding = true;
-                spawnWeapon(pointerX, pointerY);
+                if (!isHolding && !victoryTriggered) {
+                    isHolding = true;
+                    missileLaunchTimer = 0;
+                    spawnWeapon(pointerX, pointerY);
+                }
             }
         }
     });
@@ -5248,6 +5272,7 @@ async function run(mode) {
     window.addEventListener('keyup', (e) => {
         if (window.gamePausedForAd) return;
         if (e.key === ' ' || e.code === 'Space') {
+            e.preventDefault();
             isHolding = false;
             soundManager.stopLoop('sfx_laser_fire');
             soundManager.stopLoop('sfx_laser_hum');
@@ -5592,7 +5617,7 @@ async function run(mode) {
             }
 
             // Clear saved progress
-            localStorage.removeItem('annihilate_earth_save');
+            safeLocalStorage.removeItem('annihilate_earth_save');
 
             // Reset state variables
             unlockedPlanets = ['earth'];
