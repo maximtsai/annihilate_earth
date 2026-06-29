@@ -1650,6 +1650,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
         weaponAmmo.nuke = 18;
         weaponAmmo.bowling = 15;
         weaponAmmo.mysterybox = 3;
+        weaponAmmo.drill = 5;
         if (typeof updateAmmoUI === 'function') {
             updateAmmoUI();
         }
@@ -1665,6 +1666,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     particles.clear();
     shockwaves = [];
     holyRays = [];
+    activeDrills = [];
     if (!keepCooldowns) {
         totalShotsFired = 0;
         totalCratersMade = 0;

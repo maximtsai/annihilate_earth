@@ -200,8 +200,8 @@ function saveOptions(options) {
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
-let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
-let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
+let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
+let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'drill'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 let claimedPlanetSpinners = [];
 let unlockedTooltipShown = false;
@@ -330,6 +330,9 @@ async function loadUnlockedPlanets() {
         if (response.state) {
             if (response.state.weaponOrder) {
                 weaponOrder = response.state.weaponOrder;
+                if (!weaponOrder.includes('drill')) {
+                    weaponOrder.push('drill');
+                }
                 // Enforce that 'lightning' is positioned after 'bowling' in weaponOrder
                 const lightningIdx = weaponOrder.indexOf('lightning');
                 const bowlingIdx = weaponOrder.indexOf('bowling');
@@ -343,6 +346,9 @@ async function loadUnlockedPlanets() {
                 unlockedWeapons = response.state.unlockedWeapons;
                 if (!unlockedWeapons.includes('mysterybox')) {
                     unlockedWeapons.push('mysterybox');
+                }
+                if (!unlockedWeapons.includes('drill')) {
+                    unlockedWeapons.push('drill');
                 }
                 initiallyUnlockedWeapons = new Set(unlockedWeapons);
             }
@@ -456,7 +462,8 @@ let showPointer = false;
 let weaponAmmo = {
     nuke: 18,
     bowling: 15,
-    mysterybox: 3
+    mysterybox: 3,
+    drill: 5
 };
 
 function updateAmmoUI(type) {
@@ -478,6 +485,7 @@ function updateAmmoUI(type) {
         updateAmmoUI('nuke');
         updateAmmoUI('bowling');
         updateAmmoUI('mysterybox');
+        updateAmmoUI('drill');
     }
 }
 
@@ -505,6 +513,7 @@ let blackholeCooldown = STARTING_COOLDOWNS.blackhole;
 let fistCooldown = 0;
 let starCooldown = 0;
 let cometCooldown = 0;
+let drillCooldown = 0;
 let isInitialAsteroidCooldown = true;
 let isInitialLaserCooldown = true;
 let isInitialGammaCooldown = true;
@@ -531,6 +540,7 @@ let activeFistVisualExplosions = [];
 let activeStars = [];
 let activeStarProjectiles = [];
 let activeMysteryBoxes = [];
+let activeDrills = [];
 let fistStuckCount = 0;
 let isHolding = false;
 let missileLaunchTimer = 0;

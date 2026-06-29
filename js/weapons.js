@@ -53,8 +53,9 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
         else if (type === 'blackhole') cd = blackholeCooldown;
         else if (type === 'gamma') cd = gammaBurstCooldown;
         else if (type === 'lightning') cd = lightningCooldown;
+        else if (type === 'drill') cd = drillCooldown;
 
-        if (type !== 'nuke' && type !== 'missile' && type !== 'lightning' && type !== 'bowling') {
+        if (type !== 'nuke' && type !== 'missile' && type !== 'lightning' && type !== 'bowling' && type !== 'drill') {
             if (cd > 0.4) {
                 const defaultCd = (MAX_COOLDOWNS && MAX_COOLDOWNS[type] !== undefined) ? MAX_COOLDOWNS[type] : 0;
                 if (defaultCd > 2.5) {
@@ -435,6 +436,40 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
                 updateAmmoUI(type);
             }
         }
+        return;
+    }
+
+    if (type === 'drill') {
+        const playVol = (0.7 + Math.random() * 0.15) * 0.2;
+        const detune = (Math.random() - 0.5) * 300;
+        soundManager.play('sfx_launch_heavy', false, playVol, detune);
+
+        const speed = getConfigValue('weapons.drill.speed', 8.0);
+        const duration = getConfigValue('weapons.drill.drillDuration', 3.0);
+        const interval = getConfigValue('weapons.drill.explosionInterval', 0.1);
+
+        activeDrills.push({
+            x: spawnX,
+            y: spawnY,
+            vx: Math.cos(angle + Math.PI) * speed,
+            vy: Math.sin(angle + Math.PI) * speed,
+            state: 'falling', // 'falling', 'drilling', 'stuck'
+            drillTimer: duration,
+            explosionTimer: interval,
+            anticipationTimer: 0,
+            localX: 0,
+            localY: 0
+        });
+
+        if (typeof weaponAmmo !== 'undefined' && weaponAmmo[type] !== undefined) {
+            weaponAmmo[type]--;
+            if (typeof updateAmmoUI === 'function') {
+                updateAmmoUI(type);
+            }
+        }
+
+        // Set cooldown
+        drillCooldown = 1.0;
         return;
     }
 

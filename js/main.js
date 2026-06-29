@@ -919,6 +919,12 @@ async function run(mode) {
                 if (nukeCooldown < 0) nukeCooldown = 0;
             }
 
+            // Handle Drill Cooldown
+            if (drillCooldown > 0) {
+                drillCooldown -= deltaTime;
+                if (drillCooldown < 0) drillCooldown = 0;
+            }
+
             // Handle Missile Cooldown
             if (missileCooldown > 0) {
                 missileCooldown -= deltaTime;
@@ -2736,6 +2742,11 @@ async function run(mode) {
             // Update active mystery boxes
             updateMysteryBoxes(deltaTime, dt60);
 
+            // Update active drills
+            if (typeof updateDrills === 'function') {
+                updateDrills(deltaTime, dt60);
+            }
+
             // Update particles using the static pool (no array splicing, no allocations)
             for (let i = 0; i < particles.pool.length; i++) {
                 const p = particles.pool[i];
@@ -3927,6 +3938,11 @@ async function run(mode) {
         // Draw active Stars & Star Projectiles
         activeStarProjectiles.forEach(drawStarProjectile);
         activeStars.forEach(drawStar);
+
+        // Draw active drills
+        if (typeof activeDrills !== 'undefined' && typeof drawDrill === 'function') {
+            activeDrills.forEach(drill => drawDrill(ctx, drill));
+        }
 
         // Draw active mystery boxes
         activeMysteryBoxes.forEach(box => {
@@ -5651,8 +5667,8 @@ async function run(mode) {
             initiallyUnlockedPlanets = new Set(['earth']);
             bestTimes = {};
             claimedPlanetSpinners = [];
-            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet'];
-            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
+            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
+            unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'drill'];
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
             saveWeaponOrder();
             saveUnlockedWeapons();
