@@ -2,6 +2,7 @@
 supportsGlow = detectGlowSupport();
 console.log("[Glow Detection] Smooth gradient support:", supportsGlow);
 
+
 if (!supportsGlow) {
     // Intercept Canvas shadowBlur setter to disable it game-wide
     const descriptor = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'shadowBlur');
@@ -567,6 +568,7 @@ async function run(mode) {
     }
 
     window.showNewWeaponUnlockTooltip = function () {
+        if (isMainMenuActive || currentPlanet === 'custom') return;
         if (!_newWeaponTooltip.el) return;
         _newWeaponTooltip.shown = true;
         _newWeaponTooltip.timer = 0;
@@ -666,6 +668,10 @@ async function run(mode) {
     function update(deltaTime) {
         deltaTime = Math.min(deltaTime, 0.11);
         dt60 = deltaTime * 60;
+
+        if (currentPlanet === 'custom' && isDrawing && customPlanetRotationSpeed > 0) {
+            handlePlanetBuilderInput(pointerX, pointerY, 'move');
+        }
 
 
 
@@ -2051,6 +2057,7 @@ async function run(mode) {
             if (currentPlanet === 'neptune') spinMultiplier = 0.60;
             else if (currentPlanet === 'jupiter') spinMultiplier = 0.40;
             else if (currentPlanet === 'sun') spinMultiplier = 0.25;
+            else if (currentPlanet === 'custom') spinMultiplier = customPlanetRotationSpeed;
 
             const spinSpeed = getConfigValue('planet.rotationSpeed', 0.008) * 0.7225 * spinMultiplier;
             if (stuckCount > 0 || fistStuckCount > 0) {
@@ -3903,6 +3910,39 @@ async function run(mode) {
             ctx.restore();
         }
 
+        // Planet size preview outline (while dragging size slider)
+        if (currentPlanet === 'custom' && isDraggingSizeSlider && previewPlanetSize !== null) {
+            ctx.save();
+            ctx.translate(CENTER_X, CENTER_Y);
+            ctx.scale(planetScale, planetScale);
+            ctx.beginPath();
+            ctx.arc(0, 0, previewPlanetSize / 2, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 217, 255, 0.65)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 6]);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Brief red flash showing core location and size (gradual fade out)
+        if (currentPlanet === 'custom' && Date.now() < coreFlashUntil) {
+            const timeLeft = coreFlashUntil - Date.now();
+            const progress = Math.max(0, Math.min(1, timeLeft / 1500));
+            const pSize = getPlanetSize();
+            const cRad = getCoreRadius(pSize);
+            ctx.save();
+            ctx.translate(CENTER_X, CENTER_Y);
+            ctx.scale(planetScale, planetScale);
+            ctx.beginPath();
+            ctx.arc(0, 0, cRad, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 0, 0, ${0.35 * progress})`;
+            ctx.strokeStyle = `rgba(255, 0, 0, ${0.75 * progress})`;
+            ctx.lineWidth = 2.5;
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
         // Draw active Space Kraken portals & tentacles (higher depth, on top of planet surface)
         activeKrakens.forEach(w => {
             drawKrakenTentacle(w);
@@ -4934,7 +4974,7 @@ async function run(mode) {
 
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
-        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper')) {
             return;
         }
         startBGM();
@@ -4952,6 +4992,11 @@ async function run(mode) {
         pointerX = x;
         pointerY = y;
         showPointer = true;
+
+        if (currentPlanet === 'custom') {
+            handlePlanetBuilderInput(x, y, 'down');
+            return;
+        }
 
         // Check shooting star click
         if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
@@ -4971,6 +5016,10 @@ async function run(mode) {
         pointerX = (e.clientX - rect.left) / scaleX;
         pointerY = (e.clientY - rect.top) / scaleY;
         showPointer = true;
+
+        if (currentPlanet === 'custom') {
+            handlePlanetBuilderInput(pointerX, pointerY, 'move');
+        }
     });
 
     gameWorld.addEventListener('mouseleave', () => {
@@ -4978,7 +5027,7 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchstart', (e) => {
-        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper')) {
             return;
         }
         startBGM();
@@ -4998,6 +5047,11 @@ async function run(mode) {
         pointerX = x;
         pointerY = y;
         showPointer = true;
+
+        if (currentPlanet === 'custom') {
+            handlePlanetBuilderInput(x, y, 'down');
+            return;
+        }
 
         // Check shooting star click
         if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
@@ -5019,6 +5073,10 @@ async function run(mode) {
         pointerX = (touch.clientX - rect.left) / scaleX;
         pointerY = (touch.clientY - rect.top) / scaleY;
         showPointer = true;
+
+        if (currentPlanet === 'custom') {
+            handlePlanetBuilderInput(pointerX, pointerY, 'move');
+        }
     });
 
     function handleLightningRelease() {
@@ -5046,6 +5104,10 @@ async function run(mode) {
     }
 
     window.addEventListener('mouseup', () => {
+        if (currentPlanet === 'custom') {
+            handlePlanetBuilderInput(null, null, 'up');
+            return;
+        }
         isHolding = false;
         soundManager.stopLoop('sfx_laser_fire');
         soundManager.stopLoop('sfx_laser_hum');
@@ -5053,6 +5115,10 @@ async function run(mode) {
     });
 
     window.addEventListener('touchend', () => {
+        if (currentPlanet === 'custom') {
+            handlePlanetBuilderInput(null, null, 'up');
+            return;
+        }
         isHolding = false;
         soundManager.stopLoop('sfx_laser_fire');
         soundManager.stopLoop('sfx_laser_hum');
@@ -5060,6 +5126,10 @@ async function run(mode) {
     });
 
     window.addEventListener('touchcancel', () => {
+        if (currentPlanet === 'custom') {
+            handlePlanetBuilderInput(null, null, 'up');
+            return;
+        }
         isHolding = false;
         handleLightningRelease();
     });
@@ -5466,7 +5536,10 @@ async function run(mode) {
         const optMenuBtn = document.getElementById('options-menu-btn');
         if (optMenuBtn) optMenuBtn.textContent = '🏠 ' + (t.mainMenu || 'MAIN MENU');
 
-        // Main Menu Screen Buttons
+        // Main Menu Screen Title and Buttons
+        const menuTitle = document.querySelector('.main-menu-title');
+        if (menuTitle) menuTitle.textContent = t.loadingTitle || 'ANNIHILATE EARTH';
+
         const menuNewGame = document.getElementById('menu-new-game-btn');
         if (menuNewGame) {
             const hasProgress = unlockedPlanets && unlockedPlanets.length > 1;
@@ -5791,6 +5864,7 @@ async function run(mode) {
     const mainMenu = document.getElementById('main-menu');
     const menuNewGameBtn = document.getElementById('menu-new-game-btn');
     const menuLevelSelectBtn = document.getElementById('menu-level-select-btn');
+    const menuBuilderBtn = document.getElementById('menu-builder-btn');
     const menuCreditsBtn = document.getElementById('menu-credits-btn');
     
     const menuOptionsBtn = document.getElementById('menu-options-btn');
@@ -5843,6 +5917,15 @@ async function run(mode) {
         });
     }
 
+    if (menuBuilderBtn) {
+        menuBuilderBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            startBGM();
+            startPlanetBuilderMode();
+        });
+    }
+
     if (menuOptionsBtn) {
         menuOptionsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -5880,6 +5963,10 @@ async function run(mode) {
         isMainMenuActive = true;
         gameplayStarted = false;
         if (mainMenu) mainMenu.classList.remove('hidden');
+
+        // Hide tools bar wrapper
+        const toolsBar = document.getElementById('tools-bar-wrapper');
+        if (toolsBar) toolsBar.style.display = 'none';
 
         // Hide top-right options button wrapper
         const optBtnWrapper = document.getElementById('options-btn-wrapper');
@@ -6269,6 +6356,7 @@ async function run(mode) {
 
             // Show Main Menu on load finish
             showMainMenu();
+            setupPlanetBuilderEvents();
         }, 400);
     }, 600);
 

@@ -129,6 +129,7 @@ function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5
 let unlockNotificationTimeout = null;
 
 function showUnlockNotification(text) {
+    if (isMainMenuActive || currentPlanet === 'custom') return;
     const notif = document.getElementById('weapon-unlock-notification');
     if (!notif) return;
 
@@ -420,6 +421,13 @@ function refreshWeaponLocks() {
     updateWeaponOrderOnUnlock();
 }
 
+// Custom Planet Builder state variables
+var customPlanetSize = 240;
+var customPlanetDurability = 0;
+var customPlanetHasCore = true;
+var customPlanetRotationSpeed = 1.0;
+var customPlanetEnforceCircle = true;
+
 function getPlanetSize() {
     if (currentPlanet === 'earth') return 240;
     if (currentPlanet === 'neutron_star') return 188;
@@ -427,10 +435,14 @@ function getPlanetSize() {
     if (currentPlanet === 'neptune') return 340;
     if (currentPlanet === 'jupiter') return 380;
     if (currentPlanet === 'sun') return 455;
+    if (currentPlanet === 'custom') return customPlanetSize;
     return getConfigValue('planet.size', 245);
 }
 
 function getCoreRadius(planetSize, planetName = currentPlanet) {
+    if (planetName === 'custom') {
+        return customPlanetHasCore ? (25 + 0.4 * (planetSize / 2)) : 0;
+    }
     if (planetName === 'neutron_star') return 0;
     return 25 + 0.4 * (planetSize / 2);
 }

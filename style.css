@@ -2808,3 +2808,314 @@ html.no-glows *::after {
         border-width: 3px;
     }
 }
+
+/* Planet Builder Tools UI */
+.tools-bar-wrapper {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 960px;
+    height: calc(105px * var(--ui-scale));
+    padding: 1.5px;
+    background: linear-gradient(0deg, #00d9ff, rgba(0, 153, 255, 0.2));
+    clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%, 0 18px);
+    box-shadow: 0 5px 25px rgba(0, 217, 255, 0.2);
+    margin: 0;
+    z-index: 200;
+    pointer-events: auto;
+}
+
+.tools-bar-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(12, 12, 28, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0 calc(20px * var(--ui-scale));
+    clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%, 0 18px);
+    width: 100%;
+    height: 100%;
+}
+
+.tool-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(8px * var(--ui-scale));
+    padding: 0 calc(10px * var(--ui-scale));
+    border-right: 1px solid rgba(0, 217, 255, 0.15);
+    height: 70%;
+}
+
+.tool-section:last-child,
+.exit-section {
+    border-right: none;
+}
+
+.tool-section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(10px * var(--ui-scale));
+    color: #00d9ff;
+    letter-spacing: 1.2px;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.85;
+    text-align: center;
+}
+
+.tool-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: calc(8px * var(--ui-scale));
+}
+
+.tool-button,
+.size-button {
+    background: rgba(0, 217, 255, 0.05);
+    border: 1.5px solid rgba(0, 217, 255, 0.3);
+    border-radius: 4px;
+    color: #00d9ff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    outline: none;
+}
+
+.tool-button {
+    width: calc(42px * var(--ui-scale));
+    height: calc(42px * var(--ui-scale));
+}
+
+.tool-icon {
+    font-size: calc(20px * var(--ui-scale));
+    line-height: 1;
+}
+
+.size-button {
+    width: calc(34px * var(--ui-scale));
+    height: calc(34px * var(--ui-scale));
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(13px * var(--ui-scale));
+    font-weight: 800;
+}
+
+.tool-button:hover,
+.size-button:hover {
+    background: rgba(0, 217, 255, 0.15);
+    border-color: #00ffaa;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(0, 217, 255, 0.4);
+}
+
+.tool-button.selected,
+.size-button.selected {
+    background: rgba(0, 217, 255, 0.2);
+    border-color: #00d9ff;
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(0, 217, 255, 0.5), inset 0 0 6px rgba(0, 217, 255, 0.2);
+}
+
+.color-picker-wrapper {
+    width: calc(34px * var(--ui-scale));
+    height: calc(34px * var(--ui-scale));
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid rgba(0, 217, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.2);
+    transition: border-color 200ms ease;
+}
+
+.color-picker-wrapper:hover {
+    border-color: #00ffaa;
+}
+
+#tool-color-picker {
+    width: 160%;
+    height: 160%;
+    border: none;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+    outline: none;
+}
+
+/* Slider styling */
+.slider-section {
+    flex: 1;
+    min-width: calc(140px * var(--ui-scale));
+}
+
+.slider-section input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: calc(5px * var(--ui-scale));
+    background: rgba(0, 217, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.slider-section input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: calc(14px * var(--ui-scale));
+    height: calc(14px * var(--ui-scale));
+    background: #00d9ff;
+    border: 1.5px solid #ffffff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px #00d9ff;
+    transition: background-color 200ms ease, transform 150ms ease;
+}
+
+.slider-section input[type="range"]::-webkit-slider-thumb:hover {
+    background: #00ffaa;
+    transform: scale(1.15);
+}
+
+/* Toggle checkbox styling */
+.core-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: calc(8px * var(--ui-scale));
+    cursor: pointer;
+    position: relative;
+    width: calc(185px * var(--ui-scale));
+    box-sizing: border-box;
+}
+
+.core-toggle-label input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    width: calc(42px * var(--ui-scale));
+    height: calc(22px * var(--ui-scale));
+    background: rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(0, 217, 255, 0.3);
+    border-radius: 11px;
+    position: relative;
+    transition: background 250ms ease, border-color 250ms ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: calc(14px * var(--ui-scale));
+    height: calc(14px * var(--ui-scale));
+    left: calc(2.5px * var(--ui-scale));
+    top: calc(2.5px * var(--ui-scale));
+    background: rgba(0, 217, 255, 0.6);
+    border-radius: 50%;
+    transition: transform 250ms cubic-bezier(0.25, 0.8, 0.25, 1.1), background-color 250ms ease;
+}
+
+.core-toggle-label input[type="checkbox"]:checked+.toggle-slider {
+    background: rgba(0, 217, 255, 0.15);
+    border-color: #00d9ff;
+}
+
+.core-toggle-label input[type="checkbox"]:checked+.toggle-slider::before {
+    transform: translateX(calc(20px * var(--ui-scale)));
+    background: #00ffaa;
+    box-shadow: 0 0 8px #00ffaa;
+}
+
+.toggle-label-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(11px * var(--ui-scale));
+    font-weight: 700;
+    color: #a0c8d8;
+    letter-spacing: 0.5px;
+}
+
+/* Exit button */
+.tool-exit-button {
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(13px * var(--ui-scale));
+    font-weight: 800;
+    color: #ff0055;
+    background: rgba(255, 0, 85, 0.05);
+    border: 1.5px solid rgba(255, 0, 85, 0.4);
+    padding: calc(9px * var(--ui-scale)) calc(20px * var(--ui-scale));
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1.2px;
+    transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    outline: none;
+}
+
+.tool-exit-button:hover {
+    background: rgba(255, 0, 85, 0.15);
+    border-color: #ff0055;
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+}
+
+/* Grouped sliders compartment */
+.sliders-compartment {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: calc(8px * var(--ui-scale));
+    padding: 0 calc(15px * var(--ui-scale));
+    border-right: 1px solid rgba(0, 217, 255, 0.15);
+    height: 80%;
+    min-width: calc(180px * var(--ui-scale));
+    flex: 1.2;
+}
+
+.slider-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(3px * var(--ui-scale));
+    width: 100%;
+}
+
+.slider-group input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: calc(5px * var(--ui-scale));
+    background: rgba(0, 217, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: calc(14px * var(--ui-scale));
+    height: calc(14px * var(--ui-scale));
+    background: #00d9ff;
+    border: 1.5px solid #ffffff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px #00d9ff;
+    transition: background-color 200ms ease, transform 150ms ease;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb:hover {
+    background: #00ffaa;
+    transform: scale(1.15);
+}
+
+/* Align toggle switches vertically */
+.toggle-group-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(8px * var(--ui-scale));
+}

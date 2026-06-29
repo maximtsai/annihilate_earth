@@ -279,6 +279,9 @@ function initializePlanet() {
                         g = Math.floor(g * (1 - stormOpacity) + 190 * stormOpacity);
                         b = 255;
                     }
+                } else if (currentPlanet === 'custom') {
+                    // Simple off-white planet
+                    r = 245; g = 243; b = 238;
                 }
 
                 data[idx] = r;
@@ -1047,6 +1050,9 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
     if (currentPlanet === 'neutron_star') {
         finalRadius -= 3;
         finalRadius *= 0.23;
+    } else if (currentPlanet === 'custom') {
+        const reduction = customPlanetDurability / 100;
+        finalRadius *= (1 - reduction);
     } else {
         finalRadius *= 0.94;
     }
@@ -1336,6 +1342,9 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
     if (currentPlanet === 'neutron_star') {
         finalRadius -= 3;
         finalRadius *= 0.23;
+    } else if (currentPlanet === 'custom') {
+        const reduction = customPlanetDurability / 100;
+        finalRadius *= (1 - reduction);
     } else {
         finalRadius *= 0.94;
     }

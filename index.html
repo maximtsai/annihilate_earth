@@ -75,23 +75,26 @@
                     <div class="main-menu-buttons">
                         <button class="menu-btn" id="menu-new-game-btn">NEW GAME</button>
                         <button class="menu-btn" id="menu-level-select-btn">LEVEL SELECT</button>
-                        <button class="menu-btn disabled-stub" id="menu-builder-btn" title="Coming Soon">PLANET BUILDER</button>
+                        <button class="menu-btn" id="menu-builder-btn">PLANET BUILDER</button>
                         <button class="menu-btn" id="menu-options-btn">OPTIONS</button>
                         <button class="menu-btn" id="menu-credits-btn">CREDITS</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Credits Popup -->
-            <div class="options-popup-overlay" id="credits-popup-overlay" style="display: none; z-index: 500;">
+            <div class="options-popup-overlay" id="credits-popup-overlay" style="z-index: 500;">
                 <div class="options-popup" style="border-color: #00d9ff; box-shadow: 0 0 40px rgba(0, 217, 255, 0.25);">
                     <div class="options-popup-title">CREDITS</div>
                     <button class="options-popup-close" id="credits-close-btn">✕</button>
                     <div class="credits-content" style="color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 14px; text-align: center; line-height: 1.8; margin: 20px 0; letter-spacing: 1px;">
-                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">GAME DESIGN & DEVELOPMENT</strong><br>Maxim Tsai</p>
-                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">ART & PROCEDURAL SHADERS</strong><br>Maxim Tsai</p>
-                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">AUDIO & SOUND EFFECTS</strong><br>Maxim Tsai</p>
-                        <p style="margin: 20px 0 10px 0; font-size: 11px; color: #888888;">© 2026 MAXGAMES. ALL RIGHTS RESERVED.</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">GAME BY</strong><br>Maxim Tsai</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">ART MADE WITH</strong><br>paint.net</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">CODED WITH</strong><br>Gemini</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">SOUND EFFECTS FROM</strong><br>Freesound.org & Elevenlabs</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">BUILT WITH</strong><br>HTML5 Canvas & Vanilla JS</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">FONTS USED</strong><br>Orbitron & Share Tech Mono</p>
+                        <p style="margin: 10px 0;"><strong style="color: #00d9ff;">SPECIAL THANKS TO</strong><br>HBY for art help<br>My mother for obsessive playtesting</p>
+                        <p style="margin: 20px 0 10px 0; font-size: 11px; color: #888888;">© 2026 MAXIM TSAI. ALL RIGHTS RESERVED.</p>
                     </div>
                 </div>
             </div>
@@ -419,6 +422,79 @@
                                 class="arrow-text">▼</span></button>
                     </div>
                 </div>
+                
+                <!-- Planet Builder Tools UI Panel -->
+                <div class="tools-bar-wrapper" id="tools-bar-wrapper" style="display: none;">
+                    <div class="tools-bar-container">
+                        <!-- Left section: Main Tools -->
+                        <div class="tool-section">
+                            <span class="tool-section-title">TOOLS</span>
+                            <div class="tool-row">
+                                <button class="tool-button selected" data-tool="brush" id="tool-brush" title="Paintbrush">
+                                    <span class="tool-icon">🖌️</span>
+                                </button>
+                                <button class="tool-button" data-tool="bucket" id="tool-bucket" title="Paint Bucket">
+                                    <span class="tool-icon">🪣</span>
+                                </button>
+                                <button class="tool-button" id="tool-clear" title="Reset Planet">
+                                    <span class="tool-icon">🔄</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Brush sizes & Color -->
+                        <div class="tool-section">
+                            <span class="tool-section-title">BRUSH</span>
+                            <div class="tool-row">
+                                <button class="size-button" data-size="4" id="brush-size-s" title="Small Brush">S</button>
+                                <button class="size-button selected" data-size="8" id="brush-size-m" title="Medium Brush">M</button>
+                                <button class="size-button" data-size="16" id="brush-size-l" title="Large Brush">L</button>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="tool-color-picker" value="#00d9ff" title="Select Color">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Planet properties compartment -->
+                        <div class="sliders-compartment">
+                            <div class="slider-group">
+                                <span class="tool-section-title">SIZE (<span id="size-val-display">240km</span>)</span>
+                                <input type="range" id="tool-size-slider" min="180" max="480" value="240" step="5">
+                            </div>
+                            <div class="slider-group">
+                                <span class="tool-section-title">DURABILITY (<span id="durability-val-display">0%</span>)</span>
+                                <input type="range" id="tool-durability-slider" min="0" max="100" value="0" step="5">
+                            </div>
+                        </div>
+
+                        <!-- Rotation speed compartment -->
+                        <div class="tool-section slider-section">
+                            <span class="tool-section-title">ROTATION (<span id="rotation-val-display">1.0x</span>)</span>
+                            <input type="range" id="tool-rotation-slider" min="0" max="100" value="25" step="1">
+                        </div>
+
+                        <div class="tool-section checkbox-section">
+                            <span class="tool-section-title">SETTINGS</span>
+                            <div class="toggle-group-container">
+                                <label class="core-toggle-label">
+                                    <input type="checkbox" id="tool-core-checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label-text">HAS CORE</span>
+                                </label>
+                                <label class="core-toggle-label">
+                                    <input type="checkbox" id="tool-circle-checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label-text">ENFORCE CIRCLE</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Exit button -->
+                        <div class="tool-section exit-section">
+                            <button class="tool-exit-button" id="tool-exit-btn">EXIT</button>
+                        </div>
+                    </div>
+                </div>
 
 
 
@@ -480,6 +556,7 @@
     <script src="js/mystery-box.js"></script>
     <script src="js/drill.js"></script>
     <script src="js/intro.js"></script>
+    <script src="js/builder.js"></script>
     <script src="js/main.js"></script>
 </body>
 
