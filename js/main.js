@@ -4934,7 +4934,7 @@ async function run(mode) {
 
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('#main-menu') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -4978,7 +4978,7 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('#main-menu') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -5274,7 +5274,6 @@ async function run(mode) {
 
         // Toggle UI / Photo Mode (only during gameplay)
         if (e.key === 'h' || e.key === 'H') {
-            if (isMainMenuActive) return;
             toggleUI();
             return;
         }
@@ -5756,13 +5755,22 @@ async function run(mode) {
         const optBtnWrapper = document.getElementById('options-btn-wrapper');
         if (optBtnWrapper) optBtnWrapper.style.display = 'none';
 
-        // Ensure gameplay UI elements are hidden initially
+        // Ensure gameplay UI elements are hidden initially and non-interactive
         const weaponBar = document.querySelector('.weapon-bar-wrapper');
         const hudHeader = document.querySelector('.hud-header-wrapper');
         const selector = document.querySelector('.planet-selector');
-        if (weaponBar) weaponBar.style.opacity = '0';
-        if (hudHeader) hudHeader.style.opacity = '0';
-        if (selector) selector.style.opacity = '0';
+        if (weaponBar) {
+            weaponBar.style.opacity = '0';
+            weaponBar.style.pointerEvents = 'none';
+        }
+        if (hudHeader) {
+            hudHeader.style.opacity = '0';
+            hudHeader.style.pointerEvents = 'none';
+        }
+        if (selector) {
+            selector.style.opacity = '0';
+            selector.style.pointerEvents = 'none';
+        }
 
         // Change "New Game" button text based on progress
         if (menuNewGameBtn) {
@@ -6095,6 +6103,10 @@ async function run(mode) {
     }
 
     function beginGameplay() {
+        if (weaponBarWrapper) weaponBarWrapper.style.pointerEvents = 'auto';
+        if (hudHeaderWrapper) hudHeaderWrapper.style.pointerEvents = 'auto';
+        if (planetSelector) planetSelector.style.pointerEvents = 'auto';
+
         flickerIn(weaponBarWrapper, 300, 200);
         flickerIn(hudHeaderWrapper, 500, 750);
         flickerIn(planetSelector, 500, 450);
