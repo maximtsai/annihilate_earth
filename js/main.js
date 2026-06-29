@@ -5348,54 +5348,7 @@ async function run(mode) {
         }
     });
 
-    // Planet selector trigger
-    document.querySelectorAll('.planet-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            startBGM();
-            try {
-                e.stopPropagation();
-                const nextPlanet = btn.dataset.planet;
-                if (btn.classList.contains('locked')) {
-                    try { soundManager.play('sfx_ui_switch', false, 1.0, -800); } catch (sfxErr) { }
-                    return;
-                }
-                if (nextPlanet === currentPlanet || isPlanetSwitching) return;
 
-                const isProgression = window.isNextPlanetProgression;
-                window.isNextPlanetProgression = false;
-
-                try { soundManager.play('sfx_ui_switch'); } catch (sfxErr) { }
-
-                // Start cinematic transition (User feature 5)
-                isPlanetSwitching = true;
-
-                setTimeout(() => {
-                    currentPlanet = nextPlanet;
-                    document.querySelectorAll('.planet-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-
-                    updateGameTitle();
-                    planetTimeSpent = 0;
-                    gameplayStarted = true;
-                    resetGame(true, !isProgression);
-
-                    isPlanetSwitching = false;
-                    zoomProgress = 0;
-                    planetScale = 0.7; // Start point for the ease
-
-                    // Subtle UI polish
-                    if (weaponBarWrapper) weaponBarWrapper.style.opacity = '0';
-                    if (hudHeaderWrapper) hudHeaderWrapper.style.opacity = '0';
-                    if (planetSelector) planetSelector.style.opacity = '0';
-                    flickerIn(weaponBarWrapper, 300, 50);
-                    flickerIn(hudHeaderWrapper, 500, 300);
-                    flickerIn(planetSelector, 500, 500);
-                }, 300); // Wait for scale down
-            } catch (err) {
-                console.error("Error swapping planets:", err);
-            }
-        });
-    });
 
     // Restart / Next Planet trigger
     document.getElementById('restart-button').addEventListener('click', (e) => {
@@ -5508,6 +5461,43 @@ async function run(mode) {
         if (optFullscreen) optFullscreen.textContent = '🖥️ ' + (t.fullScreen || 'FULL SCREEN');
 
         if (optReset) optReset.textContent = '⚠️ ' + (t.resetProgress || 'RESET PROGRESS') + ' ⚠️';
+
+        // Main Menu button in Options popup
+        const optMenuBtn = document.getElementById('options-menu-btn');
+        if (optMenuBtn) optMenuBtn.textContent = '🏠 ' + (t.mainMenu || 'MAIN MENU');
+
+        // Main Menu Screen Buttons
+        const menuNewGame = document.getElementById('menu-new-game-btn');
+        if (menuNewGame) {
+            const hasProgress = unlockedPlanets && unlockedPlanets.length > 1;
+            menuNewGame.textContent = hasProgress ? (t.continue || 'CONTINUE') : (t.newGame || 'NEW GAME');
+        }
+        const menuLevelSelect = document.getElementById('menu-level-select-btn');
+        if (menuLevelSelect) menuLevelSelect.textContent = t.levelSelect || 'LEVEL SELECT';
+        const menuBuilder = document.getElementById('menu-builder-btn');
+        if (menuBuilder) {
+            menuBuilder.textContent = t.planetBuilder || 'PLANET BUILDER';
+            menuBuilder.setAttribute('title', t.comingSoon || 'COMING SOON');
+        }
+        const menuOptions = document.getElementById('menu-options-btn');
+        if (menuOptions) menuOptions.textContent = t.options || 'OPTIONS';
+        const menuCredits = document.getElementById('menu-credits-btn');
+        if (menuCredits) menuCredits.textContent = t.credits || 'CREDITS';
+
+        // Level Select Popup Button Names
+        document.querySelectorAll('.level-select-btn').forEach(btn => {
+            const planet = btn.dataset.planet;
+            const nameSpan = btn.querySelector('.level-select-name');
+            if (nameSpan && t.planets[planet]) {
+                nameSpan.textContent = t.planets[planet];
+            }
+        });
+
+        // Popups titles
+        const levelSelectTitle = document.getElementById('level-select-title');
+        if (levelSelectTitle) levelSelectTitle.textContent = t.levelSelect || 'LEVEL SELECT';
+        const creditsTitle = document.querySelector('#credits-popup-overlay .options-popup-title');
+        if (creditsTitle) creditsTitle.textContent = t.credits || 'CREDITS';
 
         // Reset Confirmation Popup translations
         const confirmTitle = document.querySelector('#confirm-popup-overlay .options-popup-title');
@@ -5729,22 +5719,70 @@ async function run(mode) {
 
     document.querySelectorAll('.level-select-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const planet = btn.dataset.planet;
-            if (!unlockedPlanets.includes(planet)) {
-                try { soundManager.play('sfx_ui_switch', false, 1.0, -800); } catch (sfxErr) { }
-                return;
-            }
-            
-            // Close Level Select popup immediately
-            if (levelSelectOverlay) levelSelectOverlay.classList.remove('show');
-            
-            if (planet === currentPlanet) return;
-            
-            // Trigger click on the corresponding bottom selector button to reuse its transition/BGM logic
-            const targetBtn = document.getElementById('btn-planet-' + planet);
-            if (targetBtn) {
-                targetBtn.click();
+            startBGM();
+            try {
+                e.stopPropagation();
+                const nextPlanet = btn.dataset.planet;
+                if (!unlockedPlanets.includes(nextPlanet)) {
+                    try { soundManager.play('sfx_ui_switch', false, 1.0, -800); } catch (sfxErr) { }
+                    return;
+                }
+                if (nextPlanet === currentPlanet || isPlanetSwitching) return;
+
+                // Close Level Select popup immediately
+                if (levelSelectOverlay) levelSelectOverlay.classList.remove('show');
+
+                const isProgression = window.isNextPlanetProgression;
+                window.isNextPlanetProgression = false;
+
+                try { soundManager.play('sfx_ui_switch'); } catch (sfxErr) { }
+
+                // Start cinematic transition
+                isPlanetSwitching = true;
+
+                setTimeout(() => {
+                    currentPlanet = nextPlanet;
+                    document.querySelectorAll('.level-select-btn').forEach(b => {
+                        if (b.dataset.planet === currentPlanet) b.classList.add('selected');
+                        else b.classList.remove('selected');
+                    });
+
+                    updateGameTitle();
+                    planetTimeSpent = 0;
+                    gameplayStarted = true;
+
+                    // If we were on the Main Menu, transition to gameplay!
+                    if (isMainMenuActive) {
+                        isMainMenuActive = false;
+                        if (mainMenu) mainMenu.classList.add('hidden');
+                        
+                        const optBtnWrapper = document.getElementById('options-btn-wrapper');
+                        if (optBtnWrapper) optBtnWrapper.style.display = 'block';
+                        const lvlBtnWrapper = document.getElementById('level-select-btn-wrapper');
+                        if (lvlBtnWrapper) lvlBtnWrapper.style.display = 'block';
+                        
+                        if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+                            window.PlatformBridge.gameplayStart();
+                        }
+                        
+                        resetGame(true, !isProgression);
+                        beginGameplay();
+                    } else {
+                        resetGame(true, !isProgression);
+                    }
+
+                    isPlanetSwitching = false;
+                    zoomProgress = 0;
+                    planetScale = 0.7; // Start point for the ease
+
+                    // Subtle UI polish
+                    if (weaponBarWrapper) weaponBarWrapper.style.opacity = '0';
+                    if (hudHeaderWrapper) hudHeaderWrapper.style.opacity = '0';
+                    flickerIn(weaponBarWrapper, 300, 50);
+                    flickerIn(hudHeaderWrapper, 500, 300);
+                }, 300);
+            } catch (err) {
+                console.error("Error swapping planets:", err);
             }
         });
     });
@@ -5784,7 +5822,7 @@ async function run(mode) {
             if (!hasProgress) {
                 // Reset to Earth for New Game
                 currentPlanet = 'earth';
-                document.querySelectorAll('.planet-btn').forEach(b => {
+                document.querySelectorAll('.level-select-btn').forEach(b => {
                     if (b.dataset.planet === 'earth') b.classList.add('selected');
                     else b.classList.remove('selected');
                 });
@@ -5800,23 +5838,8 @@ async function run(mode) {
         menuLevelSelectBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
-            startBGM();
-
-            isMainMenuActive = false;
-            gameplayStarted = true;
-            if (mainMenu) mainMenu.classList.add('hidden');
-
-            const optBtnWrapper = document.getElementById('options-btn-wrapper');
-            if (optBtnWrapper) optBtnWrapper.style.display = 'block';
-            const lvlBtnWrapper = document.getElementById('level-select-btn-wrapper');
-            if (lvlBtnWrapper) lvlBtnWrapper.style.display = 'block';
-
-            if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
-                window.PlatformBridge.gameplayStart();
-            }
-
-            resetGame(false);
-            beginGameplay();
+            updateLevelSelectPopup();
+            if (levelSelectOverlay) levelSelectOverlay.classList.add('show');
         });
     }
 
@@ -5883,15 +5906,12 @@ async function run(mode) {
 
         // Change "New Game" button text based on progress
         if (menuNewGameBtn) {
+            const t = translations[currentLanguage] || translations['en'];
             const hasProgress = unlockedPlanets && unlockedPlanets.length > 1;
-            menuNewGameBtn.textContent = hasProgress ? 'CONTINUE' : 'NEW GAME';
+            menuNewGameBtn.textContent = hasProgress ? (t.continue || 'CONTINUE') : (t.newGame || 'NEW GAME');
         }
 
-        // Disable level select if only Earth is available
-        if (menuLevelSelectBtn) {
-            const hasMultiplePlanets = unlockedPlanets && unlockedPlanets.length > 1;
-            menuLevelSelectBtn.disabled = !hasMultiplePlanets;
-        }
+
     }
     window.showMainMenu = showMainMenu;
 
@@ -5950,8 +5970,8 @@ async function run(mode) {
 
             if (currentPlanet !== 'earth') {
                 currentPlanet = 'earth';
-                document.querySelectorAll('.planet-btn').forEach(b => b.classList.remove('selected'));
-                const earthBtn = document.getElementById('btn-planet-earth');
+                document.querySelectorAll('.level-select-btn').forEach(b => b.classList.remove('selected'));
+                const earthBtn = document.querySelector('.level-select-btn[data-planet="earth"]');
                 if (earthBtn) earthBtn.classList.add('selected');
                 updateGameTitle();
             }
@@ -6172,7 +6192,7 @@ async function run(mode) {
         }
         if (currentPlanet !== furthestPlanet) {
             currentPlanet = furthestPlanet;
-            document.querySelectorAll('.planet-btn').forEach(b => {
+            document.querySelectorAll('.level-select-btn').forEach(b => {
                 if (b.dataset.planet === furthestPlanet) {
                     b.classList.add('selected');
                 } else {

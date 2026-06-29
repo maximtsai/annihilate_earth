@@ -1,5 +1,13 @@
 const translations = {
     en: {
+        mainMenu: 'MAIN MENU',
+        newGame: 'NEW GAME',
+        continue: 'CONTINUE',
+        levelSelect: 'LEVEL SELECT',
+        credits: 'CREDITS',
+        planetBuilder: 'PLANET BUILDER',
+        comingSoon: 'COMING SOON',
+
         options: 'OPTIONS',
         soundEffects: 'SOUND EFFECTS',
         music: 'MUSIC',
@@ -71,6 +79,14 @@ const translations = {
         stopSpinner: 'STOP SPINNER'
     },
     'zh-CN': {
+        mainMenu: '主菜单',
+        newGame: '新游戏',
+        continue: '继续',
+        levelSelect: '选择关卡',
+        credits: '制作人员',
+        planetBuilder: '星球建造器',
+        comingSoon: '即将推出',
+
         options: '设置',
         soundEffects: '音效',
         music: '音乐',
@@ -142,6 +158,14 @@ const translations = {
         stopSpinner: '停止转盘'
     },
     'zh-TW': {
+        mainMenu: '主選單',
+        newGame: '新遊戲',
+        continue: '繼續',
+        levelSelect: '選擇關卡',
+        credits: '製作人員',
+        planetBuilder: '星球建造器',
+        comingSoon: '即將推出',
+
         options: '設定',
         soundEffects: '音效',
         music: '音樂',
@@ -213,6 +237,14 @@ const translations = {
         stopSpinner: '停止轉盤'
     },
     es: {
+        mainMenu: 'MENÚ PRINCIPAL',
+        newGame: 'NUEVO JUEGO',
+        continue: 'CONTINUAR',
+        levelSelect: 'SELECCIONAR NIVEL',
+        credits: 'CRÉDITOS',
+        planetBuilder: 'CREADOR DE PLANETAS',
+        comingSoon: 'PRÓXIMAMENTE',
+
         options: 'OPCIONES',
         soundEffects: 'EFECTOS DE SONIDO',
         music: 'MÚSICA',
@@ -284,6 +316,14 @@ const translations = {
         stopSpinner: 'DETENER RULETA'
     },
     fr: {
+        mainMenu: 'MENU PRINCIPAL',
+        newGame: 'NOUVEAU JEU',
+        continue: 'CONTINUER',
+        levelSelect: 'SÉLECTIONNER NIVEAU',
+        credits: 'CRÉDITS',
+        planetBuilder: 'CRÉATEUR DE PLANÈTES',
+        comingSoon: 'BIENTÔT DISPONIBLE',
+
         options: 'OPTIONS',
         soundEffects: 'EFFETS SONORES',
         music: 'MUSIQUE',
@@ -355,6 +395,14 @@ const translations = {
         stopSpinner: 'ARRÊTER LA ROUE'
     },
     ru: {
+        mainMenu: 'ГЛАВНОЕ МЕНЮ',
+        newGame: 'НОВАЯ ИГРА',
+        continue: 'ПРОДОЛЖИТЬ',
+        levelSelect: 'ВЫБОР УРОВНЯ',
+        credits: 'АВТОРЫ',
+        planetBuilder: 'СОЗДАТЕЛЬ ПЛАНЕТ',
+        comingSoon: 'СКОРО В ИГРЕ',
+
         options: 'НАСТРОЙКИ',
         soundEffects: 'ЗВУКОВЫЕ ЭФФЕКТЫ',
         music: 'МУЗЫКА',
@@ -426,6 +474,14 @@ const translations = {
         stopSpinner: 'ОСТАНОВИТЬ КОЛЕСО'
     },
     ja: {
+        mainMenu: 'メインメニュー',
+        newGame: 'ニューゲーム',
+        continue: 'つづける',
+        levelSelect: 'レベル選択',
+        credits: 'クレジット',
+        planetBuilder: '惑星ビルダー',
+        comingSoon: '近日公開',
+
         options: 'オプション',
         soundEffects: '効果音',
         music: '音楽',
@@ -497,6 +553,14 @@ const translations = {
         stopSpinner: 'ルーレットを止める'
     },
     ar: {
+        mainMenu: 'القائمة الرئيسية',
+        newGame: 'لعبة جديدة',
+        continue: 'استمرار',
+        levelSelect: 'تحديد المستوى',
+        credits: 'الأسماء المشاركة',
+        planetBuilder: 'منشئ الكواكب',
+        comingSoon: 'قريباً',
+
         options: 'الخيارات',
         soundEffects: 'المؤثرات الصوتية',
         music: 'الموسيقى',

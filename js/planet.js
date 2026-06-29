@@ -1670,21 +1670,13 @@ function getNextPlanet(planet) {
 
 function updatePlanetButtons() {
     PLANET_ORDER.forEach((planet, index) => {
-        const btn = document.getElementById(`btn-planet-${planet}`);
+        const btn = document.querySelector(`.level-select-btn[data-planet="${planet}"]`);
         if (!btn) return;
 
         const isUnlocked = unlockedPlanets.includes(planet);
         if (isUnlocked) {
             btn.classList.remove('locked');
             btn.removeAttribute('data-tooltip');
-            const iconSpan = btn.querySelector('.planet-btn-icon');
-            if (iconSpan) {
-                if (planet === 'earth') iconSpan.textContent = '🌍';
-                else if (planet === 'mars') iconSpan.textContent = '🔴';
-                else if (planet === 'neptune') iconSpan.textContent = '🔵';
-                else if (planet === 'jupiter') iconSpan.textContent = '🪐';
-                else if (planet === 'sun') iconSpan.textContent = '☀️';
-            }
         } else {
             btn.classList.add('locked');
             const prevPlanet = PLANET_ORDER[index - 1];
@@ -1693,11 +1685,6 @@ function updatePlanetButtons() {
             const destroyVerb = (tLock.annihilate || 'DESTROY').toUpperCase();
             const toUnlockText = (tLock.toUnlock || 'TO UNLOCK!').toUpperCase();
             btn.setAttribute('data-tooltip', `${destroyVerb} ${prevName}\n${toUnlockText}`);
-
-            const iconSpan = btn.querySelector('.planet-btn-icon');
-            if (iconSpan) {
-                iconSpan.textContent = '🔒';
-            }
         }
     });
 }
