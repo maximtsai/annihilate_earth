@@ -5195,9 +5195,61 @@ async function run(mode) {
         setTimeout(updateWeaponScrollButtons, 500);
     }
 
+    // Photo Mode / Cinematic HUD Toggle
+    let uiHidden = false;
+    let uiNotificationTimeout = null;
+
+    function toggleUI() {
+        const uiContainer = document.getElementById('ui-container');
+        if (!uiContainer) return;
+
+        uiHidden = !uiHidden;
+        if (uiHidden) {
+            uiContainer.classList.add('ui-hidden-mode');
+            
+            // Remove existing notification if any
+            const oldNotif = document.getElementById('ui-hidden-notification');
+            if (oldNotif) oldNotif.remove();
+            if (uiNotificationTimeout) clearTimeout(uiNotificationTimeout);
+
+            // Create new notification
+            const notif = document.createElement('div');
+            notif.id = 'ui-hidden-notification';
+            notif.textContent = 'UI Hidden with "H"';
+            
+            // Append to game-world so it's visible even when ui-container is hidden
+            const gameWorld = document.getElementById('game-world') || document.body;
+            gameWorld.appendChild(notif);
+
+            // Trigger fade out after a short delay (so transition works)
+            requestAnimationFrame(() => {
+                // Force reflow
+                notif.offsetHeight;
+                notif.classList.add('ui-hidden-fade');
+            });
+
+            // Remove element after 3 seconds
+            uiNotificationTimeout = setTimeout(() => {
+                notif.remove();
+            }, 3000);
+        } else {
+            uiContainer.classList.remove('ui-hidden-mode');
+            const notif = document.getElementById('ui-hidden-notification');
+            if (notif) notif.remove();
+            if (uiNotificationTimeout) clearTimeout(uiNotificationTimeout);
+        }
+    }
+
     // Keyboard shortcut hooks
     window.addEventListener('keydown', (e) => {
         if (window.gamePausedForAd) return;
+
+        // Toggle UI / Photo Mode
+        if (e.key === 'h' || e.key === 'H') {
+            toggleUI();
+            return;
+        }
+
         if (e.key === 'Escape') {
             const optionsOverlay = document.getElementById('options-overlay');
             if (optionsOverlay && optionsOverlay.classList.contains('show')) {
