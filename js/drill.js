@@ -7,14 +7,15 @@ function updateDrills(deltaTime, dt60) {
     for (let i = activeDrills.length - 1; i >= 0; i--) {
         const drill = activeDrills[i];
 
-        // 1. If the drill has already impacted, its timers tick down continuously (does not pause while falling)
-        if (drill.hasImpacted) {
-            if (drill.state === 'drilling' || drill.state === 'falling') {
-                drill.drillTimer -= deltaTime;
-                drill.explosionTimer -= deltaTime;
+        // 1. Timers tick down continuously from creation
+        if (drill.state === 'drilling' || drill.state === 'falling') {
+            drill.drillTimer -= deltaTime;
 
+            // Only emit mini-explosions if the drill has already impacted
+            if (drill.hasImpacted) {
+                drill.explosionTimer -= deltaTime;
                 if (drill.explosionTimer <= 0) {
-                    const interval = getConfigValue('weapons.drill.explosionInterval', 0.12);
+                    const interval = getConfigValue('weapons.drill.explosionInterval', 0.15);
                     const size = getConfigValue('weapons.drill.explosionSize', 10);
                     drill.explosionTimer = interval;
 
@@ -22,29 +23,29 @@ function updateDrills(deltaTime, dt60) {
                     const tipX = drill.x + Math.cos(drill.angle) * 12;
                     const tipY = drill.y + Math.sin(drill.angle) * 12;
                     const localTip = screenToLocal(tipX, tipY, CENTER_X, CENTER_Y, planetRotation);
-                    
+
                     createExplosion(localTip.x, localTip.y, size, 3, 'drill', false, true);
-                    
+
                     // Drilling sound effect
-                    soundManager.play('sfx_ui_switch', false, 0.3, 800 + Math.random() * 400);
+                    soundManager.play('sfx_ui_switch', false, 0.3, 300 + Math.random() * 300);
                 }
+            }
 
-                if (drill.drillTimer <= 0) {
-                    drill.state = 'anticipation';
-                    drill.anticipationTimer = 0.9;
-                }
-            } else if (drill.state === 'anticipation') {
-                drill.anticipationTimer -= deltaTime;
+            if (drill.drillTimer <= 0) {
+                drill.state = 'anticipation';
+                drill.anticipationTimer = 0.9;
+            }
+        } else if (drill.state === 'anticipation') {
+            drill.anticipationTimer -= deltaTime;
 
-                if (drill.anticipationTimer <= 0) {
-                    // Final detonation: 54px radius explosion (using asteroid type for big impact sound)
-                    const local = screenToLocal(drill.x, drill.y, CENTER_X, CENTER_Y, planetRotation);
-                    createExplosion(local.x, local.y, 54, 25, 'asteroid', false, true);
+            if (drill.anticipationTimer <= 0) {
+                // Final detonation: 54px radius explosion (using asteroid type for big impact sound)
+                const local = screenToLocal(drill.x, drill.y, CENTER_X, CENTER_Y, planetRotation);
+                createExplosion(local.x, local.y, 54, 25, 'asteroid', false, true);
 
-                    // Remove the drill from play
-                    activeDrills.splice(i, 1);
-                    continue;
-                }
+                // Remove the drill from play
+                activeDrills.splice(i, 1);
+                continue;
             }
         }
 
@@ -97,10 +98,10 @@ function updateDrills(deltaTime, dt60) {
                     // Transition to drilling or anticipation
                     drill.hasImpacted = true;
                     drill.state = drill.drillTimer > 0 ? 'drilling' : 'anticipation';
-                    if (drill.state === 'drilling') {
-                        soundManager.play('sfx_laser_fire', false, 0.4);
-                    }
-                    
+                    // if (drill.state === 'drilling') {
+                    //     soundManager.play('sfx_laser_fire', false, 0.4);
+                    // }
+
                     // Save stuck local coordinate
                     const localStuck = screenToLocal(drill.x, drill.y, CENTER_X, CENTER_Y, planetRotation);
                     drill.localX = localStuck.x;
@@ -122,16 +123,18 @@ function updateDrills(deltaTime, dt60) {
             drill.y = CENTER_Y + (dxLocal * sin + dyLocal * cos);
 
             // Check if terrain underneath the drill body is destroyed (meaning it should fall again)
-            const localCheck = screenToLocal(drill.x, drill.y, CENTER_X, CENTER_Y, planetRotation);
-            const pxCheck = Math.floor(localCheck.x);
-            const pyCheck = Math.floor(localCheck.y);
+            if (drill.state === 'drilling') {
+                const localCheck = screenToLocal(drill.x, drill.y, CENTER_X, CENTER_Y, planetRotation);
+                const pxCheck = Math.floor(localCheck.x);
+                const pyCheck = Math.floor(localCheck.y);
 
-            if (pxCheck < 0 || pxCheck >= PLANET_CANVAS_SIZE || pyCheck < 0 || pyCheck >= PLANET_CANVAS_SIZE || !isSolidPixel(pxCheck, pyCheck, sharedPlanetData)) {
-                // Ground destroyed! Fall back down
-                drill.state = 'falling';
-                drill.vx = 0;
-                drill.vy = 0;
-                continue;
+                if (pxCheck < 0 || pxCheck >= PLANET_CANVAS_SIZE || pyCheck < 0 || pyCheck >= PLANET_CANVAS_SIZE || !isSolidPixel(pxCheck, pyCheck, sharedPlanetData)) {
+                    // Ground destroyed! Fall back down
+                    drill.state = 'falling';
+                    drill.vx = 0;
+                    drill.vy = 0;
+                    continue;
+                }
             }
         }
 
@@ -182,7 +185,7 @@ function drawDrill(ctx, drill) {
     ctx.beginPath();
     ctx.rect(-16, -10, 16, 20);
     ctx.clip(); // Restrict thread drawing to body bounds
-    
+
     ctx.beginPath();
     for (let x = -32; x < 16; x += 6) {
         ctx.moveTo(x + threadOffset, -11);
@@ -223,7 +226,7 @@ function drawDrill(ctx, drill) {
     if (drill.state === 'anticipation') {
         const progress = (0.9 - drill.anticipationTimer) / 0.9;
         const opacity = 0.2 + 0.8 * Math.min(1, Math.max(0, progress));
-        
+
         ctx.save();
         ctx.strokeStyle = `rgba(255, 0, 0, ${opacity})`;
         ctx.lineWidth = 3.0;

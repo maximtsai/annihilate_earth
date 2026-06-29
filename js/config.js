@@ -73,8 +73,8 @@ window.gameConfig = {
         "drill": {
             "speed": 8,
             "drillDuration": 3.5,
-            "explosionInterval": 0.15,
-            "explosionSize": 10,
+            "explosionInterval": 0.165,
+            "explosionSize": 9,
             "particleCount": 12
         }
     },
