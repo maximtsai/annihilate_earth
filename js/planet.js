@@ -1505,7 +1505,7 @@ function triggerVictory() {
                 vicSubtitle.textContent = t.sunSubtitle;
             } else if (currentPlanet === 'neutron_star') {
                 vicTitle.textContent = t.neutron_starAnnihilated || 'NEUTRON STAR ANNIHILATED';
-                vicSubtitle.textContent = t.neutron_starSubtitle || 'You annihilated the Neutron Star! Its superdense degenerate matter has dispersed.';
+                vicSubtitle.textContent = t.neutron_starSubtitle;
             } else {
                 vicTitle.textContent = t.earthAnnihilated;
                 vicSubtitle.textContent = t.earthSubtitle;
