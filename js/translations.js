@@ -67,7 +67,8 @@ const translations = {
         full: 'FULL',
         switchWeapons: 'CLICK TO\nSWITCH WEAPONS',
         newWeapon: 'NEW WEAPON',
-        stopSpinner: 'STOP SPINNER'
+        stopSpinner: 'STOP SPINNER',
+        siteLockMessage: 'FULL VERSION ON CRAZYGAMES!'
     },
     'zh-CN': {
         options: '设置',
@@ -137,7 +138,8 @@ const translations = {
         full: '全',
         switchWeapons: '点击切换\n武器',
         newWeapon: '新武器',
-        stopSpinner: '停止转盘'
+        stopSpinner: '停止转盘',
+        siteLockMessage: '完整版仅限 CrazyGames！'
     },
     'zh-TW': {
         options: '設定',
@@ -207,7 +209,8 @@ const translations = {
         full: '全',
         switchWeapons: '點擊切換\n武器',
         newWeapon: '新武器',
-        stopSpinner: '停止轉盤'
+        stopSpinner: '停止轉盤',
+        siteLockMessage: '完整版僅限 CrazyGames！'
     },
     es: {
         options: 'OPCIONES',
@@ -277,7 +280,8 @@ const translations = {
         full: 'COMPLETO',
         switchWeapons: 'TOCA PARA\nCAMBIAR ARMA',
         newWeapon: 'NUEVA ARMA',
-        stopSpinner: 'DETENER RULETA'
+        stopSpinner: 'DETENER RULETA',
+        siteLockMessage: '¡VERSIÓN COMPLETA EN CRAZYGAMES!'
     },
     fr: {
         options: 'OPTIONS',
@@ -347,7 +351,8 @@ const translations = {
         full: 'PLEIN',
         switchWeapons: 'CLIQUER POUR\nCHANGER D\'ARME',
         newWeapon: 'NOUVELLE ARME',
-        stopSpinner: 'ARRÊTER LA ROUE'
+        stopSpinner: 'ARRÊTER LA ROUE',
+        siteLockMessage: 'VERSION COMPLÈTE SUR CRAZYGAMES !'
     },
     ru: {
         options: 'НАСТРОЙКИ',
@@ -417,7 +422,8 @@ const translations = {
         full: 'ПОЛНОЕ',
         switchWeapons: 'НАЖМИТЕ, ЧТОБЫ\nСМЕНИТЬ ОРУЖИЕ',
         newWeapon: 'НОВОЕ ОРУЖИЕ',
-        stopSpinner: 'ОСТАНОВИТЬ КОЛЕСО'
+        stopSpinner: 'ОСТАНОВИТЬ КОЛЕСО',
+        siteLockMessage: 'ПОЛНАЯ ВЕРСИЯ НА CRAZYGAMES!'
     },
     ja: {
         options: 'オプション',
@@ -487,7 +493,8 @@ const translations = {
         full: '全',
         switchWeapons: 'タップして\n武器を切替',
         newWeapon: '新武器',
-        stopSpinner: 'ルーレットを止める'
+        stopSpinner: 'ルーレットを止める',
+        siteLockMessage: '正規版はCrazyGamesで！'
     },
     ar: {
         options: 'الخيارات',
@@ -557,6 +564,7 @@ const translations = {
         full: 'كامل',
         switchWeapons: 'اضغط للتبديل\nالسلاح',
         newWeapon: 'سلاح جديد',
-        stopSpinner: 'أوقف العجلة'
+        stopSpinner: 'أوقف العجلة',
+        siteLockMessage: 'النسخة الكاملة على CrazyGames!'
     }
 };

@@ -178,10 +178,19 @@ class WeaponSpinner {
     start() {
         if (this.lockedWeapons.length === 0) return;
 
-        // Site lock check: allow local dev, otherwise check if the word "crazygames" is in the URL/referrer
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '';
-        const hasCrazyGames = window.location.href.includes('crazygames') || (document.referrer && document.referrer.includes('crazygames'));
-        if (!isLocal && !hasCrazyGames) {
+        // Site lock check: allow local dev, otherwise check if hosted on valid CrazyGames domains
+        const isLocal = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' || 
+                        window.location.hostname === '';
+        
+        const isCrazyGamesDomain = () => {
+            const hostname = window.location.hostname;
+            const parts = hostname.split(".");
+            const idx = parts.indexOf("crazygames");
+            return idx !== -1 && idx >= parts.length - 3;
+        };
+
+        if (!isLocal && !isCrazyGamesDomain()) {
             return;
         }
 

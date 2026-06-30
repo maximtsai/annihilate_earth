@@ -1403,6 +1403,23 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
 
 // Trigger Victory splash
 function triggerVictory() {
+    // Site lock: only grant victory on an authorized CrazyGames domain (or local dev)
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
+    const hostParts = hostname.split('.');
+    const crazyGamesIdx = hostParts.indexOf('crazygames');
+    const isCrazyGamesDomain = crazyGamesIdx !== -1 && crazyGamesIdx >= hostParts.length - 3;
+    if (!isLocal && !isCrazyGamesDomain) {
+        const sitelockEl = document.getElementById('sitelock-message');
+        if (sitelockEl) {
+            const t = translations[currentLanguage] || translations['en'];
+            sitelockEl.textContent = t.siteLockMessage || translations['en'].siteLockMessage;
+            sitelockEl.classList.add('show');
+            sitelockEl.setAttribute('aria-hidden', 'false');
+        }
+        return;
+    }
+
     const previousBest = bestTimes[currentPlanet];
     victoryTriggered = true;
     soundManager.play('sfx_victory');
