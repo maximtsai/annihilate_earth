@@ -1713,7 +1713,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     if (typeof weaponAmmo !== 'undefined') {
         weaponAmmo.nuke = 18;
         weaponAmmo.bowling = 15;
-        weaponAmmo.mysterybox = 3;
+        weaponAmmo.mysterybox = 20;
         weaponAmmo.drill = 5;
         if (typeof updateAmmoUI === 'function') {
             updateAmmoUI();
@@ -1753,6 +1753,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     activeStars = [];
     activeStarProjectiles = [];
     activeMysteryBoxes = [];
+    activeFallingDucks = [];
     if (typeof hasSpawnedBlackHoleFromMysteryBox !== 'undefined') {
         hasSpawnedBlackHoleFromMysteryBox = false;
     }

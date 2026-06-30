@@ -231,17 +231,17 @@ html {
     border-radius: 0px !important;
     color: rgba(0, 217, 255, 0.8);
     font-family: 'Orbitron', sans-serif;
-    font-size: calc((14px + var(--planet-font-adjust)) * var(--ui-scale));
+    font-size: calc((15px + var(--planet-font-adjust)) * var(--ui-scale));
     font-weight: 700;
-    padding: calc(11px * var(--ui-scale)) calc(9px * var(--ui-scale)) calc(8px * var(--ui-scale)) calc(9px * var(--ui-scale));
-    width: calc(98px * var(--ui-scale));
-    height: calc(79px * var(--ui-scale));
+    padding: calc(12px * var(--ui-scale)) calc(10px * var(--ui-scale)) calc(9px * var(--ui-scale)) calc(10px * var(--ui-scale));
+    width: calc(106px * var(--ui-scale));
+    height: calc(85px * var(--ui-scale));
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: calc(6px * var(--ui-scale));
+    gap: calc(6.5px * var(--ui-scale));
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -250,7 +250,7 @@ html {
 }
 
 .planet-btn-icon {
-    font-size: calc((30px + var(--planet-font-adjust)) * var(--ui-scale));
+    font-size: calc((32.5px + var(--planet-font-adjust)) * var(--ui-scale));
     /* Make the planet icon prominent and large */
     line-height: 1;
     transition: filter 250ms ease;
@@ -262,15 +262,15 @@ html {
     }
 
     .planet-btn {
-        width: calc(92px * var(--ui-scale));
-        height: calc(74px * var(--ui-scale));
-        font-size: calc((12.5px + var(--planet-font-adjust)) * var(--ui-scale));
-        padding: calc(9px * var(--ui-scale)) calc(7.5px * var(--ui-scale)) calc(6.5px * var(--ui-scale)) calc(7.5px * var(--ui-scale));
-        gap: calc(5px * var(--ui-scale));
+        width: calc(99px * var(--ui-scale));
+        height: calc(80px * var(--ui-scale));
+        font-size: calc((13.5px + var(--planet-font-adjust)) * var(--ui-scale));
+        padding: calc(10px * var(--ui-scale)) calc(8px * var(--ui-scale)) calc(7px * var(--ui-scale)) calc(8px * var(--ui-scale));
+        gap: calc(5.4px * var(--ui-scale));
     }
 
     .planet-btn-icon {
-        font-size: calc((28px + var(--planet-font-adjust)) * var(--ui-scale));
+        font-size: calc((30px + var(--planet-font-adjust)) * var(--ui-scale));
     }
 
     .lang-cjk .planet-btn {
@@ -429,8 +429,8 @@ html {
     position: absolute;
     right: 24px;
     top: 15px;
-    width: calc(64px * var(--ui-scale));
-    height: calc(64px * var(--ui-scale));
+    width: calc(70px * var(--ui-scale));
+    height: calc(70px * var(--ui-scale));
     padding: 1.5px;
     background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
@@ -472,8 +472,8 @@ html {
 }
 
 .options-toggle svg {
-    width: calc(40px * var(--ui-scale));
-    height: calc(40px * var(--ui-scale));
+    width: calc(44px * var(--ui-scale));
+    height: calc(44px * var(--ui-scale));
     fill: #ffffff;
     filter: drop-shadow(0 0 4px rgba(0, 238, 255, 0.6));
     transition: filter 250ms ease;
@@ -1630,15 +1630,15 @@ html {
     }
 
     .planet-btn {
-        font-size: calc((20px + var(--planet-font-adjust)) * var(--ui-scale));
-        width: calc(140px * var(--ui-scale));
-        height: calc(108px * var(--ui-scale));
-        padding: calc(12px * var(--ui-scale)) calc(17px * var(--ui-scale));
+        font-size: calc((21.5px + var(--planet-font-adjust)) * var(--ui-scale));
+        width: calc(151px * var(--ui-scale));
+        height: calc(117px * var(--ui-scale));
+        padding: calc(13px * var(--ui-scale)) calc(18.5px * var(--ui-scale));
         flex-shrink: 0;
     }
 
     .planet-btn-icon {
-        font-size: calc((44px + var(--planet-font-adjust)) * var(--ui-scale));
+        font-size: calc((47.5px + var(--planet-font-adjust)) * var(--ui-scale));
     }
 
     .lang-cjk .planet-btn {
@@ -1752,13 +1752,13 @@ html {
     }
 
     .options-toggle-wrapper {
-        width: calc(80px * var(--ui-scale));
-        height: calc(80px * var(--ui-scale));
+        width: calc(88px * var(--ui-scale));
+        height: calc(88px * var(--ui-scale));
     }
 
     .options-toggle svg {
-        width: calc(50px * var(--ui-scale));
-        height: calc(50px * var(--ui-scale));
+        width: calc(55px * var(--ui-scale));
+        height: calc(55px * var(--ui-scale));
     }
 
     /* Scaling Options popup */
@@ -2282,7 +2282,7 @@ html.no-glows *::after {
 
 #switch-weapon-tooltip .tooltip-label {
     font-family: 'Orbitron', sans-serif;
-    font-size: calc(26px * var(--ui-scale));
+    font-size: calc(22px * var(--ui-scale));
     font-weight: 900;
     letter-spacing: calc(1.5px * var(--ui-scale));
     text-transform: uppercase;
@@ -2313,7 +2313,7 @@ html.no-glows *::after {
 }
 
 #switch-weapon-tooltip.tooltip-portrait .tooltip-label {
-    font-size: calc(32px * var(--ui-scale));
+    font-size: calc(28px * var(--ui-scale));
 }
 
 /* Landscape: label on left, arrow pointing RIGHT */

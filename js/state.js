@@ -1,5 +1,5 @@
 var canvas, ctx, hiddenCanvas, hiddenCtx, bgCanvas, bgCtx, soundManager, fistImage;
-var spriteOrange, spriteBrightYellow, spriteSmokeStandard, spriteSmokeMissile, spriteVermillionRed, spriteLightOrange, spriteWhiteGold;
+var spriteOrange, spriteBrightYellow, spriteSmokeStandard, spriteSmokeMissile, spriteVermillionRed, spriteLightOrange, spriteWhiteGold, spriteDuck;
 var supportsGlow = true;
 var earthGlow, marsGlow, neptuneGlow, jupiterGlow, neutronStarGlow, sunCorona, sunCoreGlow, magmaCoreGlow;
 var SCREEN_W = 1600;
@@ -461,7 +461,7 @@ let showPointer = false;
 let weaponAmmo = {
     nuke: 18,
     bowling: 15,
-    mysterybox: 3,
+    mysterybox: 20,
     drill: 5
 };
 
@@ -540,6 +540,7 @@ let activeFistVisualExplosions = [];
 let activeStars = [];
 let activeStarProjectiles = [];
 let activeMysteryBoxes = [];
+let activeFallingDucks = [];
 let activeDrills = [];
 let fistStuckCount = 0;
 let isHolding = false;

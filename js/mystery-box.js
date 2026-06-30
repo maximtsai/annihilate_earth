@@ -24,24 +24,50 @@ function spawnMysteryBoxDissipateSmoke(x, y) {
 const mysteryBoxEffects = [
     {
         name: "small_explosion",
-        // Effect 1: flash red for 0.6s before creating a 50 unit explosion
+        // Effect 1: fly up and spawn a falling duck of size 50
         trigger: function (box) {
-            box.state = 'flashing_red';
-            box.flashTimer = 0.6;
+            box.state = 'flying_up_duck';
+            box.flyTargetRadius = Math.sqrt((box.x - CENTER_X) * (box.x - CENTER_X) + (box.y - CENTER_Y) * (box.y - CENTER_Y)) + 180;
+            box.vx = 0;
+            box.vy = 0;
             box.targetExplosionSize = 50;
             box.targetShakeIntensity = 10;
-            box.targetWeaponType = 'asteroid';
         }
     },
     {
         name: "large_explosion",
-        // Effect 2: flash red for 0.9s before creating a 100 unit explosion
+        // Effect 2: fly up and spawn a falling duck of size 85
         trigger: function (box) {
-            box.state = 'flashing_red';
-            box.flashTimer = 0.9;
-            box.targetExplosionSize = 100;
-            box.targetShakeIntensity = 25;
-            box.targetWeaponType = 'moon';
+            box.state = 'flying_up_duck';
+            box.flyTargetRadius = Math.sqrt((box.x - CENTER_X) * (box.x - CENTER_X) + (box.y - CENTER_Y) * (box.y - CENTER_Y)) + 180;
+            box.vx = 0;
+            box.vy = 0;
+            box.targetExplosionSize = 85;
+            box.targetShakeIntensity = 20;
+        }
+    },
+    {
+        name: "huge_explosion",
+        // Effect: fly up and spawn a falling duck of size 120
+        trigger: function (box) {
+            box.state = 'flying_up_duck';
+            box.flyTargetRadius = Math.sqrt((box.x - CENTER_X) * (box.x - CENTER_X) + (box.y - CENTER_Y) * (box.y - CENTER_Y)) + 180;
+            box.vx = 0;
+            box.vy = 0;
+            box.targetExplosionSize = 120;
+            box.targetShakeIntensity = 32;
+        }
+    },
+    {
+        name: "tiny_explosion",
+        // Effect: fly up and spawn a falling duck of size 10
+        trigger: function (box) {
+            box.state = 'flying_up_duck';
+            box.flyTargetRadius = Math.sqrt((box.x - CENTER_X) * (box.x - CENTER_X) + (box.y - CENTER_Y) * (box.y - CENTER_Y)) + 180;
+            box.vx = 0;
+            box.vy = 0;
+            box.targetExplosionSize = 10;
+            box.targetShakeIntensity = 0;
         }
     },
     {
@@ -332,7 +358,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
             continue;
         }
 
-        if (box.state === 'flying_up' || box.state === 'flying_up_nukes' || box.state === 'flying_up_worm' || box.state === 'flying_up_blackhole' || box.state === 'flying_up_excalibur' || box.state === 'flying_up_cthulhu' || box.state === 'flying_up_lasers') {
+        if (box.state === 'flying_up' || box.state === 'flying_up_nukes' || box.state === 'flying_up_worm' || box.state === 'flying_up_blackhole' || box.state === 'flying_up_excalibur' || box.state === 'flying_up_cthulhu' || box.state === 'flying_up_lasers' || box.state === 'flying_up_duck') {
             // Fly up (away from center)
             const dxCenter = box.x - CENTER_X;
             const dyCenter = box.y - CENTER_Y;
@@ -525,6 +551,11 @@ function updateMysteryBoxes(deltaTime, dt60) {
                     box.laserDuration = 3.0; // 3 seconds
                     box.laserLaunchTimer = 0.0;
                     soundManager.play('sfx_laser_fire', true, 0.6);
+                } else if (box.state === 'flying_up_duck') {
+                    // Poof in dust/smoke and spawn the gently falling duck
+                    spawnMysteryBoxDissipateSmoke(box.x, box.y);
+                    spawnFallingDuck(box.x, box.y, box.targetExplosionSize, box.targetShakeIntensity);
+                    activeMysteryBoxes.splice(i, 1);
                 }
             }
             continue;
@@ -604,6 +635,151 @@ function updateMysteryBoxes(deltaTime, dt60) {
         // Remove if out of bounds (too far)
         if (dist > 1000) {
             activeMysteryBoxes.splice(i, 1);
+        }
+    }
+}
+
+function spawnFallingDuck(x, y, explosionSize, shakeIntensity) {
+    activeFallingDucks.push({
+        x: x,
+        y: y,
+        vx: 0,
+        vy: 0,
+        angle: Math.atan2(y - CENTER_Y, x - CENTER_X) + Math.PI / 2, // point bottom/top correctly
+        state: 'falling',
+        timer: 2.5, // 2.5s of gentle falling
+        flashTimer: explosionSize === 10 ? 0.45 : (explosionSize === 50 ? 0.6 : (explosionSize === 85 ? 0.8 : 1.1)),
+        maxFlashTimer: explosionSize === 10 ? 0.45 : (explosionSize === 50 ? 0.6 : (explosionSize === 85 ? 0.8 : 1.1)),
+        explosionSize: explosionSize,
+        shakeIntensity: shakeIntensity,
+        isStuck: false,
+        localX: 0,
+        localY: 0,
+        stuckAngle: 0
+    });
+}
+
+function updateFallingDucks(deltaTime, dt60) {
+    const sharedPlanetData = getSharedPlanetData();
+    if (!sharedPlanetData) return;
+
+    for (let i = activeFallingDucks.length - 1; i >= 0; i--) {
+        const duck = activeFallingDucks[i];
+
+        if (duck.state === 'falling') {
+            duck.timer -= deltaTime;
+            if (duck.timer <= 0) {
+                duck.state = 'flashing_red';
+            }
+        } else if (duck.state === 'flashing_red') {
+            duck.flashTimer -= deltaTime;
+            if (duck.flashTimer <= 0) {
+                // Explode!
+                const localDuck = screenToLocal(duck.x, duck.y, CENTER_X, CENTER_Y, planetRotation);
+
+                createExplosion(localDuck.x, localDuck.y, duck.explosionSize, duck.shakeIntensity, duck.explosionSize === 10 ? 'missile' : (duck.explosionSize === 50 ? 'asteroid' : 'moon'), false, true);
+
+                soundManager.play('sfx_quack', false, 1.0);
+
+                // Create a mushroom cloud rising away from the planet center
+                const dxCenter = duck.x - CENTER_X;
+                const dyCenter = duck.y - CENTER_Y;
+                const distCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+                const ux = distCenter > 0 ? dxCenter / distCenter : 0;
+                const uy = distCenter > 0 ? dyCenter / distCenter : 1;
+                const stemLength = duck.explosionSize * 1.4;
+                const cloudAngle = Math.atan2(uy, ux);
+
+                // 1. Stem particles
+                for (let s = 0; s < 15; s++) {
+                    const progress = s / 15;
+                    const spawnDist = progress * stemLength;
+                    const pX = duck.x + ux * spawnDist;
+                    const pY = duck.y + uy * spawnDist;
+                    const dispersion = (Math.random() - 0.5) * 0.8;
+                    const vX = ux * (1.5 + Math.random() * 2.0) + (-uy) * dispersion;
+                    const vY = uy * (1.5 + Math.random() * 2.0) + ux * dispersion;
+
+                    particles.push({
+                        x: pX,
+                        y: pY,
+                        vx: vX,
+                        vy: vY,
+                        life: 1.0,
+                        maxLife: (Math.random() * 0.6 + 0.4) * 2.0,
+                        size: Math.random() * (duck.explosionSize * 0.3) + (duck.explosionSize * 0.2),
+                        color: Math.random() < 0.4 ? '#ff7700' : (Math.random() < 0.7 ? '#555555' : '#888888'),
+                        type: 'smoke'
+                    });
+                }
+
+                // 2. Cap particles
+                const capX = duck.x + ux * stemLength;
+                const capY = duck.y + uy * stemLength;
+                for (let c = 0; c < 25; c++) {
+                    const angle = cloudAngle + (Math.random() - 0.5) * Math.PI;
+                    const speed = (0.5 + Math.random() * 2.5);
+                    const vX = Math.cos(angle) * speed + ux * 0.8;
+                    const vY = Math.sin(angle) * speed + uy * 0.8;
+
+                    particles.push({
+                        x: capX + (Math.random() - 0.5) * 15,
+                        y: capY + (Math.random() - 0.5) * 15,
+                        vx: vX,
+                        vy: vY,
+                        life: 1.0,
+                        maxLife: (Math.random() * 0.8 + 0.5) * 2.0,
+                        size: Math.random() * (duck.explosionSize * 0.5) + (duck.explosionSize * 0.3),
+                        color: Math.random() < 0.3 ? '#ffaa00' : (Math.random() < 0.6 ? '#666666' : '#999999'),
+                        type: 'smoke'
+                    });
+                }
+
+                activeFallingDucks.splice(i, 1);
+                continue;
+            }
+        }
+
+        // Apply gentle movement/rotation
+        const local = screenToLocal(duck.x, duck.y, CENTER_X, CENTER_Y, planetRotation);
+        const px = Math.floor(local.x);
+        const py = Math.floor(local.y);
+        let onSurface = false;
+        if (px >= 0 && px < PLANET_CANVAS_SIZE && py >= 0 && py < PLANET_CANVAS_SIZE) {
+            if (isSolidPixel(px, py, sharedPlanetData)) {
+                onSurface = true;
+            }
+        }
+
+        if (!onSurface && !duck.isStuck) {
+            const dx = CENTER_X - duck.x;
+            const dy = CENTER_Y - duck.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 0) {
+                // Gentle fall speed
+                const fallSpeed = 1.0 * dt60;
+                duck.x += (dx / dist) * fallSpeed;
+                duck.y += (dy / dist) * fallSpeed;
+            }
+            // Rotate gently
+            duck.angle += 0.05 * dt60;
+        } else {
+            if (!duck.isStuck) {
+                duck.isStuck = true;
+                duck.localX = local.x;
+                duck.localY = local.y;
+                duck.stuckAngle = Math.atan2(duck.y - CENTER_Y, duck.x - CENTER_X) + Math.PI / 2 - planetRotation;
+            }
+        }
+
+        if (duck.isStuck) {
+            const cos = Math.cos(planetRotation);
+            const sin = Math.sin(planetRotation);
+            const dxLocal = duck.localX - planetCenterX;
+            const dyLocal = duck.localY - planetCenterY;
+            duck.x = CENTER_X + (dxLocal * cos - dyLocal * sin);
+            duck.y = CENTER_Y + (dxLocal * sin + dyLocal * cos);
+            duck.angle = duck.stuckAngle + planetRotation;
         }
     }
 }
