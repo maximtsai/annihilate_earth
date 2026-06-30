@@ -1408,6 +1408,11 @@ function triggerVictory() {
     soundManager.play('sfx_victory');
     if (window.PlatformBridge) {
         window.PlatformBridge.gameplayStop();
+        if (currentPlanet === 'sun' || currentPlanet === 'neutron_star') {
+            if (typeof window.PlatformBridge.happytime === 'function') {
+                window.PlatformBridge.happytime();
+            }
+        }
     }
 
     screenShake = {

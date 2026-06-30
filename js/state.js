@@ -222,10 +222,17 @@ function saveUnlockedWeapons() {
         state.unlockedWeapons = unlockedWeapons;
     });
     try {
-        const saved = localStorage.getItem('annihilate_earth_save');
+        const saved = (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) ?
+                      window.CrazyGames.SDK.data.getItem('annihilate_earth_save') :
+                      localStorage.getItem('annihilate_earth_save');
         const state = saved ? JSON.parse(saved) : {};
         state.unlockedWeapons = unlockedWeapons;
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        const serialized = JSON.stringify(state);
+        if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+            window.CrazyGames.SDK.data.setItem('annihilate_earth_save', serialized);
+        } else {
+            localStorage.setItem('annihilate_earth_save', serialized);
+        }
     } catch (e) {
         console.warn('Failed to save unlocked weapons immediately:', e);
     }
@@ -236,10 +243,17 @@ function saveUnlockedTooltipShown() {
         state.unlockedTooltipShown = unlockedTooltipShown;
     });
     try {
-        const saved = localStorage.getItem('annihilate_earth_save');
+        const saved = (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) ?
+                      window.CrazyGames.SDK.data.getItem('annihilate_earth_save') :
+                      localStorage.getItem('annihilate_earth_save');
         const state = saved ? JSON.parse(saved) : {};
         state.unlockedTooltipShown = unlockedTooltipShown;
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        const serialized = JSON.stringify(state);
+        if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+            window.CrazyGames.SDK.data.setItem('annihilate_earth_save', serialized);
+        } else {
+            localStorage.setItem('annihilate_earth_save', serialized);
+        }
     } catch (e) {
         console.warn('Failed to save unlocked tooltip state:', e);
     }

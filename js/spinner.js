@@ -177,10 +177,10 @@ class WeaponSpinner {
     start() {
         if (this.lockedWeapons.length === 0) return;
 
-        // Site lock check: allow local dev, otherwise check if the word "poki" is in the URL/referrer
+        // Site lock check: allow local dev, otherwise check if the word "crazygames" is in the URL/referrer
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '';
-        const hasPoki = window.location.href.includes('poki') || (document.referrer && document.referrer.includes('poki'));
-        if (!isLocal && !hasPoki) {
+        const hasCrazyGames = window.location.href.includes('crazygames') || (document.referrer && document.referrer.includes('crazygames'));
+        if (!isLocal && !hasCrazyGames) {
             return;
         }
 

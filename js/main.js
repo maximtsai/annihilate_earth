@@ -5651,6 +5651,13 @@ async function run(mode) {
             }
 
             // Clear saved progress
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+                try {
+                    window.CrazyGames.SDK.data.removeItem('annihilate_earth_save');
+                } catch (err) {
+                    console.warn('Failed to remove item from CrazyGames SDK:', err);
+                }
+            }
             localStorage.removeItem('annihilate_earth_save');
 
             // Reset state variables

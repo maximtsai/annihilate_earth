@@ -19,6 +19,10 @@ window.PlatformBridge = {
         console.log("[PlatformBridge] Gameplay Stop triggered.");
     },
 
+    happytime: function() {
+        console.log("[PlatformBridge] Local happytime triggered.");
+    },
+
     showAdBreak: function(onComplete) {
         console.log("[PlatformBridge] Requesting commercial/ad break...");
         

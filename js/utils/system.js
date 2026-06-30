@@ -74,20 +74,30 @@ function toggleFullscreen(enable) {
 // 4. Configuration & State Persistence Helpers
 const saveGameState = async (state) => {
     try {
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        const serialized = JSON.stringify(state);
+        if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+            window.CrazyGames.SDK.data.setItem('annihilate_earth_save', serialized);
+        } else {
+            localStorage.setItem('annihilate_earth_save', serialized);
+        }
         return { success: true };
     } catch (e) {
-        console.error('Failed to save to local storage', e);
+        console.error('Failed to save state', e);
         return { success: false };
     }
 };
 
 const getGameState = async () => {
     try {
-        const saved = localStorage.getItem('annihilate_earth_save');
+        let saved = null;
+        if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+            saved = window.CrazyGames.SDK.data.getItem('annihilate_earth_save');
+        } else {
+            saved = localStorage.getItem('annihilate_earth_save');
+        }
         return { state: saved ? JSON.parse(saved) : null, success: true };
     } catch (e) {
-        console.error('Failed to load from local storage', e);
+        console.error('Failed to load state', e);
         return { state: null, success: false };
     }
 };

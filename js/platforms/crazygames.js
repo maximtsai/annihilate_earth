@@ -1,6 +1,6 @@
-// Poki SDK implementation of the Platform Bridge API
+// CrazyGames SDK v3 implementation of the Platform Bridge API
 window.PlatformBridge = {
-    platform: 'poki',
+    platform: 'crazygames',
     sdkLoaded: false,
 
     init: function() {
@@ -11,24 +11,31 @@ window.PlatformBridge = {
             }
             
             const script = document.createElement('script');
-            script.src = 'https://game-cdn.poki.com/scripts/v2/poki-sdk.js';
+            script.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
             script.onload = () => {
                 this.sdkLoaded = true;
-                if (typeof PokiSDK !== 'undefined') {
-                    PokiSDK.init().then(() => {
-                        console.log("[PlatformBridge] Poki SDK successfully initialized.");
-                        resolve();
-                    }).catch(() => {
-                        console.warn("[PlatformBridge] Poki SDK failed to initialize; using fallback mode.");
-                        resolve();
-                    });
+                if (typeof window.CrazyGames !== 'undefined' && window.CrazyGames.SDK) {
+                    window.CrazyGames.SDK.init()
+                        .then(() => {
+                            console.log("[PlatformBridge] CrazyGames SDK successfully initialized.");
+                            // Start loading event as per CrazyGames SDK v3 requirements
+                            if (window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.loadingStart === 'function') {
+                                window.CrazyGames.SDK.game.loadingStart();
+                                console.log("[PlatformBridge] CrazyGames loadingStart triggered.");
+                            }
+                            resolve();
+                        })
+                        .catch((err) => {
+                            console.warn("[PlatformBridge] CrazyGames SDK failed to initialize; using fallback mode.", err);
+                            resolve();
+                        });
                 } else {
-                    console.warn("[PlatformBridge] PokiSDK variable not found; using fallback mode.");
+                    console.warn("[PlatformBridge] CrazyGames SDK variable not found; using fallback mode.");
                     resolve();
                 }
             };
             script.onerror = () => {
-                console.warn("[PlatformBridge] Poki SDK script failed to load; using fallback mode.");
+                console.warn("[PlatformBridge] CrazyGames SDK script failed to load; using fallback mode.");
                 resolve();
             };
             document.head.appendChild(script);
@@ -36,28 +43,45 @@ window.PlatformBridge = {
     },
 
     gameLoadingFinished: function() {
-        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
-            PokiSDK.gameLoadingFinished();
-            console.log("[PlatformBridge] Poki gameLoadingFinished triggered.");
+        if (this.sdkLoaded && typeof window.CrazyGames !== 'undefined' && window.CrazyGames.SDK.game) {
+            if (typeof window.CrazyGames.SDK.game.loadingStop === 'function') {
+                window.CrazyGames.SDK.game.loadingStop();
+                console.log("[PlatformBridge] CrazyGames loadingStop triggered.");
+            }
         }
     },
 
     gameplayStart: function() {
-        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
-            PokiSDK.gameplayStart();
+        if (this.sdkLoaded && typeof window.CrazyGames !== 'undefined' && window.CrazyGames.SDK.game) {
+            if (typeof window.CrazyGames.SDK.game.gameplayStart === 'function') {
+                window.CrazyGames.SDK.game.gameplayStart();
+                console.log("[PlatformBridge] CrazyGames gameplayStart triggered.");
+            }
         }
     },
 
     gameplayStop: function() {
-        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
-            PokiSDK.gameplayStop();
+        if (this.sdkLoaded && typeof window.CrazyGames !== 'undefined' && window.CrazyGames.SDK.game) {
+            if (typeof window.CrazyGames.SDK.game.gameplayStop === 'function') {
+                window.CrazyGames.SDK.game.gameplayStop();
+                console.log("[PlatformBridge] CrazyGames gameplayStop triggered.");
+            }
+        }
+    },
+
+    happytime: function() {
+        if (this.sdkLoaded && typeof window.CrazyGames !== 'undefined' && window.CrazyGames.SDK.game) {
+            if (typeof window.CrazyGames.SDK.game.happytime === 'function') {
+                window.CrazyGames.SDK.game.happytime();
+                console.log("[PlatformBridge] CrazyGames happytime triggered.");
+            }
         }
     },
 
     showAdBreak: function(onComplete) {
-        console.log("[PlatformBridge] Poki commercial break requested.");
+        console.log("[PlatformBridge] CrazyGames commercial break requested.");
 
-        // Pause audio and game loop
+        // Pause audio and game loop immediately
         window.gamePausedForAd = true;
         if (window.soundManager && window.soundManager.context) {
             window.soundManager.context.suspend().catch(() => {});
@@ -74,8 +98,9 @@ window.PlatformBridge = {
                 }
                 if (onComplete) onComplete();
                 
-                // Transition away once everything is completed
-                this._runTransitionOut();
+                // Defer transition-out by one frame so game DOM updates (hiding
+                // victory screen, loading next planet) flush before the overlay sweeps away
+                requestAnimationFrame(() => this._runTransitionOut());
             }
         };
 
@@ -85,34 +110,38 @@ window.PlatformBridge = {
             tryResume();
         });
 
-        // 2. Request Poki ad immediately (running in parallel to transition-in)
+        // 2. Request CrazyGames ad immediately (running in parallel to transition-in)
         const onAdComplete = () => {
             adFinished = true;
             tryResume();
         };
 
-        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
-            PokiSDK.commercialBreak()
-                .then(() => {
-                    console.log("[PlatformBridge] Commercial break completed successfully.");
+        if (this.sdkLoaded && typeof window.CrazyGames !== 'undefined' && window.CrazyGames.SDK.ad) {
+            window.CrazyGames.SDK.ad.requestAd("midgame", {
+                adStarted: () => {
+                    console.log("[PlatformBridge] CrazyGames midgame ad started.");
+                },
+                adFinished: () => {
+                    console.log("[PlatformBridge] CrazyGames midgame ad completed successfully.");
                     window.lastAdPlayTime = Date.now();
                     onAdComplete();
-                })
-                .catch((err) => {
-                    console.warn("[PlatformBridge] Commercial break failed or was skipped:", err);
+                },
+                adError: (error) => {
+                    console.warn("[PlatformBridge] CrazyGames midgame ad failed or was skipped:", error);
                     onAdComplete();
-                });
+                }
+            });
         } else {
             // Fallback if SDK failed to load
-            console.log("[PlatformBridge] Fallback: No Poki SDK loaded, skipping commercial break.");
+            console.log("[PlatformBridge] Fallback: No CrazyGames SDK loaded, skipping commercial break.");
             onAdComplete();
         }
     },
 
     showRewardedAd: function(onComplete) {
-        console.log("[PlatformBridge] Poki rewarded ad break requested.");
+        console.log("[PlatformBridge] CrazyGames rewarded ad break requested.");
 
-        // Pause audio and game loop
+        // Pause audio and game loop immediately
         window.gamePausedForAd = true;
         if (window.soundManager && window.soundManager.context) {
             window.soundManager.context.suspend().catch(() => {});
@@ -130,8 +159,9 @@ window.PlatformBridge = {
                 }
                 if (rewardGranted && onComplete) onComplete();
                 
-                // Transition away once everything is completed
-                this._runTransitionOut();
+                // Defer transition-out by one frame so game DOM updates flush
+                // before the overlay sweeps away
+                requestAnimationFrame(() => this._runTransitionOut());
             }
         };
 
@@ -141,26 +171,30 @@ window.PlatformBridge = {
             tryResume();
         });
 
-        // 2. Request Poki rewarded ad immediately
+        // 2. Request CrazyGames rewarded ad immediately
         const onAdComplete = (success) => {
             rewardGranted = success;
             adFinished = true;
             tryResume();
         };
 
-        if (this.sdkLoaded && typeof PokiSDK !== 'undefined') {
-            PokiSDK.rewardedBreak()
-                .then((withReward) => {
-                    console.log("[PlatformBridge] Rewarded break completed. Reward status: " + withReward);
-                    onAdComplete(withReward);
-                })
-                .catch((err) => {
-                    console.warn("[PlatformBridge] Rewarded break failed or was skipped:", err);
+        if (this.sdkLoaded && typeof window.CrazyGames !== 'undefined' && window.CrazyGames.SDK.ad) {
+            window.CrazyGames.SDK.ad.requestAd("rewarded", {
+                adStarted: () => {
+                    console.log("[PlatformBridge] CrazyGames rewarded ad started.");
+                },
+                adFinished: () => {
+                    console.log("[PlatformBridge] CrazyGames rewarded ad completed. Granting reward.");
+                    onAdComplete(true);
+                },
+                adError: (error) => {
+                    console.warn("[PlatformBridge] CrazyGames rewarded ad failed or was skipped:", error);
                     onAdComplete(false);
-                });
+                }
+            });
         } else {
             // Fallback if SDK failed to load - grant reward for testing
-            console.log("[PlatformBridge] Fallback: No Poki SDK loaded, skipping rewarded break but granting mock reward.");
+            console.log("[PlatformBridge] Fallback: No CrazyGames SDK loaded, skipping rewarded break but granting mock reward.");
             onAdComplete(true);
         }
     },
@@ -218,7 +252,7 @@ window.PlatformBridge = {
         overlay.offsetHeight; // trigger reflow
         overlay.classList.add('ad-transition-in');
         setTimeout(() => {
-            overlay.style.display = 'none'; // Hide during the ad break so Poki ad is visible
+            overlay.style.display = 'none'; // Hide during the ad break so CrazyGames ad is visible
             if (onMidpoint) onMidpoint();
         }, 420);
     },
