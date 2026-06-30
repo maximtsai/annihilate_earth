@@ -2661,7 +2661,8 @@ async function run(mode) {
                                 size: w.explosionRadius * 1.3,
                                 color: 'rgba(0, 217, 255, 0.85)',
                                 type: 'explosion_ring',
-                                isComet: true
+                                isComet: true,
+                                isFreeze: true
                             });
 
 
@@ -2671,7 +2672,8 @@ async function run(mode) {
                                 vx: 0, vy: 0, life: 1.0, maxLife: 0.16,
                                 size: w.explosionRadius * 2.25,
                                 color: '0, 217, 255',
-                                type: 'circular_flash'
+                                type: 'circular_flash',
+                                isFreeze: true
                             });
 
                             // Debris particles (50 particles: mix of cyan/blue/white fire and smoke)

@@ -40,7 +40,8 @@ class ParticlePool {
                 color: '',
                 type: '',
                 moonExhaust: false,
-                isComet: false
+                isComet: false,
+                isFreeze: false
             });
         }
     }
@@ -77,6 +78,7 @@ class ParticlePool {
             p.type = properties.type;
             p.moonExhaust = !!properties.moonExhaust;
             p.isComet = !!properties.isComet;
+            p.isFreeze = !!properties.isFreeze;
         }
     }
 
@@ -461,7 +463,7 @@ let showPointer = false;
 let weaponAmmo = {
     nuke: 18,
     bowling: 15,
-    mysterybox: 20,
+    mysterybox: 4,
     drill: 5
 };
 

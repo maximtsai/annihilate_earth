@@ -227,7 +227,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
             let triggered = false;
             for (let pIdx = 0; pIdx < particles.pool.length; pIdx++) {
                 const p = particles.pool[pIdx];
-                if (p.active && (p.type === 'explosion_ring' || p.type === 'circular_flash')) {
+                if (p.active && (p.type === 'explosion_ring' || p.type === 'circular_flash') && !p.isFreeze) {
                     const pDx = p.x - box.x;
                     const pDy = p.y - box.y;
                     const pDist = Math.sqrt(pDx * pDx + pDy * pDy);
@@ -305,14 +305,16 @@ function updateMysteryBoxes(deltaTime, dt60) {
                         size: radius * 1.3,
                         color: 'rgba(0, 217, 255, 0.85)',
                         type: 'explosion_ring',
-                        isComet: true
+                        isComet: true,
+                        isFreeze: true
                     });
                     particles.push({
                         x: impactScreenX, y: impactScreenY,
                         vx: 0, vy: 0, life: 1.0, maxLife: 0.16,
                         size: radius * 2.25,
                         color: '0, 217, 255',
-                        type: 'circular_flash'
+                        type: 'circular_flash',
+                        isFreeze: true
                     });
 
                     for (let pIdx = 0; pIdx < 35; pIdx++) {
@@ -681,58 +683,60 @@ function updateFallingDucks(deltaTime, dt60) {
 
                 soundManager.play('sfx_quack', false, 1.0);
 
-                // Create a mushroom cloud rising away from the planet center
-                const dxCenter = duck.x - CENTER_X;
-                const dyCenter = duck.y - CENTER_Y;
-                const distCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
-                const ux = distCenter > 0 ? dxCenter / distCenter : 0;
-                const uy = distCenter > 0 ? dyCenter / distCenter : 1;
-                const stemLength = duck.explosionSize * 1.4;
-                const cloudAngle = Math.atan2(uy, ux);
+                // Create a mushroom cloud rising away from the planet center (only for the 2 largest explosions: 85px and 120px)
+                if (duck.explosionSize >= 85) {
+                    const dxCenter = duck.x - CENTER_X;
+                    const dyCenter = duck.y - CENTER_Y;
+                    const distCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+                    const ux = distCenter > 0 ? dxCenter / distCenter : 0;
+                    const uy = distCenter > 0 ? dyCenter / distCenter : 1;
+                    const stemLength = duck.explosionSize * 1.3;
+                    const cloudAngle = Math.atan2(uy, ux);
 
-                // 1. Stem particles
-                for (let s = 0; s < 15; s++) {
-                    const progress = s / 15;
-                    const spawnDist = progress * stemLength;
-                    const pX = duck.x + ux * spawnDist;
-                    const pY = duck.y + uy * spawnDist;
-                    const dispersion = (Math.random() - 0.5) * 0.8;
-                    const vX = ux * (1.5 + Math.random() * 2.0) + (-uy) * dispersion;
-                    const vY = uy * (1.5 + Math.random() * 2.0) + ux * dispersion;
+                    // 1. Stem particles
+                    for (let s = 0; s < 15; s++) {
+                        const progress = s / 15;
+                        const spawnDist = progress * stemLength;
+                        const pX = duck.x + ux * spawnDist;
+                        const pY = duck.y + uy * spawnDist;
+                        const dispersion = (Math.random() - 0.5) * 0.8;
+                        const vX = ux * (1.5 + Math.random() * 2.0) + (-uy) * dispersion;
+                        const vY = uy * (1.5 + Math.random() * 2.0) + ux * dispersion;
+                        
+                        particles.push({
+                            x: pX,
+                            y: pY,
+                            vx: vX,
+                            vy: vY,
+                            life: 1.0,
+                            maxLife: (Math.random() * 0.6 + 0.4) * 2.0,
+                            size: Math.random() * (duck.explosionSize * 0.24) + (duck.explosionSize * 0.16),
+                            color: Math.random() < 0.4 ? '#ff7700' : (Math.random() < 0.7 ? '#555555' : '#888888'),
+                            type: 'smoke'
+                        });
+                    }
 
-                    particles.push({
-                        x: pX,
-                        y: pY,
-                        vx: vX,
-                        vy: vY,
-                        life: 1.0,
-                        maxLife: (Math.random() * 0.6 + 0.4) * 2.0,
-                        size: Math.random() * (duck.explosionSize * 0.3) + (duck.explosionSize * 0.2),
-                        color: Math.random() < 0.4 ? '#ff7700' : (Math.random() < 0.7 ? '#555555' : '#888888'),
-                        type: 'smoke'
-                    });
-                }
+                    // 2. Cap particles
+                    const capX = duck.x + ux * stemLength;
+                    const capY = duck.y + uy * stemLength;
+                    for (let c = 0; c < 25; c++) {
+                        const angle = cloudAngle + (Math.random() - 0.5) * Math.PI;
+                        const speed = (0.5 + Math.random() * 2.5);
+                        const vX = Math.cos(angle) * speed + ux * 0.8;
+                        const vY = Math.sin(angle) * speed + uy * 0.8;
 
-                // 2. Cap particles
-                const capX = duck.x + ux * stemLength;
-                const capY = duck.y + uy * stemLength;
-                for (let c = 0; c < 25; c++) {
-                    const angle = cloudAngle + (Math.random() - 0.5) * Math.PI;
-                    const speed = (0.5 + Math.random() * 2.5);
-                    const vX = Math.cos(angle) * speed + ux * 0.8;
-                    const vY = Math.sin(angle) * speed + uy * 0.8;
-
-                    particles.push({
-                        x: capX + (Math.random() - 0.5) * 15,
-                        y: capY + (Math.random() - 0.5) * 15,
-                        vx: vX,
-                        vy: vY,
-                        life: 1.0,
-                        maxLife: (Math.random() * 0.8 + 0.5) * 2.0,
-                        size: Math.random() * (duck.explosionSize * 0.5) + (duck.explosionSize * 0.3),
-                        color: Math.random() < 0.3 ? '#ffaa00' : (Math.random() < 0.6 ? '#666666' : '#999999'),
-                        type: 'smoke'
-                    });
+                        particles.push({
+                            x: capX + (Math.random() - 0.5) * 15,
+                            y: capY + (Math.random() - 0.5) * 15,
+                            vx: vX,
+                            vy: vY,
+                            life: 1.0,
+                            maxLife: (Math.random() * 0.8 + 0.5) * 2.0,
+                            size: Math.random() * (duck.explosionSize * 0.4) + (duck.explosionSize * 0.24),
+                            color: Math.random() < 0.3 ? '#ffaa00' : (Math.random() < 0.6 ? '#666666' : '#999999'),
+                            type: 'smoke'
+                        });
+                    }
                 }
 
                 activeFallingDucks.splice(i, 1);
@@ -757,7 +761,7 @@ function updateFallingDucks(deltaTime, dt60) {
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > 0) {
                 // Gentle fall speed
-                const fallSpeed = 1.0 * dt60;
+                const fallSpeed = 1.5 * dt60;
                 duck.x += (dx / dist) * fallSpeed;
                 duck.y += (dy / dist) * fallSpeed;
             }
