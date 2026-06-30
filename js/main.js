@@ -445,9 +445,9 @@ async function run(mode) {
         const optionsScale = Math.min(1.0, Math.min(optScaleW, optScaleH));
         document.documentElement.style.setProperty('--options-scale', optionsScale);
 
-        // Ad spin popup scale (base size 630x520)
-        const adScaleH = (window.innerHeight * 0.88) / 520;
-        const adScaleW = (window.innerWidth * 0.94) / 630;
+        // Ad spin popup scale (base size 693x572)
+        const adScaleH = (window.innerHeight * 0.88) / 572;
+        const adScaleW = (window.innerWidth * 0.94) / 693;
         const adSpinScale = Math.min(1.0, Math.min(adScaleW, adScaleH));
         document.documentElement.style.setProperty('--ad-spin-scale', adSpinScale);
     }
