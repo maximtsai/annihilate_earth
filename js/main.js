@@ -345,8 +345,6 @@ function getGradientCanvas(color) {
     return offCanvas;
 }
 
-let gamePausedForAd = false;
-
 async function run(mode) {
     // Load spritesheet atlas assets first
     await loadSpritesAtlas();
@@ -5047,6 +5045,7 @@ async function run(mode) {
         }
     });
     gameWorld.addEventListener('mousemove', (e) => {
+        if (window.gamePausedForAd) return;
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -5095,6 +5094,7 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchmove', (e) => {
+        if (window.gamePausedForAd) return;
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -6077,7 +6077,7 @@ async function run(mode) {
     let lastTime = performance.now();
 
     function gameLoop(timestamp) {
-        if (gamePausedForAd) {
+        if (window.gamePausedForAd) {
             lastTime = timestamp; // Prevent delta-time jump on resume
             requestAnimationFrame(gameLoop);
             return;
