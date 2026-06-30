@@ -4987,11 +4987,35 @@ async function run(mode) {
     window.addEventListener('mousedown', triggerFirstClickGameplayStart, true);
     window.addEventListener('touchstart', triggerFirstClickGameplayStart, true);
 
-    // Prevent context menu from popping up on the canvas
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Prevent context menu from popping up on the page (CrazyGames common fixes)
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Prevent unwanted page scroll via mouse wheel and scroll through weapons if playing (CrazyGames common fixes)
+    window.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (window.gamePausedForAd) return;
+        if (typeof mode !== 'undefined' && mode === 'play' && typeof victoryTriggered !== 'undefined' && !victoryTriggered) {
+            const buttons = Array.from(document.querySelectorAll('.weapon-button'));
+            if (buttons.length > 0) {
+                const currentIndex = buttons.findIndex(btn => btn.classList.contains('selected'));
+                let nextIndex = currentIndex;
+                if (e.deltaY < 0) {
+                    // Scroll up: previous weapon
+                    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                } else if (e.deltaY > 0) {
+                    // Scroll down: next weapon
+                    nextIndex = (currentIndex + 1) % buttons.length;
+                }
+                if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < buttons.length) {
+                    buttons[nextIndex].click();
+                }
+            }
+        }
+    }, { passive: false });
 
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
+        if (window.gamePausedForAd) return;
         if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
@@ -5036,6 +5060,7 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchstart', (e) => {
+        if (window.gamePausedForAd) return;
         if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
@@ -5104,6 +5129,7 @@ async function run(mode) {
     }
 
     window.addEventListener('mouseup', () => {
+        if (window.gamePausedForAd) return;
         isHolding = false;
         soundManager.stopLoop('sfx_laser_fire');
         soundManager.stopLoop('sfx_laser_hum');
@@ -5111,6 +5137,7 @@ async function run(mode) {
     });
 
     window.addEventListener('touchend', () => {
+        if (window.gamePausedForAd) return;
         isHolding = false;
         soundManager.stopLoop('sfx_laser_fire');
         soundManager.stopLoop('sfx_laser_hum');
@@ -5118,6 +5145,7 @@ async function run(mode) {
     });
 
     window.addEventListener('touchcancel', () => {
+        if (window.gamePausedForAd) return;
         isHolding = false;
         handleLightningRelease();
     });
@@ -5315,6 +5343,11 @@ async function run(mode) {
 
     // Keyboard shortcut hooks
     window.addEventListener('keydown', (e) => {
+        // Prevent default scrolling behavior on PageUp and PageDown (others are handled downstream)
+        if (['PageUp', 'PageDown'].includes(e.key)) {
+            e.preventDefault();
+        }
+
         if (window.gamePausedForAd) return;
 
         // Toggle UI / Photo Mode
