@@ -1545,7 +1545,7 @@ function triggerVictory() {
         // Setup the Victory Spinner
         const container = document.getElementById('victory-spinner-container');
         if (container) {
-            const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
+            const allLockedWeapons = ALL_LOCKED_WEAPONS;
             const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
             if (restartBtn) {

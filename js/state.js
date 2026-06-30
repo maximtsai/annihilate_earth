@@ -205,6 +205,7 @@ let initiallyUnlockedPlanets = new Set(['earth']);
 let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
 let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
+const ALL_LOCKED_WEAPONS = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword', 'drill'];
 let claimedPlanetSpinners = [];
 let unlockedTooltipShown = false;
 window.shouldShowUnlockTooltipOnNextPlanet = false;
@@ -214,6 +215,7 @@ function saveClaimedPlanetSpinners() {
         state.claimedPlanetSpinners = claimedPlanetSpinners;
     });
 }
+
 
 function isWeaponUnlocked(wid) {
     return unlockedWeapons.includes(wid);
@@ -248,8 +250,7 @@ function saveUnlockedTooltipShown() {
 }
 
 function unlockRandomWeapon() {
-    const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
-    const lockedRemaining = allLockedWeapons.filter(wid => !unlockedWeapons.includes(wid));
+    const lockedRemaining = ALL_LOCKED_WEAPONS.filter(wid => !unlockedWeapons.includes(wid));
     if (lockedRemaining.length > 0) {
         const randomIndex = Math.floor(Math.random() * lockedRemaining.length);
         const weaponToUnlock = lockedRemaining[randomIndex];

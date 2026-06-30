@@ -20,11 +20,12 @@ class WeaponSpinner {
             'bowling': { icon: '🎳', name: 'Bowling', color: '#ef4444' }, // Red
             'star': { icon: '⭐', name: 'Star', color: '#3b82f6' },     // Blue
             'comet': { icon: '❄️', name: 'Comet', color: '#06b6d4' },    // Cyan
-            'sword': { icon: '🗡️', name: 'Excalibur', color: '#60a5fa' } // Light Blue
+            'sword': { icon: '🗡️', name: 'Excalibur', color: '#60a5fa' }, // Light Blue
+            'drill': { icon: '⚙️', name: 'Drill', color: '#64748b' } // Slate
         };
 
         // Determine currently locked weapons
-        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
+        const allLockedWeapons = ALL_LOCKED_WEAPONS;
         const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
         this.lockedWeapons = allLockedWeapons.filter(wid => !currentUnlocked.includes(wid));
 

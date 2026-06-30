@@ -41,7 +41,7 @@
             const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
             if (currentUnlocked.length !== lastUnlockedCount) {
                 lastUnlockedCount = currentUnlocked.length;
-                const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
+                const allLockedWeapons = ALL_LOCKED_WEAPONS;
                 hasLockedWeapons = allLockedWeapons.some(wid => !currentUnlocked.includes(wid));
             }
             if (!hasLockedWeapons) {
@@ -330,7 +330,7 @@
                     // Reset and initialize the spinner inside the ad popup
                     const container = document.getElementById('star-spinner-container');
                     if (container) {
-                        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
+                        const allLockedWeapons = ALL_LOCKED_WEAPONS;
                         const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
                         const btnContainer = document.getElementById('ad-spin-buttons-container');
