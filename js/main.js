@@ -250,6 +250,7 @@ function loadSpritesAtlas() {
                 spriteBrightYellow = extractSprite('bright_yellow.webp');
                 spriteSmokeStandard = extractSprite('smoke_standard.webp');
                 spriteSmokeMissile = extractSprite('smoke_missile.webp');
+                spriteDuck = extractSprite('duck.png');
 
                 // Planet and core glows
                 earthGlow = extractSprite('earth-glow.png');
@@ -431,7 +432,7 @@ async function run(mode) {
             uiContainer.style.height = '100%';
             uiContainer.style.transform = 'none';
         }
-        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1080));
+        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1280));
 
         const scaleHeight = (window.innerHeight * 0.88) / 720;
         const isLandscape = window.innerWidth >= window.innerHeight;
@@ -2660,7 +2661,8 @@ async function run(mode) {
                                 size: w.explosionRadius * 1.3,
                                 color: 'rgba(0, 217, 255, 0.85)',
                                 type: 'explosion_ring',
-                                isComet: true
+                                isComet: true,
+                                isFreeze: true
                             });
 
 
@@ -2670,7 +2672,8 @@ async function run(mode) {
                                 vx: 0, vy: 0, life: 1.0, maxLife: 0.16,
                                 size: w.explosionRadius * 2.25,
                                 color: '0, 217, 255',
-                                type: 'circular_flash'
+                                type: 'circular_flash',
+                                isFreeze: true
                             });
 
                             // Debris particles (50 particles: mix of cyan/blue/white fire and smoke)
@@ -2732,6 +2735,9 @@ async function run(mode) {
 
             // Update active mystery boxes
             updateMysteryBoxes(deltaTime, dt60);
+            if (typeof updateFallingDucks === 'function') {
+                updateFallingDucks(deltaTime, dt60);
+            }
 
             // Update active drills
             if (typeof updateDrills === 'function') {
@@ -4029,6 +4035,66 @@ async function run(mode) {
             }
         });
 
+        // Draw active falling ducks
+        if (typeof activeFallingDucks !== 'undefined') {
+            activeFallingDucks.forEach(duck => {
+                ctx.save();
+                ctx.translate(duck.x, duck.y);
+                ctx.rotate(duck.angle);
+
+                const baseScale = 1.0;
+                ctx.scale(baseScale, baseScale);
+
+                if (spriteDuck) {
+                    const w = spriteDuck.width;
+                    const h = spriteDuck.height;
+                    ctx.drawImage(spriteDuck, -w / 2, -h / 2);
+
+                    if (duck.state === 'flashing_red') {
+                        const flashInterval = 0.07;
+                        const phase = Math.floor(duck.flashTimer / flashInterval) % 2;
+                        if (phase === 0) {
+                            ctx.save();
+                            ctx.globalCompositeOperation = 'source-atop';
+                            ctx.fillStyle = 'rgba(244, 67, 54, 0.65)';
+                            ctx.fillRect(-w / 2, -h / 2, w, h);
+                            ctx.restore();
+                        }
+                    }
+                } else {
+                    ctx.fillStyle = duck.state === 'flashing_red' && (Math.floor(duck.flashTimer / 0.07) % 2 === 0) ? '#f44336' : '#ffeb3b';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+
+                // Draw anticipation AOE circle right before exploding (last 0.14 seconds)
+                if (duck.state === 'flashing_red' && duck.flashTimer <= 0.18) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(duck.x, duck.y, duck.explosionSize, 0, Math.PI * 2);
+                    if (duck.flashTimer > 0.09) {
+                        // White flash phase
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                    } else {
+                        // Black flash phase (subtle dark border)
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+            });
+        }
+
         // Draw flying or penetrating bowling balls in screen space (higher depth)
         activeBowlingBalls.forEach(w => {
             if (w.state !== 'stuck') {
@@ -5213,7 +5279,7 @@ async function run(mode) {
         uiHidden = !uiHidden;
         if (uiHidden) {
             uiContainer.classList.add('ui-hidden-mode');
-            
+
             // Remove existing notification if any
             const oldNotif = document.getElementById('ui-hidden-notification');
             if (oldNotif) oldNotif.remove();
@@ -5223,7 +5289,7 @@ async function run(mode) {
             const notif = document.createElement('div');
             notif.id = 'ui-hidden-notification';
             notif.textContent = 'UI Hidden with "H"';
-            
+
             // Append to game-world so it's visible even when ui-container is hidden
             const gameWorld = document.getElementById('game-world') || document.body;
             gameWorld.appendChild(notif);
