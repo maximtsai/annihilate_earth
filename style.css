@@ -1610,11 +1610,20 @@ html {
 
 @media (orientation: portrait) {
 
+    .hud-header {
+        max-height: 130px;
+        padding: calc(20px * var(--ui-scale)) calc(24px * var(--ui-scale)) calc(13px * var(--ui-scale)) calc(24px * var(--ui-scale));
+    }
+
+    .game-title {
+        font-size: calc((28px + var(--title-font-adjust)) * 1.15 * var(--ui-scale));
+    }
+
     /* Move planet selector to top horizontal row */
     .planet-selector {
         position: absolute;
         left: 50%;
-        top: calc(40px + 90px * var(--ui-scale));
+        top: calc(64px + 90px * var(--ui-scale));
         transform: translateX(-50%);
         display: flex;
         flex-direction: row;
@@ -1622,7 +1631,7 @@ html {
         justify-content: center;
         gap: 10px;
         width: 90%;
-        max-width: 600px;
+        max-width: 680px;
         height: auto;
         padding: 5px 0;
         margin: 0;
@@ -1630,15 +1639,15 @@ html {
     }
 
     .planet-btn {
-        font-size: calc((21.5px + var(--planet-font-adjust)) * var(--ui-scale));
-        width: calc(151px * var(--ui-scale));
-        height: calc(117px * var(--ui-scale));
-        padding: calc(13px * var(--ui-scale)) calc(18.5px * var(--ui-scale));
+        font-size: calc((21.5px + var(--planet-font-adjust)) * 1.1 * var(--ui-scale));
+        width: calc(166px * var(--ui-scale));
+        height: calc(129px * var(--ui-scale));
+        padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
         flex-shrink: 0;
     }
 
     .planet-btn-icon {
-        font-size: calc((47.5px + var(--planet-font-adjust)) * var(--ui-scale));
+        font-size: calc((47.5px + var(--planet-font-adjust)) * 1.1 * var(--ui-scale));
     }
 
     .lang-cjk .planet-btn {
@@ -1673,9 +1682,9 @@ html {
         right: auto;
         top: auto;
         transform: translateX(-50%);
-        width: 90%;
-        max-width: 800px;
-        height: calc(11px + 154px * var(--ui-scale));
+        width: 95%;
+        max-width: 860px;
+        height: calc(11px + 178px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
         background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
@@ -1693,9 +1702,9 @@ html {
     }
 
     .scroll-arrow {
-        flex: 0 0 calc(48px * var(--ui-scale));
-        width: calc(48px * var(--ui-scale));
-        height: calc(133px * var(--ui-scale));
+        flex: 0 0 calc(58px * var(--ui-scale));
+        width: calc(58px * var(--ui-scale));
+        height: calc(157px * var(--ui-scale));
         font-size: calc(32px * var(--ui-scale));
     }
 
@@ -1730,35 +1739,35 @@ html {
     }
 
     .weapon-button {
-        flex: 0 0 calc(138.5px * var(--ui-scale));
-        width: calc(138.5px * var(--ui-scale));
-        height: calc(133px * var(--ui-scale));
-        gap: calc(4.5px * var(--ui-scale));
+        flex: 0 0 calc(163px * var(--ui-scale));
+        width: calc(163px * var(--ui-scale));
+        height: calc(157px * var(--ui-scale));
+        gap: calc(5px * var(--ui-scale));
     }
 
     .weapon-icon {
-        font-size: calc(38.5px * var(--ui-scale));
+        font-size: calc(45px * var(--ui-scale));
     }
 
     .weapon-name {
-        font-size: calc((16.5px + var(--weapon-font-adjust)) * var(--ui-scale));
-        max-width: calc(138.6px * var(--ui-scale));
+        font-size: calc((16.5px + var(--weapon-font-adjust)) * 1.18 * var(--ui-scale));
+        max-width: calc(164px * var(--ui-scale));
     }
 
     .lang-cjk .weapon-name {}
 
     .weapon-button.selected::after {
-        height: calc(2.75px * var(--ui-scale));
+        height: calc(3px * var(--ui-scale));
     }
 
     .options-toggle-wrapper {
-        width: calc(88px * var(--ui-scale));
-        height: calc(88px * var(--ui-scale));
+        width: calc(104px * var(--ui-scale));
+        height: calc(104px * var(--ui-scale));
     }
 
     .options-toggle svg {
-        width: calc(55px * var(--ui-scale));
-        height: calc(55px * var(--ui-scale));
+        width: calc(65px * var(--ui-scale));
+        height: calc(65px * var(--ui-scale));
     }
 
     /* Scaling Options popup */
@@ -1799,7 +1808,7 @@ html {
     }
 
     .weapon-cooldown {
-        font-size: calc(30px * var(--ui-scale));
+        font-size: calc(35px * var(--ui-scale));
     }
 
     .weapon-spinner-row {
@@ -2441,6 +2450,7 @@ html.no-glows *::after {
         transform: scale(0.3);
         opacity: 0;
     }
+
     100% {
         transform: scale(1);
         opacity: 1;
