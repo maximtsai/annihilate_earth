@@ -5487,7 +5487,7 @@ async function run(mode) {
 
         const proceedRestart = () => {
             const next = getNextPlanet(currentPlanet);
-            const nextBtn = document.getElementById(`btn-planet-${next}`);
+            const nextBtn = document.querySelector(`.level-select-btn[data-planet="${next}"]`);
             window.isNextPlanetProgression = true;
             if (nextBtn) {
                 nextBtn.click();
@@ -5653,12 +5653,12 @@ async function run(mode) {
 
         // Planet button names
         PLANET_ORDER.forEach(planet => {
-            const btn = document.getElementById(`btn-planet-${planet}`);
+            const btn = document.querySelector(`.level-select-btn[data-planet="${planet}"]`);
             if (btn) {
-                const iconSpan = btn.querySelector('.planet-btn-icon');
-                const iconHTML = iconSpan ? iconSpan.outerHTML : '';
-                const name = t.planets[planet] || planet;
-                btn.innerHTML = iconHTML + ' ' + name;
+                const nameSpan = btn.querySelector('.level-select-name');
+                if (nameSpan) {
+                    nameSpan.textContent = t.planets[planet] || planet;
+                }
                 // Re-apply translated lock tooltip if locked
                 if (btn.classList.contains('locked')) {
                     const idx = PLANET_ORDER.indexOf(planet);
