@@ -681,7 +681,8 @@ function updateFallingDucks(deltaTime, dt60) {
 
                 createExplosion(localDuck.x, localDuck.y, duck.explosionSize, duck.shakeIntensity, duck.explosionSize === 10 ? 'missile' : (duck.explosionSize === 50 ? 'asteroid' : 'moon'), false, true);
 
-                soundManager.play('sfx_quack', false, 1.0);
+                const quackDetune = (Math.random() - 0.5) * 250; // +/- 125 cents pitch variation
+                soundManager.play('sfx_quack', false, 1.0, quackDetune);
 
                 // Create a mushroom cloud rising away from the planet center (only for the 2 largest explosions: 85px and 120px)
                 if (duck.explosionSize >= 85) {
@@ -702,7 +703,7 @@ function updateFallingDucks(deltaTime, dt60) {
                         const dispersion = (Math.random() - 0.5) * 0.8;
                         const vX = ux * (1.5 + Math.random() * 2.0) + (-uy) * dispersion;
                         const vY = uy * (1.5 + Math.random() * 2.0) + ux * dispersion;
-                        
+
                         particles.push({
                             x: pX,
                             y: pY,
