@@ -119,7 +119,7 @@ window.PlatformBridge = {
         overlay.offsetHeight; // trigger reflow
         overlay.classList.add('ad-transition-in');
         setTimeout(() => {
-            overlay.style.display = 'none'; // Hide during the ad break so Poki ad is visible
+            overlay.style.display = 'none'; // Hide during the ad break so CrazyGames ad is visible
             if (onMidpoint) onMidpoint();
         }, 420);
     },
