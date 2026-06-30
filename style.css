@@ -1642,7 +1642,7 @@ html {
 
 .options-menu-button {
     width: 100%;
-    height: 38px;
+    height: 48px;
     background: rgba(0, 217, 255, 0.08);
     border: 1.2px solid rgba(0, 217, 255, 0.6);
     border-radius: 4px;
@@ -2809,15 +2809,14 @@ html.no-glows *::after {
     }
 }
 
-/* Planet Builder Tools UI */
 .tools-bar-wrapper {
     position: absolute;
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
-    width: 90%;
-    max-width: 960px;
-    height: calc(105px * var(--ui-scale));
+    width: 95%;
+    max-width: 1080px;
+    height: calc(122px * var(--ui-scale));
     padding: 1.5px;
     background: linear-gradient(0deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%, 0 18px);
@@ -2859,7 +2858,7 @@ html.no-glows *::after {
 
 .tool-section-title {
     font-family: 'Orbitron', sans-serif;
-    font-size: calc(10px * var(--ui-scale));
+    font-size: calc(16px * var(--ui-scale));
     color: #00d9ff;
     letter-spacing: 1.2px;
     font-weight: 700;
@@ -2890,8 +2889,8 @@ html.no-glows *::after {
 }
 
 .tool-button {
-    width: calc(42px * var(--ui-scale));
-    height: calc(42px * var(--ui-scale));
+    width: calc(52px * var(--ui-scale));
+    height: calc(52px * var(--ui-scale));
 }
 
 .tool-icon {
@@ -2900,8 +2899,8 @@ html.no-glows *::after {
 }
 
 .size-button {
-    width: calc(34px * var(--ui-scale));
-    height: calc(34px * var(--ui-scale));
+    width: calc(44px * var(--ui-scale));
+    height: calc(44px * var(--ui-scale));
     font-family: 'Orbitron', sans-serif;
     font-size: calc(13px * var(--ui-scale));
     font-weight: 800;
@@ -2924,8 +2923,8 @@ html.no-glows *::after {
 }
 
 .color-picker-wrapper {
-    width: calc(34px * var(--ui-scale));
-    height: calc(34px * var(--ui-scale));
+    width: calc(44px * var(--ui-scale));
+    height: calc(44px * var(--ui-scale));
     border-radius: 50%;
     overflow: hidden;
     border: 2px solid rgba(0, 217, 255, 0.6);
@@ -2934,7 +2933,9 @@ html.no-glows *::after {
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 0 8px rgba(0, 217, 255, 0.2);
-    transition: border-color 200ms ease;
+    transition: border-color 200ms ease, background-color 200ms ease;
+    position: relative;
+    background-color: #00d9ff;
 }
 
 .color-picker-wrapper:hover {
@@ -2942,8 +2943,12 @@ html.no-glows *::after {
 }
 
 #tool-color-picker {
-    width: 160%;
-    height: 160%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
     border: none;
     padding: 0;
     background: none;
@@ -3034,33 +3039,69 @@ html.no-glows *::after {
 
 .toggle-label-text {
     font-family: 'Orbitron', sans-serif;
-    font-size: calc(11px * var(--ui-scale));
+    font-size: calc(13px * var(--ui-scale));
     font-weight: 700;
     color: #a0c8d8;
     letter-spacing: 0.5px;
 }
 
-/* Exit button */
-.tool-exit-button {
+/* Action button (Upload / Save) */
+.tool-action-button {
     font-family: 'Orbitron', sans-serif;
-    font-size: calc(13px * var(--ui-scale));
+    font-size: calc(12px * var(--ui-scale));
     font-weight: 800;
-    color: #ff0055;
-    background: rgba(255, 0, 85, 0.05);
-    border: 1.5px solid rgba(255, 0, 85, 0.4);
-    padding: calc(9px * var(--ui-scale)) calc(20px * var(--ui-scale));
+    color: #00d9ff;
+    background: rgba(0, 217, 255, 0.05);
+    border: 1.5px solid rgba(0, 217, 255, 0.4);
+    padding: calc(8px * var(--ui-scale)) calc(18px * var(--ui-scale));
     border-radius: 4px;
     cursor: pointer;
-    letter-spacing: 1.2px;
+    letter-spacing: 1px;
     transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
     outline: none;
+    width: calc(100px * var(--ui-scale));
+    text-align: center;
+    white-space: nowrap;
+    box-sizing: border-box;
 }
 
-.tool-exit-button:hover {
-    background: rgba(255, 0, 85, 0.15);
-    border-color: #ff0055;
+.tool-action-button:hover {
+    background: rgba(0, 217, 255, 0.15);
+    border-color: #00ffaa;
     color: #ffffff;
-    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+    box-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+}
+
+.tool-action-button.save-btn {
+    color: #00ffaa;
+    background: rgba(0, 255, 170, 0.05);
+    border-color: rgba(0, 255, 170, 0.4);
+}
+
+.tool-action-button.save-btn:hover {
+    background: rgba(0, 255, 170, 0.15);
+    border-color: #00ffaa;
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(0, 255, 170, 0.4);
+}
+
+/* Custom planet list scrollbar styling */
+.custom-planets-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-planets-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 3px;
+}
+
+.custom-planets-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 217, 255, 0.2);
+    border-radius: 3px;
+}
+
+.custom-planets-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 217, 255, 0.4);
 }
 
 /* Grouped sliders compartment */
@@ -3118,4 +3159,51 @@ html.no-glows *::after {
     flex-direction: column;
     align-items: flex-start;
     gap: calc(8px * var(--ui-scale));
+}
+
+/* Brush size circle icons */
+.size-button {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.brush-circle {
+    display: block;
+    border-radius: 50%;
+    background-color: currentColor; /* Matches button text color (and glows on hover/selection!) */
+    transition: background-color 200ms ease, transform 150ms ease;
+}
+
+.brush-circle-s {
+    width: calc(4px * var(--ui-scale));
+    height: calc(4px * var(--ui-scale));
+}
+
+.brush-circle-m {
+    width: calc(10px * var(--ui-scale));
+    height: calc(10px * var(--ui-scale));
+}
+
+.brush-circle-l {
+    width: calc(25px * var(--ui-scale));
+    height: calc(25px * var(--ui-scale));
+}
+
+/* Custom planet list delete button */
+.delete-custom-planet {
+    color: #ff3e6c;
+    font-size: 18px;
+    padding: 4px 8px;
+    margin-right: -5px;
+    transition: all 200ms cubic-bezier(0.25, 0.8, 0.25, 1.1);
+    cursor: pointer;
+    display: inline-block;
+    font-weight: bold;
+}
+
+.delete-custom-planet:hover {
+    color: #ff0044;
+    text-shadow: 0 0 10px #ff3e6c, 0 0 20px #ff3e6c;
+    transform: scale(1.3);
 }

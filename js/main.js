@@ -568,7 +568,7 @@ async function run(mode) {
     }
 
     window.showNewWeaponUnlockTooltip = function () {
-        if (isMainMenuActive || currentPlanet === 'custom') return;
+        if (gameMode === 'menu' || currentPlanet === 'custom') return;
         if (!_newWeaponTooltip.el) return;
         _newWeaponTooltip.shown = true;
         _newWeaponTooltip.timer = 0;
@@ -669,7 +669,7 @@ async function run(mode) {
         deltaTime = Math.min(deltaTime, 0.11);
         dt60 = deltaTime * 60;
 
-        if (currentPlanet === 'custom' && isDrawing && customPlanetRotationSpeed > 0) {
+        if (gameMode === 'builder' && isDrawing && customPlanetRotationSpeed > 0) {
             handlePlanetBuilderInput(pointerX, pointerY, 'move');
         }
 
@@ -724,7 +724,7 @@ async function run(mode) {
             }
         }
 
-        if (!victoryTriggered && !isMainMenuActive) {
+        if (!victoryTriggered && gameMode === 'gameplay') {
             planetTimeSpent += deltaTime;
         }
 
@@ -1108,7 +1108,7 @@ async function run(mode) {
             }
 
             // ── Switch-weapon tooltip logic ──
-            if (_switchTooltip.el && !_switchTooltip.dismissed && !victoryTriggered && !isMainMenuActive) {
+            if (_switchTooltip.el && !_switchTooltip.dismissed && !victoryTriggered && gameMode === 'gameplay') {
                 const marsUnlocked = unlockedPlanets.includes('mars');
                 const isMissileSelected = selectedWeapon === 'missile';
                 const nukeAmmoFull = (typeof weaponAmmo !== 'undefined' && weaponAmmo.nuke >= 18);
@@ -1132,7 +1132,7 @@ async function run(mode) {
                 if (_switchTooltip.shown) {
                     _updateSwitchTooltipPosition();
                 }
-            } else if (isMainMenuActive) {
+            } else if (gameMode === 'menu' || gameMode === 'builder') {
                 _switchTooltip.timer = 0;
                 if (_switchTooltip.shown) {
                     _switchTooltip.shown = false;
@@ -4397,7 +4397,7 @@ async function run(mode) {
         */
 
         // Draw Glowing Spawn Indicator Triangle (hollow, pointing inward, offset further back)
-        if (showPointer && !victoryTriggered && mode === 'play') {
+        if (showPointer && !victoryTriggered && mode === 'play' && gameMode !== 'builder') {
             const angle = Math.atan2(pointerY - CENTER_Y, pointerX - CENTER_X);
             const spawnRadius = getConfigValue('gameplay.spawnDistance', 300);
             // Shift the indicator 35px further back from the actual weapon spawn orbit (which is spawnRadius + 10)
@@ -4957,8 +4957,8 @@ async function run(mode) {
 
     const triggerFirstClickGameplayStart = () => {
         startBGM();
-        if (!gameplayStarted) {
-            gameplayStarted = true;
+        if (gameMode === 'menu') {
+            gameMode = 'gameplay';
             if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
                 window.PlatformBridge.gameplayStart();
             }
@@ -4977,9 +4977,8 @@ async function run(mode) {
         if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper')) {
             return;
         }
-        startBGM();
-        if (!gameplayStarted) {
-            gameplayStarted = true;
+        if (gameMode === 'menu') {
+            gameMode = 'gameplay';
             if (window.PlatformBridge) {
                 window.PlatformBridge.gameplayStart();
             }
@@ -4993,7 +4992,7 @@ async function run(mode) {
         pointerY = y;
         showPointer = true;
 
-        if (currentPlanet === 'custom') {
+        if (gameMode === 'builder') {
             handlePlanetBuilderInput(x, y, 'down');
             return;
         }
@@ -5017,7 +5016,7 @@ async function run(mode) {
         pointerY = (e.clientY - rect.top) / scaleY;
         showPointer = true;
 
-        if (currentPlanet === 'custom') {
+        if (gameMode === 'builder') {
             handlePlanetBuilderInput(pointerX, pointerY, 'move');
         }
     });
@@ -5030,9 +5029,8 @@ async function run(mode) {
         if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper')) {
             return;
         }
-        startBGM();
-        if (!gameplayStarted) {
-            gameplayStarted = true;
+        if (gameMode === 'menu') {
+            gameMode = 'gameplay';
             if (window.PlatformBridge) {
                 window.PlatformBridge.gameplayStart();
             }
@@ -5048,7 +5046,7 @@ async function run(mode) {
         pointerY = y;
         showPointer = true;
 
-        if (currentPlanet === 'custom') {
+        if (gameMode === 'builder') {
             handlePlanetBuilderInput(x, y, 'down');
             return;
         }
@@ -5074,7 +5072,7 @@ async function run(mode) {
         pointerY = (touch.clientY - rect.top) / scaleY;
         showPointer = true;
 
-        if (currentPlanet === 'custom') {
+        if (gameMode === 'builder') {
             handlePlanetBuilderInput(pointerX, pointerY, 'move');
         }
     });
@@ -5104,7 +5102,7 @@ async function run(mode) {
     }
 
     window.addEventListener('mouseup', () => {
-        if (currentPlanet === 'custom') {
+        if (gameMode === 'builder') {
             handlePlanetBuilderInput(null, null, 'up');
             return;
         }
@@ -5115,7 +5113,7 @@ async function run(mode) {
     });
 
     window.addEventListener('touchend', () => {
-        if (currentPlanet === 'custom') {
+        if (gameMode === 'builder') {
             handlePlanetBuilderInput(null, null, 'up');
             return;
         }
@@ -5126,7 +5124,7 @@ async function run(mode) {
     });
 
     window.addEventListener('touchcancel', () => {
-        if (currentPlanet === 'custom') {
+        if (gameMode === 'builder') {
             handlePlanetBuilderInput(null, null, 'up');
             return;
         }
@@ -5329,6 +5327,11 @@ async function run(mode) {
     window.addEventListener('keydown', (e) => {
         if (window.gamePausedForAd) return;
 
+        // Do not trigger game shortcuts if the user is typing in an input or textarea
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+            return;
+        }
+
         if (e.key === 'Escape') {
             const levelSelectOverlay = document.getElementById('level-select-popup-overlay');
             if (levelSelectOverlay && levelSelectOverlay.classList.contains('show')) {
@@ -5409,6 +5412,12 @@ async function run(mode) {
 
     window.addEventListener('keyup', (e) => {
         if (window.gamePausedForAd) return;
+        
+        // Do not trigger game shortcuts if the user is typing in an input or textarea
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+            return;
+        }
+
         if (e.key === ' ' || e.code === 'Space') {
             e.preventDefault();
             isHolding = false;
@@ -5763,6 +5772,10 @@ async function run(mode) {
                 btn.classList.add('locked');
             }
         });
+
+        if (window.refreshCustomPlanetsList) {
+            window.refreshCustomPlanetsList();
+        }
     }
 
     if (levelSelectBtn) {
@@ -5822,11 +5835,10 @@ async function run(mode) {
 
                     updateGameTitle();
                     planetTimeSpent = 0;
-                    gameplayStarted = true;
+                    gameMode = 'gameplay';
 
                     // If we were on the Main Menu, transition to gameplay!
-                    if (isMainMenuActive) {
-                        isMainMenuActive = false;
+                    if (mainMenu && !mainMenu.classList.contains('hidden')) {
                         if (mainMenu) mainMenu.classList.add('hidden');
                         
                         const optBtnWrapper = document.getElementById('options-btn-wrapper');
@@ -5879,8 +5891,7 @@ async function run(mode) {
             soundManager.play('sfx_ui_switch');
             startBGM();
             
-            isMainMenuActive = false;
-            gameplayStarted = true;
+            gameMode = 'gameplay';
             if (mainMenu) mainMenu.classList.add('hidden');
 
             const optBtnWrapper = document.getElementById('options-btn-wrapper');
@@ -5960,8 +5971,8 @@ async function run(mode) {
 
     // Helper to initialize/refresh Main Menu state
     function showMainMenu() {
-        isMainMenuActive = true;
-        gameplayStarted = false;
+        gameMode = 'menu';
+        resetGame(true);
         if (mainMenu) mainMenu.classList.remove('hidden');
 
         // Hide tools bar wrapper
@@ -6001,6 +6012,7 @@ async function run(mode) {
 
     }
     window.showMainMenu = showMainMenu;
+    window.beginGameplay = beginGameplay;
 
     // Reset Progress custom popup logic
     const optionsResetBtn = document.getElementById('options-reset-btn');

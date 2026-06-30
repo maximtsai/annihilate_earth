@@ -18,6 +18,55 @@ function generateStars() {
 
 // Generate realistic procedural Earth textures
 function initializePlanet() {
+    if (currentPlanet === 'custom') {
+        const imgData = hiddenCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+        let hasPixels = false;
+        for (let i = 3; i < imgData.data.length; i += 4) {
+            if (imgData.data[i] > 0) {
+                hasPixels = true;
+                break;
+            }
+        }
+        
+        if (!hasPixels) {
+            hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+            const d = getPlanetSize();
+            const radius = d / 2;
+            const cx = hiddenCanvas.width / 2;
+            const cy = hiddenCanvas.height / 2;
+            hiddenCtx.beginPath();
+            hiddenCtx.fillStyle = '#f5f3ee'; // Off-white
+            hiddenCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            hiddenCtx.fill();
+        }
+        
+        // Count starting pixels and core pixels from the existing canvas
+        initialPixelCount = 0;
+        initialCorePixelCount = 0;
+        const rawData = hiddenCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+        const planetCanvasCX = hiddenCanvas.width / 2;
+        const planetCanvasCY = hiddenCanvas.height / 2;
+        const coreRadius = getCoreRadius(getPlanetSize());
+
+        for (let y = 0; y < hiddenCanvas.height; y++) {
+            for (let x = 0; x < hiddenCanvas.width; x++) {
+                const idx = (y * hiddenCanvas.width + x) * 4;
+                if (rawData.data[idx + 3] > 0) {
+                    initialPixelCount++;
+                    if (customPlanetHasCore) {
+                        const dx = x - planetCanvasCX;
+                        const dy = y - planetCanvasCY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= coreRadius) {
+                            initialCorePixelCount++;
+                        }
+                    }
+                }
+            }
+        }
+        return;
+    }
+
     hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
     const d = getPlanetSize();
@@ -1412,7 +1461,7 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
 
 // Trigger Victory splash
 function triggerVictory() {
-    if (typeof isMainMenuActive !== 'undefined' && isMainMenuActive) return;
+    if (typeof gameMode !== 'undefined' && gameMode === 'menu') return;
     const previousBest = bestTimes[currentPlanet];
     victoryTriggered = true;
     soundManager.play('sfx_victory');
@@ -1707,6 +1756,13 @@ function updatePlanetButtons() {
 
 // Reset Game values
 function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
+    // Dynamically set Y position based on the current phase
+    if (typeof gameMode !== 'undefined' && gameMode === 'builder') {
+        CENTER_Y = 450 + PLANET_OFFSET_Y - 100; // Shifted up for builder UI space
+    } else {
+        CENTER_Y = 450 + PLANET_OFFSET_Y; // Centered default
+    }
+
     if (typeof weaponAmmo !== 'undefined') {
         weaponAmmo.nuke = 18;
         weaponAmmo.bowling = 15;
@@ -1913,7 +1969,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     document.getElementById('victory-screen').classList.remove('show');
     initializePlanet();
     generateStars();
-    if (window.PlatformBridge && gameplayStarted && !isPlanetSwitch) {
+    if (window.PlatformBridge && gameMode === 'gameplay' && !isPlanetSwitch) {
         window.PlatformBridge.gameplayStart();
     }
     if (window.ShootingStarManager) {

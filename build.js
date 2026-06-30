@@ -18,8 +18,8 @@ const JS_FILES = [
     path.join(__dirname, 'js', 'mystery-box.js'),
     path.join(__dirname, 'js', 'drill.js'),
     path.join(__dirname, 'js', 'intro.js'),
-    path.join(__dirname, 'js', 'main.js'),
     path.join(__dirname, 'js', 'builder.js'),
+    path.join(__dirname, 'js', 'main.js'),
 ];
 
 async function build() {
@@ -110,7 +110,12 @@ async function build() {
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/state\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/planet\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/weapons\.js["']><\/script>\s*/gi, '');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/spinner\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/shooting-star\.js["']><\/script>\s*/gi, '');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/mystery-box\.js["']><\/script>\s*/gi, '');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/drill\.js["']><\/script>\s*/gi, '');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/intro\.js["']><\/script>\s*/gi, '');
+        htmlContent = htmlContent.replace(/<script\s+src=["']js\/builder\.js["']><\/script>\s*/gi, '');
         htmlContent = htmlContent.replace(/<script\s+src=["']js\/main\.js["']><\/script>\s*/gi, '');
     }
 

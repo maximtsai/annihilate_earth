@@ -15,6 +15,7 @@ var weaponQueues = {};
 // Game States
 let selectedWeapon = 'missile';
 let currentPlanet = 'earth';
+let isPlanetBuilderMode = false;
 let seedX = 0;
 let seedY = 0;
 let laserSoundCounter = 0;
@@ -94,8 +95,7 @@ let totalShotsFired = 0; // (User feature 4: Stats tracking)
 let totalCratersMade = 0; // (User feature 4: Stats tracking)
 let planetTimeSpent = 0;
 let bestTimes = {};
-let gameplayStarted = false;
-let isMainMenuActive = true;
+let gameMode = 'menu'; // 'menu', 'builder', 'gameplay'
 let planetRotation = 0;
 let planetScale = 1.0;
 let isPlanetSwitching = false;
@@ -129,7 +129,7 @@ function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5
 let unlockNotificationTimeout = null;
 
 function showUnlockNotification(text) {
-    if (isMainMenuActive || currentPlanet === 'custom') return;
+    if (gameMode === 'menu' || currentPlanet === 'custom') return;
     const notif = document.getElementById('weapon-unlock-notification');
     if (!notif) return;
 
