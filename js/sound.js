@@ -11,6 +11,7 @@ class SoundManager {
                 this.bgmGain.connect(this.masterGain);
                 this.isInitialized = false;
                 this.muted = false;
+                this.crazyGamesMuted = false;
 
                 const resumeAudio = () => {
                     if (this.context && this.context.state === 'suspended') {
@@ -32,10 +33,20 @@ class SoundManager {
                 this.bgmGain.gain.setTargetAtTime(Math.max(0, Math.min(1, v)), this.context.currentTime, 0.05);
             }
 
+            updateMasterVolume() {
+                const isSilent = this.muted || this.crazyGamesMuted;
+                this.masterGain.gain.setTargetAtTime(isSilent ? 0 : 1, this.context.currentTime, 0.05);
+            }
+
             toggleMute() {
                 this.muted = !this.muted;
-                this.masterGain.gain.setTargetAtTime(this.muted ? 0 : 1, this.context.currentTime, 0.05);
+                this.updateMasterVolume();
                 return this.muted;
+            }
+
+            setCrazyGamesMuted(muted) {
+                this.crazyGamesMuted = !!muted;
+                this.updateMasterVolume();
             }
 
             async init() {

@@ -18,10 +18,26 @@ window.PlatformBridge = {
                     window.CrazyGames.SDK.init()
                         .then(() => {
                             console.log("[PlatformBridge] CrazyGames SDK successfully initialized.");
-                            // Start loading event as per CrazyGames SDK v3 requirements
-                            if (window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.loadingStart === 'function') {
-                                window.CrazyGames.SDK.game.loadingStart();
-                                console.log("[PlatformBridge] CrazyGames loadingStart triggered.");
+                            
+                            // Initialize audio settings listener
+                            if (window.CrazyGames.SDK.game) {
+                                if (typeof window.CrazyGames.SDK.game.addSettingsChangeListener === 'function') {
+                                    const currentSettings = window.CrazyGames.SDK.game.settings;
+                                    if (currentSettings && currentSettings.muteAudio !== undefined) {
+                                        if (window.soundManager) window.soundManager.setCrazyGamesMuted(currentSettings.muteAudio);
+                                    }
+                                    window.CrazyGames.SDK.game.addSettingsChangeListener((newSettings) => {
+                                        if (newSettings && newSettings.muteAudio !== undefined) {
+                                            if (window.soundManager) window.soundManager.setCrazyGamesMuted(newSettings.muteAudio);
+                                        }
+                                    });
+                                }
+
+                                // Start loading event as per CrazyGames SDK v3 requirements
+                                if (typeof window.CrazyGames.SDK.game.loadingStart === 'function') {
+                                    window.CrazyGames.SDK.game.loadingStart();
+                                    console.log("[PlatformBridge] CrazyGames loadingStart triggered.");
+                                }
                             }
                             resolve();
                         })
