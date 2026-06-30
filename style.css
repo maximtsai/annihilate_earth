@@ -1616,7 +1616,7 @@ html {
     }
 
     .game-title {
-        font-size: calc((28px + var(--title-font-adjust)) * 1.15 * var(--ui-scale));
+        font-size: calc((34px + var(--title-font-adjust)) * var(--ui-scale));
     }
 
     /* Move planet selector to top horizontal row */
@@ -1639,7 +1639,7 @@ html {
     }
 
     .planet-btn {
-        font-size: calc((21.5px + var(--planet-font-adjust)) * 1.1 * var(--ui-scale));
+        font-size: calc((24px + var(--planet-font-adjust)) * var(--ui-scale));
         width: calc(166px * var(--ui-scale));
         height: calc(129px * var(--ui-scale));
         padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
@@ -1647,7 +1647,7 @@ html {
     }
 
     .planet-btn-icon {
-        font-size: calc((47.5px + var(--planet-font-adjust)) * 1.1 * var(--ui-scale));
+        font-size: calc((52px + var(--planet-font-adjust)) * var(--ui-scale));
     }
 
     .lang-cjk .planet-btn {
@@ -1739,8 +1739,8 @@ html {
     }
 
     .weapon-button {
-        flex: 0 0 calc(163px * var(--ui-scale));
-        width: calc(163px * var(--ui-scale));
+        flex: 0 0 calc(167px * var(--ui-scale));
+        width: calc(167px * var(--ui-scale));
         height: calc(157px * var(--ui-scale));
         gap: calc(5px * var(--ui-scale));
     }
@@ -1750,8 +1750,8 @@ html {
     }
 
     .weapon-name {
-        font-size: calc((16.5px + var(--weapon-font-adjust)) * 1.18 * var(--ui-scale));
-        max-width: calc(164px * var(--ui-scale));
+        font-size: calc((22px + var(--weapon-font-adjust)) * var(--ui-scale));
+        max-width: calc(167px * var(--ui-scale));
     }
 
     .lang-cjk .weapon-name {}
@@ -1854,11 +1854,11 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     background: rgba(10, 10, 20, 0.4);
     border: 1.5px solid rgba(255, 230, 0, 0.15);
     border-radius: 8px;
-    padding: 12px;
+    padding: 13px;
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
     box-sizing: border-box;
 }
@@ -1867,20 +1867,20 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 15px;
+    gap: 17px;
     width: 100%;
 }
 
 .weapon-spinner-preview {
-    width: 50px;
-    height: 50px;
+    width: 55px;
+    height: 55px;
     background: #0d0d18;
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 30px;
+    font-size: 33px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     transition: border-color 0.1s ease, box-shadow 0.1s ease;
 }
@@ -1891,8 +1891,8 @@ html {
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
     display: block;
     cursor: default;
-    width: calc(420px * (0.5 + 0.5 * var(--ui-scale)));
-    height: calc(180px * (0.5 + 0.5 * var(--ui-scale)));
+    width: calc(462px * (0.5 + 0.5 * var(--ui-scale)));
+    height: calc(198px * (0.5 + 0.5 * var(--ui-scale)));
 }
 
 .weapon-spinner-canvas.clickable {
@@ -1901,14 +1901,14 @@ html {
 
 .weapon-spinner-stop-btn {
     font-family: 'Orbitron', sans-serif;
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 800;
     letter-spacing: 2px;
     color: #ffe600;
     background: rgba(255, 230, 0, 0.08);
     border: 1.5px solid rgba(255, 230, 0, 0.4);
     border-radius: 4px;
-    padding: 12px 54px;
+    padding: 13px 59px;
     cursor: pointer;
     box-shadow: 0 0 10px rgba(255, 230, 0, 0.1);
     position: relative;
@@ -2005,13 +2005,13 @@ html {
 
 /* Ad Spin Popup Width Override for Large Spinner */
 #ad-spin-popup-overlay .ad-spin-popup {
-    max-width: 630px;
+    max-width: 693px;
     transform: scale(var(--ad-spin-scale, 1));
 }
 
 /* Celebration & Announcement Area Styles */
 .weapon-spinner-action-area {
-    min-height: 48px;
+    min-height: 53px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2020,7 +2020,7 @@ html {
 
 .weapon-spinner-announcement {
     font-family: 'Orbitron', sans-serif;
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 900;
     letter-spacing: 2px;
     text-align: center;

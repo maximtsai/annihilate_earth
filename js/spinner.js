@@ -92,10 +92,10 @@ class WeaponSpinner {
         this.leftPreview.className = 'weapon-spinner-preview left-preview';
         row.appendChild(this.leftPreview);
 
-        // 1. Create Canvas (420x180, which is 50% larger than 280x120)
+        // 1. Create Canvas (462x198, which is 10% larger than 420x180)
         this.canvas = document.createElement('canvas');
-        this.canvas.width = 420;
-        this.canvas.height = 180;
+        this.canvas.width = 462;
+        this.canvas.height = 198;
         this.canvas.className = 'weapon-spinner-canvas';
         this.ctx = this.canvas.getContext('2d');
         row.appendChild(this.canvas);
