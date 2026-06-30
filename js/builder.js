@@ -9,6 +9,7 @@ var lastLocalPos = null;
 var previewPlanetSize = null;
 var isDraggingSizeSlider = false;
 var coreFlashUntil = 0;
+var circleFlashUntil = 0;
 var planetToDelete = null;
 
 // Converts screen coordinates to local planet canvas coordinates
@@ -35,6 +36,9 @@ function drawBrush(x, y) {
         hiddenCtx.clip();
     }
     hiddenCtx.beginPath();
+    if (activeTool === 'eraser') {
+        hiddenCtx.globalCompositeOperation = 'destination-out';
+    }
     hiddenCtx.fillStyle = brushColor;
     hiddenCtx.arc(x, y, brushSize, 0, Math.PI * 2);
     hiddenCtx.fill();
@@ -50,6 +54,9 @@ function drawBrushLine(x1, y1, x2, y2) {
         hiddenCtx.clip();
     }
     hiddenCtx.beginPath();
+    if (activeTool === 'eraser') {
+        hiddenCtx.globalCompositeOperation = 'destination-out';
+    }
     hiddenCtx.strokeStyle = brushColor;
     hiddenCtx.lineWidth = brushSize * 2;
     hiddenCtx.lineCap = 'round';
@@ -137,7 +144,7 @@ function handlePlanetBuilderInput(x, y, eventType) {
             if (dist > getPlanetSize() / 2) return;
         }
 
-        if (activeTool === 'brush') {
+        if (activeTool === 'brush' || activeTool === 'eraser') {
             isDrawing = true;
             lastLocalPos = localPos;
             drawBrush(localPos.x, localPos.y);
@@ -237,6 +244,7 @@ function exitPlanetBuilderMode() {
 function setupPlanetBuilderEvents() {
     // Tool selection
     const brushBtn = document.getElementById('tool-brush');
+    const eraserBtn = document.getElementById('tool-eraser');
     const bucketBtn = document.getElementById('tool-bucket');
     const clearBtn = document.getElementById('tool-clear');
 
@@ -247,6 +255,15 @@ function setupPlanetBuilderEvents() {
             activeTool = 'brush';
             document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('selected'));
             brushBtn.classList.add('selected');
+        });
+    }
+    if (eraserBtn) {
+        eraserBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundManager.play('sfx_ui_switch');
+            activeTool = 'eraser';
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('selected'));
+            eraserBtn.classList.add('selected');
         });
     }
     if (bucketBtn) {
@@ -262,8 +279,7 @@ function setupPlanetBuilderEvents() {
         clearBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
-            hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-            resetGame(false);
+            confirmClearPlanet();
         });
     }
 
@@ -315,6 +331,9 @@ function setupPlanetBuilderEvents() {
             const val = parseInt(e.target.value);
             isDraggingSizeSlider = false;
             customPlanetSize = val;
+            if (customPlanetHasCore) {
+                coreFlashUntil = Date.now() + 1500;
+            }
             // Clear canvas so initializePlanet() knows to regenerate a clean circle at the new size
             hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
             resetGame(false);
@@ -354,6 +373,9 @@ function setupPlanetBuilderEvents() {
     if (circleCheckbox) {
         circleCheckbox.addEventListener('change', (e) => {
             customPlanetEnforceCircle = e.target.checked;
+            if (customPlanetEnforceCircle) {
+                circleFlashUntil = Date.now() + 1500;
+            }
         });
     }
 
@@ -385,8 +407,17 @@ function setupPlanetBuilderEvents() {
                     const x = planetCenterX - w / 2;
                     const y = planetCenterY - h / 2;
 
-                    // 3. Draw the image (respecting transparency)
-                    hiddenCtx.drawImage(img, x, y, w, h);
+                    // 3. Draw the image (respecting transparency and Enforce Circle constraint)
+                    if (customPlanetEnforceCircle) {
+                        hiddenCtx.save();
+                        hiddenCtx.beginPath();
+                        hiddenCtx.arc(planetCenterX, planetCenterY, size / 2, 0, Math.PI * 2);
+                        hiddenCtx.clip();
+                        hiddenCtx.drawImage(img, x, y, w, h);
+                        hiddenCtx.restore();
+                    } else {
+                        hiddenCtx.drawImage(img, x, y, w, h);
+                    }
 
                     // 4. Update the game physics and sound
                     calculateCenterOfMass();
@@ -396,7 +427,30 @@ function setupPlanetBuilderEvents() {
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+
+            // Clear the input value so selecting the same file again triggers the change event
+            e.target.value = '';
         });
+    }
+
+    // Helper to generate a unique default planet name (e.g., PLANET 1, PLANET 2) without collisions
+    function getUniqueDefaultPlanetName() {
+        let num = 1;
+        let name = `PLANET ${num}`;
+        
+        const nameExists = (planetName) => {
+            if (localStorage.getItem('custom_planet_' + planetName)) return true;
+            const domExists = Array.from(document.querySelectorAll('#custom-planets-list .custom-planet-btn .level-select-name'))
+                .some(el => el.textContent.trim().toUpperCase() === planetName.toUpperCase());
+            if (domExists) return true;
+            return false;
+        };
+
+        while (nameExists(name)) {
+            num++;
+            name = `PLANET ${num}`;
+        }
+        return name;
     }
 
     // Save Button and Naming Modal
@@ -410,8 +464,16 @@ function setupPlanetBuilderEvents() {
         saveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
-            if (nameInput) nameInput.value = '';
-            nameOverlay.style.display = 'flex';
+            if (nameInput) {
+                nameInput.value = getUniqueDefaultPlanetName();
+                nameOverlay.style.display = 'flex';
+                setTimeout(() => {
+                    nameInput.focus();
+                    nameInput.select();
+                }, 50);
+            } else {
+                nameOverlay.style.display = 'flex';
+            }
         });
     }
 
@@ -523,13 +585,47 @@ function loadCustomPlanet(savedData) {
     img.src = savedData.image;
 }
 
+// Shows a confirmation popup before clearing the custom planet
+function confirmClearPlanet() {
+    const overlay = document.getElementById('clear-confirm-popup-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        
+        // Lazy-bind confirmation buttons if not already done
+        if (!window.hasBoundClearConfirmEvents) {
+            window.hasBoundClearConfirmEvents = true;
+            const yesBtn = document.getElementById('clear-confirm-yes');
+            const noBtn = document.getElementById('clear-confirm-no');
+            
+            if (yesBtn) {
+                yesBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    soundManager.play('sfx_ui_switch');
+                    hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                    resetGame(false);
+                    overlay.style.display = 'none';
+                });
+            }
+            if (noBtn) {
+                noBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    soundManager.play('sfx_ui_switch');
+                    overlay.style.display = 'none';
+                });
+            }
+        }
+    }
+}
+
 // Triggers the delete confirmation popup
 function deleteCustomPlanet(name) {
     planetToDelete = name;
     const overlay = document.getElementById('delete-confirm-popup-overlay');
     const message = document.getElementById('delete-confirm-message');
     if (overlay && message) {
-        message.textContent = `ARE YOU SURE YOU WANT TO DELETE "${name.toUpperCase()}"?`;
+        const t = translations[currentLanguage] || translations['en'];
+        const pattern = t.deletePlanetWarnName || 'ARE YOU SURE YOU WANT TO DELETE "{name}"?';
+        message.textContent = pattern.replace('{name}', name.toUpperCase());
         overlay.style.display = 'flex';
         
         // Lazy-bind confirmation buttons if not already done
@@ -591,31 +687,14 @@ function refreshCustomPlanetsList() {
     const addPlanetButton = (planetData) => {
         const btn = document.createElement('button');
         btn.className = 'level-select-btn custom-planet-btn';
-        btn.style.width = '100%';
-        btn.style.display = 'flex';
-        btn.style.alignItems = 'center';
-        btn.style.justifyContent = 'space-between';
-        btn.style.padding = '10px 15px';
-        btn.style.background = 'rgba(0, 217, 255, 0.05)';
-        btn.style.border = '1px solid rgba(0, 217, 255, 0.2)';
-        btn.style.borderRadius = '4px';
-        btn.style.color = '#ffffff';
-        btn.style.fontFamily = "'Orbitron', sans-serif";
-        btn.style.fontSize = '12px';
-        btn.style.cursor = 'pointer';
-        btn.style.transition = 'all 0.2s';
-        btn.style.marginBottom = '6px';
-        btn.style.boxSizing = 'border-box';
+        btn.style.position = 'relative';
+        btn.style.height = 'calc(105px * var(--ui-scale))';
 
         btn.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px; pointer-events: none;">
-                <img src="${planetData.image}" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,217,255,0.4); background: #000;">
-                <span style="font-weight: 700; letter-spacing: 0.5px;">${planetData.name.toUpperCase()}</span>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <span style="color: #a0c8d8; font-size: 10px; pointer-events: none;">${planetData.size}km</span>
-                <span class="delete-custom-planet" data-name="${planetData.name}">✕</span>
-            </div>
+            <span class="delete-custom-planet" data-name="${planetData.name}" style="position: absolute; bottom: 4px; left: 6px; z-index: 10; padding: 2px 4px; margin: 0; line-height: 1;">✖</span>
+            <img src="${planetData.image}" style="width: calc(50px * var(--ui-scale)); height: calc(50px * var(--ui-scale)); border-radius: 50%; border: 1px solid rgba(0,217,255,0.4); background: #000; pointer-events: none;">
+            <span class="level-select-name" style="pointer-events: none; max-width: 95%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(11px * var(--ui-scale));">${planetData.name.toUpperCase()}</span>
+            <span style="color: #a0c8d8; font-size: calc(9px * var(--ui-scale)); pointer-events: none; margin-top: -4px;">${planetData.size}km</span>
         `;
 
         // Click to load planet
@@ -627,18 +706,6 @@ function refreshCustomPlanetsList() {
                 return;
             }
             loadCustomPlanet(planetData);
-        });
-
-        // Hover effects
-        btn.addEventListener('mouseenter', () => {
-            btn.style.background = 'rgba(0, 217, 255, 0.15)';
-            btn.style.borderColor = '#00d9ff';
-            btn.style.boxShadow = '0 0 8px rgba(0, 217, 255, 0.3)';
-        });
-        btn.addEventListener('mouseleave', () => {
-            btn.style.background = 'rgba(0, 217, 255, 0.05)';
-            btn.style.borderColor = 'rgba(0, 217, 255, 0.2)';
-            btn.style.boxShadow = 'none';
         });
 
         listContainer.appendChild(btn);

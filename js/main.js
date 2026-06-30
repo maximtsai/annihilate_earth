@@ -3815,7 +3815,12 @@ async function run(mode) {
                 const pulse = 0.7 + Math.sin(performance.now() * 0.005) * 0.05;
                 ctx.save();
                 ctx.translate(dxLocal, dyLocal);
-                let scaleFactor = coreRatio * pulse * (planetSize / 240);
+                let scaleFactor = coreRatio * pulse;
+                if (currentPlanet === 'custom') {
+                    scaleFactor *= (getCoreRadius(planetSize) / 73);
+                } else {
+                    scaleFactor *= (planetSize / 240);
+                }
                 ctx.scale(scaleFactor, scaleFactor);
                 ctx.drawImage(coreImg, -coreImg.width / 2, -coreImg.height / 2);
                 ctx.restore();
@@ -3939,6 +3944,24 @@ async function run(mode) {
             ctx.strokeStyle = `rgba(255, 0, 0, ${0.75 * progress})`;
             ctx.lineWidth = 2.5;
             ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Brief blue-green flash showing allowed drawing area (gradual fade out)
+        if (currentPlanet === 'custom' && Date.now() < circleFlashUntil) {
+            const timeLeft = circleFlashUntil - Date.now();
+            const progress = Math.max(0, Math.min(1, timeLeft / 1500));
+            const pSize = getPlanetSize();
+            const radius = pSize / 2;
+            ctx.save();
+            ctx.translate(CENTER_X, CENTER_Y);
+            ctx.scale(planetScale, planetScale);
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(0, 230, 180, ${0.85 * progress})`;
+            ctx.lineWidth = 4;
+            ctx.setLineDash([6, 6]);
             ctx.stroke();
             ctx.restore();
         }
@@ -5552,19 +5575,19 @@ async function run(mode) {
         const menuNewGame = document.getElementById('menu-new-game-btn');
         if (menuNewGame) {
             const hasProgress = unlockedPlanets && unlockedPlanets.length > 1;
-            menuNewGame.textContent = hasProgress ? (t.continue || 'CONTINUE') : (t.newGame || 'NEW GAME');
+            menuNewGame.textContent = (hasProgress ? '▶️ ' : '🚀 ') + (hasProgress ? (t.continue || 'CONTINUE') : (t.newGame || 'NEW GAME'));
         }
         const menuLevelSelect = document.getElementById('menu-level-select-btn');
-        if (menuLevelSelect) menuLevelSelect.textContent = t.levelSelect || 'LEVEL SELECT';
+        if (menuLevelSelect) menuLevelSelect.textContent = '🪐 ' + (t.levelSelect || 'LEVEL SELECT');
         const menuBuilder = document.getElementById('menu-builder-btn');
         if (menuBuilder) {
-            menuBuilder.textContent = t.planetBuilder || 'PLANET BUILDER';
+            menuBuilder.textContent = '🛠️ ' + (t.planetBuilder || 'PLANET BUILDER');
             menuBuilder.setAttribute('title', t.comingSoon || 'COMING SOON');
         }
         const menuOptions = document.getElementById('menu-options-btn');
-        if (menuOptions) menuOptions.textContent = t.options || 'OPTIONS';
+        if (menuOptions) menuOptions.textContent = '⚙️ ' + (t.options || 'OPTIONS');
         const menuCredits = document.getElementById('menu-credits-btn');
-        if (menuCredits) menuCredits.textContent = t.credits || 'CREDITS';
+        if (menuCredits) menuCredits.textContent = '🏆 ' + (t.credits || 'CREDITS');
 
         // Level Select Popup Button Names
         document.querySelectorAll('.level-select-btn').forEach(btn => {
@@ -5590,6 +5613,31 @@ async function run(mode) {
         if (confirmMsg) confirmMsg.textContent = t.resetWarnMessage || '';
         if (confirmYes) confirmYes.textContent = t.yesReset || 'YES, RESET';
         if (confirmNo) confirmNo.textContent = t.cancel || 'CANCEL';
+
+        // Delete Confirmation Popup translations
+        const deleteConfirmTitle = document.querySelector('#delete-confirm-popup-overlay .options-popup-title');
+        const deleteConfirmMsg = document.querySelector('#delete-confirm-popup-overlay .confirm-message');
+        const deleteConfirmYes = document.getElementById('delete-confirm-yes');
+        const deleteConfirmNo = document.getElementById('delete-confirm-no');
+        if (deleteConfirmTitle) deleteConfirmTitle.textContent = t.deletePlanetConfirm || 'DELETE PLANET?';
+        if (deleteConfirmMsg && typeof planetToDelete !== 'undefined' && planetToDelete) {
+            const pattern = t.deletePlanetWarnName || 'ARE YOU SURE YOU WANT TO DELETE "{name}"?';
+            deleteConfirmMsg.textContent = pattern.replace('{name}', planetToDelete.toUpperCase());
+        } else if (deleteConfirmMsg) {
+            deleteConfirmMsg.textContent = t.deletePlanetWarnMessage || 'ARE YOU SURE YOU WANT TO DELETE THIS PLANET?';
+        }
+        if (deleteConfirmYes) deleteConfirmYes.textContent = t.yesDelete || 'DELETE';
+        if (deleteConfirmNo) deleteConfirmNo.textContent = t.cancel || 'CANCEL';
+
+        // Clear Confirmation Popup translations
+        const clearConfirmTitle = document.querySelector('#clear-confirm-popup-overlay .options-popup-title');
+        const clearConfirmMsg = document.querySelector('#clear-confirm-popup-overlay .confirm-message');
+        const clearConfirmYes = document.getElementById('clear-confirm-yes');
+        const clearConfirmNo = document.getElementById('clear-confirm-no');
+        if (clearConfirmTitle) clearConfirmTitle.textContent = t.clearPlanetConfirm || 'RESET PLANET?';
+        if (clearConfirmMsg) clearConfirmMsg.textContent = t.clearPlanetWarnMessage || 'ARE YOU SURE YOU WANT TO CLEAR ALL DRAWINGS ON THE PLANET?';
+        if (clearConfirmYes) clearConfirmYes.textContent = t.yesClear || 'RESET';
+        if (clearConfirmNo) clearConfirmNo.textContent = t.cancel || 'CANCEL';
 
         // Victory stats labels (User feature 4)
         const shotsLabel = document.getElementById('stat-shots-label');
@@ -5861,7 +5909,10 @@ async function run(mode) {
                     planetScale = 0.7; // Start point for the ease
 
                     // Subtle UI polish
-                    if (weaponBarWrapper) weaponBarWrapper.style.opacity = '0';
+                    if (weaponBarWrapper) {
+                        weaponBarWrapper.style.display = 'block';
+                        weaponBarWrapper.style.opacity = '0';
+                    }
                     if (hudHeaderWrapper) hudHeaderWrapper.style.opacity = '0';
                     flickerIn(weaponBarWrapper, 300, 50);
                     flickerIn(hudHeaderWrapper, 500, 300);
@@ -5990,6 +6041,7 @@ async function run(mode) {
         const hudHeader = document.querySelector('.hud-header-wrapper');
         const selector = document.querySelector('.planet-selector');
         if (weaponBar) {
+            weaponBar.style.display = 'block';
             weaponBar.style.opacity = '0';
             weaponBar.style.pointerEvents = 'none';
         }
@@ -6331,7 +6383,10 @@ async function run(mode) {
     }
 
     function beginGameplay() {
-        if (weaponBarWrapper) weaponBarWrapper.style.pointerEvents = 'auto';
+        if (weaponBarWrapper) {
+            weaponBarWrapper.style.display = 'block';
+            weaponBarWrapper.style.pointerEvents = 'auto';
+        }
         if (hudHeaderWrapper) hudHeaderWrapper.style.pointerEvents = 'auto';
         if (planetSelector) planetSelector.style.pointerEvents = 'auto';
 

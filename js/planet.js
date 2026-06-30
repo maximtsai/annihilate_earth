@@ -64,6 +64,10 @@ function initializePlanet() {
                 }
             }
         }
+        currentPixelCount = initialPixelCount;
+        currentCorePixelCount = initialCorePixelCount;
+        planetCenterX = hiddenCanvas.width / 2;
+        planetCenterY = hiddenCanvas.height / 2;
         return;
     }
 

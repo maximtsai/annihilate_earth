@@ -2730,7 +2730,7 @@ html.no-glows *::after {
     border-color: #00ffaa;
     color: #ffffff;
     box-shadow: 0 0 20px rgba(0, 217, 255, 0.45);
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.05);
 }
 
 .level-select-btn:active:not(.locked) {
@@ -3173,6 +3173,7 @@ html.no-glows *::after {
     border-radius: 50%;
     background-color: currentColor; /* Matches button text color (and glows on hover/selection!) */
     transition: background-color 200ms ease, transform 150ms ease;
+    box-shadow: 0 0 0 1.5px #000;
 }
 
 .brush-circle-s {
