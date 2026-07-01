@@ -429,8 +429,8 @@ html {
     position: absolute;
     right: 24px;
     top: 15px;
-    width: calc(70px * var(--ui-scale));
-    height: calc(70px * var(--ui-scale));
+    width: calc(60px * var(--ui-scale));
+    height: calc(60px * var(--ui-scale));
     padding: 1.5px;
     background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
@@ -438,6 +438,21 @@ html {
     z-index: 100;
     transition: all 150ms cubic-bezier(0.25, 0.8, 0.25, 1);
     box-sizing: border-box;
+}
+
+/* Invisible, larger hit-area sitting behind the options button so taps just
+   outside its clipped octagon shape still register, without changing its
+   visible size. */
+.options-hitbox {
+    position: absolute;
+    right: 24px;
+    top: 15px;
+    width: calc(60px * var(--ui-scale));
+    height: calc(60px * var(--ui-scale));
+    transform: scale(1.35);
+    background: transparent;
+    cursor: pointer;
+    z-index: 99;
 }
 
 .options-toggle-wrapper:hover {
@@ -1647,7 +1662,7 @@ html {
     .planet-selector {
         position: absolute;
         left: 50%;
-        top: calc(64px + 90px * var(--ui-scale));
+        top: calc(20px + 152px * var(--ui-scale));
         transform: translateX(-50%);
         display: flex;
         flex-direction: row;
@@ -1706,8 +1721,8 @@ html {
         right: auto;
         top: auto;
         transform: translateX(-50%);
-        width: 95%;
-        max-width: 860px;
+        width: 93%;
+        max-width: 843px;
         height: calc(11px + 178px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
@@ -1726,8 +1741,8 @@ html {
     }
 
     .scroll-arrow {
-        flex: 0 0 calc(58px * var(--ui-scale));
-        width: calc(58px * var(--ui-scale));
+        flex: 0 0 calc(64px * var(--ui-scale));
+        width: calc(64px * var(--ui-scale));
         height: calc(157px * var(--ui-scale));
         font-size: calc(32px * var(--ui-scale));
     }
@@ -1785,6 +1800,11 @@ html {
     }
 
     .options-toggle-wrapper {
+        width: calc(104px * var(--ui-scale));
+        height: calc(104px * var(--ui-scale));
+    }
+
+    .options-hitbox {
         width: calc(104px * var(--ui-scale));
         height: calc(104px * var(--ui-scale));
     }
@@ -1861,7 +1881,7 @@ html {
 
 @media (max-width: 660px) {
     .game-title {
-        font-size: calc((20px + var(--title-font-adjust)) * var(--ui-scale));
+        font-size: calc((28px + var(--title-font-adjust)) * var(--ui-scale));
     }
 }
 

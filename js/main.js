@@ -5014,7 +5014,7 @@ async function run(mode) {
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
         if (window.gamePausedForAd) return;
-        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -5060,7 +5060,7 @@ async function run(mode) {
 
     gameWorld.addEventListener('touchstart', (e) => {
         if (window.gamePausedForAd) return;
-        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
+        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
         startBGM();
@@ -5697,6 +5697,16 @@ async function run(mode) {
         soundManager.play('sfx_ui_switch');
         optionsOverlay.classList.add('show');
     });
+
+    // Extended invisible hit-area behind the options button (same size/position,
+    // scaled up) so taps just outside its clipped octagon shape still open options.
+    const optionsHitbox = document.getElementById('options-hitbox');
+    if (optionsHitbox) {
+        optionsHitbox.addEventListener('click', (e) => {
+            e.stopPropagation();
+            optionsBtn.click();
+        });
+    }
 
     optionsCloseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
