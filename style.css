@@ -429,8 +429,8 @@ html {
     position: absolute;
     right: 24px;
     top: 15px;
-    width: calc(60px * var(--ui-scale));
-    height: calc(60px * var(--ui-scale));
+    width: calc(60px * var(--ui-scale) + 8px);
+    height: calc(60px * var(--ui-scale) + 8px);
     padding: 1.5px;
     background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
@@ -447,8 +447,8 @@ html {
     position: absolute;
     right: 24px;
     top: 15px;
-    width: calc(60px * var(--ui-scale));
-    height: calc(60px * var(--ui-scale));
+    width: calc(60px * var(--ui-scale) + 8px);
+    height: calc(60px * var(--ui-scale) + 8px);
     transform: scale(1.35);
     background: transparent;
     cursor: pointer;
@@ -487,8 +487,8 @@ html {
 }
 
 .options-toggle svg {
-    width: calc(44px * var(--ui-scale));
-    height: calc(44px * var(--ui-scale));
+    width: calc(34px * var(--ui-scale) + 8px);
+    height: calc(34px * var(--ui-scale) + 8px);
     fill: #ffffff;
     filter: drop-shadow(0 0 4px rgba(0, 238, 255, 0.6));
     transition: filter 250ms ease;
@@ -1800,18 +1800,18 @@ html {
     }
 
     .options-toggle-wrapper {
-        width: calc(104px * var(--ui-scale));
-        height: calc(104px * var(--ui-scale));
+        width: calc(94px * var(--ui-scale) + 8px);
+        height: calc(94px * var(--ui-scale) + 8px);
     }
 
     .options-hitbox {
-        width: calc(104px * var(--ui-scale));
-        height: calc(104px * var(--ui-scale));
+        width: calc(94px * var(--ui-scale) + 8px);
+        height: calc(94px * var(--ui-scale) + 8px);
     }
 
     .options-toggle svg {
-        width: calc(65px * var(--ui-scale));
-        height: calc(65px * var(--ui-scale));
+        width: calc(55px * var(--ui-scale) + 8px);
+        height: calc(55px * var(--ui-scale) + 8px);
     }
 
     /* Scaling Options popup */
