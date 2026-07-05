@@ -188,21 +188,31 @@ function setLoadingProgress(pct, status) {
 
 setLoadingProgress(10, (translations[currentLanguage] || translations['en']).loadingAudio || 'Initializing audio system...');
 soundManager = new SoundManager();
-const soundIds = [
-    'sfx_launch_heavy',
-    'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large',
-    'sfx_laser_fire', 'sfx_gamma_charge', 'sfx_gamma_beam',
-    'sfx_sword_fly', 'sfx_sword_stab', 'sfx_victory',
+const criticalSoundIds = [
+    'bgm_gentle_space',
     'sfx_ui_switch', 'sfx_ui_scroll',
-    'sfx_sword_rumble_loop', 'sfx_sword_pullout', 'sfx_gamma_warning',
-    'sfx_laser_crack', 'sfx_bowling_pins',
-    'sfx_black_hole_disappear', 'sfx_black_hole_spawn',
-    'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
-    'sfx_mystical_moon_explosion', 'sfx_holy_shine',
-    'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error', 'sfx_void_body', 'sfx_quack'
+    'sfx_launch_heavy',
+    'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large'
 ];
-soundIds.forEach(id => soundManager.load(id));
+criticalSoundIds.forEach(id => soundManager.load(id));
+
+window.deferredSoundIds = [
+    'sfx_laser_fire', 'sfx_laser_hum', 'sfx_laser_crack',
+    'sfx_gamma_charge', 'sfx_gamma_beam', 'sfx_gamma_warning',
+    'sfx_sword_fly', 'sfx_sword_stab', 'sfx_sword_pullout', 'sfx_sword_rumble_loop', 'sfx_holy_shine',
+    'sfx_bowling_pins',
+    'sfx_black_hole_spawn', 'sfx_black_hole_disappear',
+    'sfx_nom_short',
+    'sfx_fist_impact',
+    'sfx_mystical_moon_explosion',
+    'sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade',
+    'sfx_freeze', 'sfx_shatter',
+    'sfx_lightning',
+    'sfx_void_body',
+    'sfx_quack',
+    'sfx_error',
+    'sfx_victory'
+];
 
 // Spritesheet Atlas Loading & Extraction Logic
 const atlasImage = new Image();
@@ -5017,6 +5027,7 @@ async function run(mode) {
         if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
+        if (canvas) canvas.focus(); // Focus canvas to redirect keyboard shortcuts
         startBGM();
         if (!gameplayStarted) {
             gameplayStarted = true;
@@ -5063,6 +5074,7 @@ async function run(mode) {
         if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
             return;
         }
+        if (canvas) canvas.focus(); // Focus canvas on touch gesture
         startBGM();
         if (!gameplayStarted) {
             gameplayStarted = true;
@@ -5074,9 +5086,14 @@ async function run(mode) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
-        const touch = e.touches[0];
-        const x = (touch.clientX - rect.left) / scaleX;
-        const y = (touch.clientY - rect.top) / scaleY;
+
+        // Defensive coordinate check for mock touch profiles
+        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
+        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
+        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
+
+        const x = (clientX - rect.left) / scaleX;
+        const y = (clientY - rect.top) / scaleY;
         pointerX = x;
         pointerY = y;
         showPointer = true;
@@ -5091,18 +5108,24 @@ async function run(mode) {
             missileLaunchTimer = 0;
             spawnWeapon(x, y);
         }
-    });
+    }, { passive: false });
 
     gameWorld.addEventListener('touchmove', (e) => {
         if (window.gamePausedForAd) return;
+        e.preventDefault(); // Prevents screen dragging/scrolling on mobile devices
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
-        const touch = e.touches[0];
-        pointerX = (touch.clientX - rect.left) / scaleX;
-        pointerY = (touch.clientY - rect.top) / scaleY;
+
+        // Defensive coordinate check for mock touch profiles
+        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
+        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
+        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
+
+        pointerX = (clientX - rect.left) / scaleX;
+        pointerY = (clientY - rect.top) / scaleY;
         showPointer = true;
-    });
+    }, { passive: false });
 
     function handleLightningRelease() {
         if (selectedWeapon === 'lightning') {
@@ -5167,6 +5190,16 @@ async function run(mode) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
+    window.addEventListener('beforeunload', () => {
+        if (soundManager && soundManager.context) {
+            soundManager.context.suspend().catch(() => { });
+        }
+    });
+    window.addEventListener('pagehide', () => {
+        if (soundManager && soundManager.context) {
+            soundManager.context.suspend().catch(() => { });
+        }
+    });
 
     // Weapon selections panel
     document.querySelectorAll('.weapon-button').forEach(button => {
@@ -5572,6 +5605,9 @@ async function run(mode) {
         const optFullscreen = document.getElementById('fullscreen-label-text');
         if (optFullscreen) optFullscreen.textContent = '🖥️ ' + (t.fullScreen || 'FULL SCREEN');
 
+        const optVibration = document.getElementById('vibration-label-text');
+        if (optVibration) optVibration.textContent = '📳 ' + (t.vibration || 'VIBRATION');
+
         if (optReset) optReset.textContent = '⚠️ ' + (t.resetProgress || 'RESET PROGRESS') + ' ⚠️';
 
         // Reset Confirmation Popup translations
@@ -5948,6 +5984,25 @@ async function run(mode) {
     document.addEventListener('mozfullscreenchange', updateFullscreenCheckbox);
     document.addEventListener('MSFullscreenChange', updateFullscreenCheckbox);
 
+    // Vibration Option Logic
+    const vibCheckbox = document.getElementById('vibration-checkbox');
+    if (vibCheckbox) {
+        vibCheckbox.addEventListener('change', (e) => {
+            vibrationEnabled = vibCheckbox.checked;
+            saveOptions({ vibration: vibrationEnabled });
+            soundManager.play('sfx_ui_switch');
+            if (vibrationEnabled && typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate(20); } catch (e) { }
+            }
+        });
+    }
+
+    function updateVibrationUI() {
+        if (vibCheckbox) {
+            vibCheckbox.checked = vibrationEnabled;
+        }
+    }
+
     // Setup scene
     updatePlanetButtons();
 
@@ -5980,6 +6035,10 @@ async function run(mode) {
             if (state.screenShake !== undefined) {
                 currentScreenShakeSetting = state.screenShake;
                 updateScreenShakeUI();
+            }
+            if (state.vibration !== undefined) {
+                vibrationEnabled = state.vibration;
+                updateVibrationUI();
             }
         }
 
@@ -6072,8 +6131,13 @@ async function run(mode) {
             } else {
                 beginGameplay();
             }
-        }, 400);
-    }, 600);
+        }, 350);
+
+        // Start loading deferred sounds the moment the main loading phase is finished and gameplay begins
+        if (window.deferredSoundIds) {
+            window.deferredSoundIds.forEach(id => soundManager.load(id));
+        }
+    }, 500);
 
     // Setup Loop
     let lastTime = performance.now();
@@ -6084,8 +6148,13 @@ async function run(mode) {
             requestAnimationFrame(gameLoop);
             return;
         }
-        const deltaTime = (timestamp - lastTime) / 1000;
+        let deltaTime = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
+
+        // Cap deltaTime to 0.1s to prevent physics/state explosion after backgrounding or lag spikes
+        if (deltaTime > 0.1) {
+            deltaTime = 0.1;
+        }
 
         update(deltaTime);
         render();
@@ -6098,5 +6167,13 @@ async function run(mode) {
 
 // Auto-run the game in local mode
 window.addEventListener('DOMContentLoaded', () => {
-    run('play');
+    if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
+        document.fonts.ready.then(() => {
+            run('play');
+        }).catch(() => {
+            run('play'); // Fallback if font loading promise fails
+        });
+    } else {
+        run('play'); // Fallback for legacy browsers without document.fonts API
+    }
 });

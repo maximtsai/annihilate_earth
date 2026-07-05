@@ -198,6 +198,7 @@ function saveOptions(options) {
         if (options.musicVolume !== undefined) state.musicVolume = options.musicVolume;
         if (options.language !== undefined) state.language = options.language;
         if (options.screenShake !== undefined) state.screenShake = options.screenShake;
+        if (options.vibration !== undefined) state.vibration = options.vibration;
     });
 }
 
@@ -616,3 +617,4 @@ function fbm(x, y, octaves = 5) {
 
 let currentLanguage = 'en';
 let currentScreenShakeSetting = 'full';
+let vibrationEnabled = true;

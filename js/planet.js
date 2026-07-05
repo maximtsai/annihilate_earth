@@ -1053,7 +1053,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
 
     // Erase using centralized core-aware terrain logic
     const icePopped = eraseTerrain(localX, localY, finalRadius, isCollision, weaponType);
- 
+
     // Play explosion sound
     if (!silent) {
         if (weaponType === 'laser') {
@@ -1119,6 +1119,16 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
         intensity: shakeIntensity,
         duration: weaponType === 'missile' ? 250 : 350
     };
+
+    // Haptic vibration feedback
+    if (vibrationEnabled && radius >= 20 && typeof navigator !== 'undefined' && navigator.vibrate) {
+        let vibrationDuration = Math.min(100, Math.floor(shakeIntensity * 8));
+        if (vibrationDuration > 10) {
+            try {
+                navigator.vibrate(vibrationDuration);
+            } catch (e) { }
+        }
+    }
 
     // Screen flash on big impacts
     if (shakeIntensity >= 15 && weaponType !== 'bowling') {

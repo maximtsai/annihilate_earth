@@ -32,6 +32,9 @@
     box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
 }
 
 body,
@@ -44,6 +47,8 @@ html {
     background: #020206;
     font-family: 'Roboto', sans-serif;
     font-size: 18px;
+    touch-action: none;
+    overscroll-behavior: none;
 }
 
 /* 100% Full-bleed container to let host style and scale */
@@ -58,6 +63,7 @@ html {
     --weapon-font-adjust: 0px;
     --planet-font-adjust: 0px;
     --title-font-adjust: 0px;
+    touch-action: none;
 }
 
 #game-world.lang-cjk {
@@ -87,6 +93,7 @@ html {
     transform-origin: center center;
     overflow: hidden;
     z-index: 1;
+    touch-action: none;
 }
 
 #game-canvas {
@@ -98,6 +105,11 @@ html {
     display: block;
     z-index: 1;
     cursor: crosshair;
+    touch-action: none;
+}
+
+#game-canvas:focus {
+    outline: none;
 }
 
 #hidden-canvas {
@@ -138,7 +150,7 @@ html {
     position: relative;
     width: 88%;
     max-width: 800px;
-    margin: 10px auto 0 auto;
+    margin: max(10px, env(safe-area-inset-top, 10px)) auto 0 auto;
     padding: 1.5px;
     background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px));
@@ -206,7 +218,7 @@ html {
 /* Planet Selector UI */
 .planet-selector {
     position: absolute;
-    left: 24px;
+    left: max(24px, env(safe-area-inset-left, 24px));
     top: calc(50% + var(--planet-offset-y));
     transform: translateY(-50%);
     display: flex;
@@ -427,8 +439,8 @@ html {
 
 .options-toggle-wrapper {
     position: absolute;
-    right: 24px;
-    top: 15px;
+    right: max(24px, env(safe-area-inset-right, 24px));
+    top: max(15px, env(safe-area-inset-top, 15px));
     width: calc(70px * var(--ui-scale));
     height: calc(70px * var(--ui-scale));
     padding: 1.5px;
@@ -853,7 +865,7 @@ html {
 /* Weapon Selection Panel */
 .weapon-bar-wrapper {
     position: absolute;
-    right: 24px;
+    right: max(24px, env(safe-area-inset-right, 24px));
     top: calc(54.75% + var(--planet-offset-y) * var(--ui-scale));
     transform: translateY(-50%);
     width: calc(126px * var(--ui-scale));
@@ -862,7 +874,7 @@ html {
     padding: 1.5px;
     background: linear-gradient(90deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
-    box-shadow: -5px 0 25px rgba(0, 217, 255, 0.2);
+    box-shadow: -5px 0 25px rgba(0, 217, 255, 0.25);
     margin: 0;
     z-index: 100;
 }
@@ -2492,4 +2504,23 @@ html.no-glows *::after {
 
 .ui-hidden-fade {
     opacity: 0 !important;
+}
+
+/* Expand touch target hitboxes on mobile devices */
+.options-toggle,
+.options-popup-close,
+.scroll-arrow {
+    position: relative;
+}
+.options-toggle::after,
+.options-popup-close::after,
+.scroll-arrow::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    bottom: -20px;
+    left: -20px;
+    right: -20px;
+    cursor: pointer;
+    z-index: 10;
 }
