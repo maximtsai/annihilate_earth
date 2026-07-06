@@ -1036,6 +1036,11 @@ canvas:focus {
     overflow: hidden;
 }
 
+.weapon-button:not(.locked-active):not(.cooldown-active) {
+    background: rgba(0, 217, 255, 0.2);
+    border-color: rgba(0, 217, 255, 0.5);
+}
+
 /* Technical border corner brackets */
 .weapon-button::before {
     content: '';
@@ -1950,6 +1955,10 @@ canvas:focus {
 
     .weapon-cooldown {
         font-size: calc(35px * var(--ui-scale));
+    }
+
+    .no-ammo-overlay {
+        font-size: calc((30px + var(--font-adjust)) * var(--ui-scale));
     }
 
     .weapon-spinner-row {
