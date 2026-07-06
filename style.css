@@ -1763,9 +1763,9 @@ canvas:focus {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 8px;
+        gap: 10px;
         width: 90%;
-        max-width: 680px;
+        max-width: 600px;
         height: auto;
         padding: 5px 0;
         margin: 0;
@@ -1773,15 +1773,15 @@ canvas:focus {
     }
 
     .planet-btn {
-        font-size: calc((24px + var(--planet-font-adjust)) * var(--ui-scale));
-        width: calc(180px * var(--ui-scale));
-        height: calc(140px * var(--ui-scale));
-        padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
+        font-size: calc((20px + var(--planet-font-adjust)) * var(--ui-scale));
+        width: calc(140px * var(--ui-scale));
+        height: calc(108px * var(--ui-scale));
+        padding: calc(12px * var(--ui-scale)) calc(17px * var(--ui-scale));
         flex-shrink: 0;
     }
 
     .planet-btn-icon {
-        font-size: calc((52px + var(--planet-font-adjust)) * var(--ui-scale));
+        font-size: calc((44px + var(--planet-font-adjust)) * var(--ui-scale));
     }
 
     .lang-cjk .planet-btn {
