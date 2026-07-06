@@ -832,7 +832,8 @@ async function run(mode) {
                 laserLaunchTimer += deltaTime;
                 while (laserLaunchTimer >= laserInterval) {
                     if (lastLaserImpact && lastLaserImpact.local) {
-                        createExplosion(lastLaserImpact.local.x, lastLaserImpact.local.y, laserExplosionSize, 2, 'laser', false, true);
+                        const laserShake = (currentTier === 1) ? 0 : 2;
+                        createExplosion(lastLaserImpact.local.x, lastLaserImpact.local.y, laserExplosionSize, laserShake, 'laser', false, true);
                     }
                     if (laserTier3) {
                         laserPulseCount++;

@@ -1228,7 +1228,7 @@ canvas:focus {
 
 @media (orientation: portrait) {
     .weapon-ammo {
-        font-size: calc((20px + var(--font-adjust)) * var(--ui-scale));
+        font-size: calc((26px + var(--font-adjust)) * var(--ui-scale));
         font-weight: bold;
     }
 }
