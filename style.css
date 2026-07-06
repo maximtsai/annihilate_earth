@@ -102,7 +102,8 @@ canvas:focus {
 }
 
 /* Scale game to fit viewport on smaller screens */
-@media (max-width: 1600px), (max-height: 900px) {
+@media (max-width: 1600px),
+(max-height: 900px) {
     #game-container {
         --container-scale: min(calc(100vw / 1600), calc(100vh / 900));
     }
@@ -1693,7 +1694,7 @@ canvas:focus {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
         width: 90%;
         max-width: 680px;
         height: auto;
@@ -1704,8 +1705,8 @@ canvas:focus {
 
     .planet-btn {
         font-size: calc((24px + var(--planet-font-adjust)) * var(--ui-scale));
-        width: calc(166px * var(--ui-scale));
-        height: calc(129px * var(--ui-scale));
+        width: calc(180px * var(--ui-scale));
+        height: calc(140px * var(--ui-scale));
         padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
         flex-shrink: 0;
     }
@@ -1748,7 +1749,7 @@ canvas:focus {
         transform: translateX(-50%);
         width: 93%;
         max-width: 843px;
-        height: calc(11px + 178px * var(--ui-scale));
+        height: calc(11px + 184px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
         background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
@@ -1768,7 +1769,7 @@ canvas:focus {
     .scroll-arrow {
         flex: 0 0 calc(64px * var(--ui-scale));
         width: calc(64px * var(--ui-scale));
-        height: calc(157px * var(--ui-scale));
+        height: calc(167px * var(--ui-scale));
         font-size: calc(32px * var(--ui-scale));
     }
 
@@ -1795,17 +1796,17 @@ canvas:focus {
 
     .weapon-panel-inner {
         flex-direction: row;
-        gap: 6px;
-        padding: 0 10px;
+        gap: 4px;
+        padding: 0 6px;
         height: 100%;
         width: auto;
         align-items: center;
     }
 
     .weapon-button {
-        flex: 0 0 calc(167px * var(--ui-scale));
-        width: calc(167px * var(--ui-scale));
-        height: calc(157px * var(--ui-scale));
+        flex: 0 0 calc(177px * var(--ui-scale));
+        width: calc(177px * var(--ui-scale));
+        height: calc(167px * var(--ui-scale));
         gap: calc(5px * var(--ui-scale));
     }
 
@@ -1815,7 +1816,7 @@ canvas:focus {
 
     .weapon-name {
         font-size: calc((22px + var(--weapon-font-adjust)) * var(--ui-scale));
-        max-width: calc(167px * var(--ui-scale));
+        max-width: calc(177px * var(--ui-scale));
     }
 
     .lang-cjk .weapon-name {}
@@ -2570,6 +2571,7 @@ html.no-glows *::after {
 .scroll-arrow {
     position: relative;
 }
+
 .options-toggle::after,
 .options-popup-close::after,
 .scroll-arrow::after {
