@@ -1,0 +1,457 @@
+================================================================================
+MOBILE & WEB GAME BEST PRACTICES IMPLEMENTATION DETAILS
+================================================================================
+
+This document logs small, reusable web and mobile best practices implemented in this codebase, formatted for AI parsers to recreate similar implementations.
+
+--------------------------------------------------------------------------------
+1. VIEWPORT, PWA, AND SAFE-AREA NOTCH INTEGRATION
+--------------------------------------------------------------------------------
+Context: Prevent viewport shifting, zoom issues, and layout clipping behind notches/punch-holes on mobile devices.
+Replication:
+  A) Add the following meta tags inside <head> to enable full-bleed display:
+     ```html
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+     <meta name="apple-mobile-web-app-capable" content="yes">
+     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+     <meta name="mobile-web-app-capable" content="yes">
+     ```
+     Warning: `user-scalable=no` disables browser pinch-to-zoom. Use only when rapid double-taps/gestures are core to gameplay and conflict with browser default zooms.
+  B) Incorporate `env(safe-area-inset-...)` variables inside CSS paddings/margins to align HUD elements away from notches:
+     ```css
+     .bottom-bar {
+         padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+     }
+     .top-hud {
+         padding-top: max(16px, env(safe-area-inset-top, 0px));
+     }
+     ```
+
+--------------------------------------------------------------------------------
+2. PREVENTING MOBILE PAGE SCROLL, BOUNCE, AND OVER-SCROLL
+--------------------------------------------------------------------------------
+Context: HTML5 canvases suffer from pull-to-refresh reload actions, elastic scroll bouncing, and drag offsets when users interact near boundaries.
+Replication:
+  A) Apply CSS touch-action and overscroll rules to `body`/`html` and canvas containers:
+     ```css
+     html, body, canvas {
+         touch-action: none;
+         overscroll-behavior: none;
+     }
+     ```
+  B) Register touch event listeners with `{ passive: false }` to override native dragging/scrolling:
+     ```javascript
+     element.addEventListener('touchstart', (e) => {
+         e.preventDefault();
+     }, { passive: false });
+
+     element.addEventListener('touchmove', (e) => {
+         e.preventDefault(); // Prevents bounce and pan on mobile Safari/Chrome
+     }, { passive: false });
+     ```
+     Warning: To preserve native vertical scrolling inside overlays (like terms or settings panels), selectively bypass touch listener preventions and restore touch actions:
+     ```javascript
+     element.addEventListener('touchmove', (e) => {
+         if (e.target.closest('.scrollable-overlay')) return;
+         e.preventDefault();
+     }, { passive: false });
+     ```
+     ```css
+     .scrollable-overlay {
+         touch-action: pan-y;
+     }
+     ```
+
+--------------------------------------------------------------------------------
+3. WEB AUDIO API CONTEXT LIFECYCLE MANAGEMENT AND STATE AUTO-SAVE
+--------------------------------------------------------------------------------
+Context: Mobile browsers restrict audio initialization to direct gestures and suspend active Web Audio instances in the background. The game must wake contexts on input and save progress before the tab is suspended.
+Replication:
+  A) Auto-save and suspend context on tab suspension:
+     ```javascript
+     const handleLifecycleTeardown = () => {
+         saveGameStateSync();
+         if (audioContext) {
+             audioContext.suspend().catch(() => {});
+         }
+     };
+     window.addEventListener('beforeunload', handleLifecycleTeardown);
+     window.addEventListener('pagehide', handleLifecycleTeardown);
+     ```
+  B) Resume suspended audio contexts synchronously inside user interaction callbacks:
+     ```javascript
+     function resumeAudioContext(context) {
+         if (context && context.state === 'suspended') {
+             context.resume().catch(e => {});
+         }
+     }
+     window.addEventListener('pointerdown', () => {
+         resumeAudioContext(myAudioContext);
+     });
+     ```
+
+--------------------------------------------------------------------------------
+4. PHYSICS ENGINE DELTA-TIME CLAMPING
+--------------------------------------------------------------------------------
+Context: When browser tabs are backgrounded, requestAnimationFrame stops. Upon resumption, deltaTime can jump to seconds or minutes, exploding position calculations.
+Replication:
+  Inside the main game loop, measure elapsed time but clamp the step at a maximum safe update threshold (e.g., 0.1 seconds):
+  ```javascript
+  let lastTime = performance.now();
+  function gameLoop(timestamp) {
+      let deltaTime = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Clamp step to avoid wall clipping or physics collision failures
+      if (deltaTime > 0.1) {
+          deltaTime = 0.1;
+      }
+      updatePhysics(deltaTime);
+      renderScene();
+      requestAnimationFrame(gameLoop);
+  }
+  ```
+
+--------------------------------------------------------------------------------
+5. CONDITIONAL HAPTIC VIBRATION FILTERS
+--------------------------------------------------------------------------------
+Context: Mobile device vibration (vibrate API) should not overwhelm the user. Filter by impact size/magnitude and enforce maximum vibration boundaries.
+Replication:
+  A) Read vibration settings preferences from stored configuration.
+  B) Evaluate impact size constraints (e.g., radius of explosion >= 20) and scale vibration durations relative to the shake intensity:
+     ```javascript
+     if (vibrationEnabled && explosionRadius >= 20 && navigator.vibrate) {
+         // Scale duration to impact intensity, but limit max vibration length
+         let vibrationDuration = Math.min(100, Math.floor(shakeIntensity * 8));
+         if (vibrationDuration > 10) {
+             try {
+                 navigator.vibrate(vibrationDuration);
+             } catch (e) {
+                 // Suppress issues when API is blocked (e.g., iframe bounds)
+             }
+         }
+     }
+     ```
+
+--------------------------------------------------------------------------------
+6. GARBAGE COLLECTION (GC) OPTIMIZATION VIA OBJECT POOLING
+--------------------------------------------------------------------------------
+Context: Prevent frames stuttering caused by memory allocation and Garbage Collection (GC) sweeps during tick-based object allocation.
+Replication:
+  A) Implement an Object Pool array to pre-allocate and reuse instances:
+     ```javascript
+     const objectPool = [];
+     function spawnObject(x, y) {
+         let obj = objectPool.find(item => !item.active);
+         if (!obj) {
+             obj = { active: true, x, y };
+             objectPool.push(obj);
+         } else {
+             obj.active = true;
+             obj.x = x;
+             obj.y = y;
+         }
+         return obj;
+     }
+     ```
+  B) Clean resets using `.length = 0` to clear active collections without allocating a new array:
+     ```javascript
+     activeObjects.length = 0; // Reuses the existing array instance
+     ```
+
+--------------------------------------------------------------------------------
+7. TELEMETRY BOOT SEQUENCING (FIRST FRAME PAINT)
+--------------------------------------------------------------------------------
+Context: Ensure the browser completes a paint iteration before sending telemetries/Game Ready hooks to avoid timing validation errors in standard embed-test frameworks.
+Replication:
+  Wait one layout frame using `requestAnimationFrame` before dispatching ready and initialization stop signals:
+  ```javascript
+  requestAnimationFrame(() => {
+      // First paint completed
+      SDK.firstFrameReady();
+      preloadAssets().then(() => {
+          SDK.gameReady();
+      });
+  });
+  ```
+
+--------------------------------------------------------------------------------
+8. ASSET FILENAME SANITIZATION
+--------------------------------------------------------------------------------
+Context: Avoid using white spaces in filenames to prevent HTTP 404 errors on server implementations that fail to decode url-encoded spaces correctly.
+Replication:
+  A) Replace all asset filename spaces with underscores (e.g., `Asset Name.mp3` -> `Asset_Name.mp3`).
+  B) Keep asset mapping references in configuration files aligned with the sanitized filesystem names.
+
+--------------------------------------------------------------------------------
+9. SCORE INVERSION FOR DESCENDING LEADERBOARDS
+--------------------------------------------------------------------------------
+Context: When tracking speedrun metrics (completion time in seconds, where smaller is better) in SDK systems that only support descending sorting configurations.
+Replication:
+  Invert the completion time relative to a maximum value before dispatching leaderboard metrics:
+  ```javascript
+  const score = Math.max(0, LEADERBOARD_MAX_LIMIT_SECS - completionSecs);
+  SDK.submitScore(score); // Faster times yield higher score ranks
+  ```
+
+--------------------------------------------------------------------------------
+10. HITBOX ENLARGEMENT FOR TOUCH TARGET ACCESSIBILITY
+--------------------------------------------------------------------------------
+Context: Expand button hitboxes on small mobile screens without modifying visual padding/layout flow.
+Replication:
+  Append absolute pseudo-elements with negative offsets around interactive elements:
+  ```css
+  .button-target {
+      position: relative;
+  }
+  .button-target::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      bottom: -20px;
+      left: -20px;
+      right: -20px;
+      cursor: pointer;
+  }
+  ```
+
+--------------------------------------------------------------------------------
+11. CASE-SENSITIVE PATH ALIGNMENT
+--------------------------------------------------------------------------------
+Context: Unix/Linux environments are case-sensitive, causing asset loads to crash if file capitalization on disk does not perfectly match CSS/JS requests.
+Replication:
+  Audit all stylesheet declarations (`url(...)`) and script loader paths to ensure exact casing match (e.g. `assets/fonts/Fredoka-VariableFont.ttf`).
+
+--------------------------------------------------------------------------------
+12. DEFENSIVE COORDINATE EXTRACTION FOR MOCK TOUCH EVENTS
+--------------------------------------------------------------------------------
+Context: Automated testing scripts, browser emulators, and SDK frames sometimes send fake touch profiles lacking standard event coordinate vectors.
+Replication:
+  Ensure fallback protections are active when retrieving pointer metrics:
+  ```javascript
+  function getPointerPos(e) {
+      if (e.touches && e.touches.length > 0) {
+          return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+          return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+      }
+      return { x: e.clientX || 0, y: e.clientY || 0 };
+  }
+  ```
+
+--------------------------------------------------------------------------------
+13. REWARDED AD INTEGRITY VERIFICATION
+--------------------------------------------------------------------------------
+Context: Block loopholes where ads could be closed early but still trigger a successful reward callback.
+Replication:
+  Check resolved boolean feedback vectors inside the reward listener, block button spamming, and implement a defensive request timeout fallback (e.g., 10 seconds) to prevent permanent interface locks if the SDK hangs before launching:
+  ```javascript
+  button.classList.add('requesting'); // Lock user interaction
+  
+  let adResolved = false;
+  // Safety timeout fallback: unlock user interaction if ad takes too long to start/respond
+  const adTimeout = setTimeout(() => {
+      if (!adResolved) {
+          adResolved = true;
+          button.classList.remove('requesting');
+          showError('ad_timeout');
+      }
+  }, 10000);
+
+  SDK.requestRewardedAd({
+      onStarted: () => {
+          clearTimeout(adTimeout); // Ad started successfully, clear initial request timeout
+      }
+  }).then(completed => {
+      if (adResolved) return;
+      adResolved = true;
+      clearTimeout(adTimeout);
+      if (completed) {
+          triggerReward();
+      } else {
+          showEarlyCloseWarning();
+      }
+  });
+  ```
+
+--------------------------------------------------------------------------------
+14. CANVAS FOCUS OUTLINE & KEYBOARD ACCESSIBILITY
+--------------------------------------------------------------------------------
+Context: Canvases do not receive focus by default, causing standard keyboard listeners to ignore clicks on the canvas.
+Replication:
+  A) Add `tabindex="0"` to the canvas tag to make it focusable:
+     ```html
+     <canvas id="game-canvas" tabindex="0"></canvas>
+     ```
+  B) Suppress outline rings in CSS:
+     ```css
+     canvas:focus {
+         outline: none;
+     }
+     ```
+  C) Focus the canvas programmatically inside click/pointer listeners to capture key events:
+     ```javascript
+     canvas.addEventListener('pointerdown', () => {
+         canvas.focus();
+     });
+     ```
+
+--------------------------------------------------------------------------------
+15. COMBINATION SILENT AND DECOY SITELOCK PROTECTION
+--------------------------------------------------------------------------------
+Context: Defensive sitelock logic designed to detect mirrors without alerting unauthorized publishers/crackers.
+Replication:
+  A) Deploy a visible whitelisting check as "decoy bait" that throws noisy errors (e.g., in main script). Crackers will remove this decoy error, assume they successfully unlocked the game, and stop.
+  B) Inject a second, silent blacklist check (e.g., in utility scripts) that targets mirror patterns. If detected, silently limit maximum upgrade tiers or decrease coin drops instead of crashing.
+  C) Combine during bundling so that sitelock loaders are processed prior to main game logic.
+  Suggestion: Silent sitelock checks carry a risk of false-positives (e.g. localized testing, offline plays in web archives, or sandboxed frames with blocked referrers). To prevent players from reporting legitimate play options as "buggy" or "poorly balanced", always ensure safe-listing parameters are fully validated, or fallback to standard, informative error blocks rather than silent gameplay nerfing if the portal environment is highly ambiguous.
+
+--------------------------------------------------------------------------------
+16. HYBRID DECODEAUDIODATA COMPATIBILITY (LEGACY SAFARI SUPPORT)
+--------------------------------------------------------------------------------
+Context: Prevent AudioContext.decodeAudioData failures on legacy iOS Safari / webview builds that lack standard Promise support and only resolve via callback functions.
+Replication:
+  Wrap the `decodeAudioData` invocation inside a custom Promise wrapper that handles both Promise resolutions and standard callback parameters:
+  ```javascript
+  async function loadAudioBuffer(context, arrayBuffer) {
+      return new Promise((resolve, reject) => {
+          try {
+              const res = context.decodeAudioData(arrayBuffer, resolve, reject);
+              // If modern Promise-returning API, chain standard resolve/reject
+              if (res && typeof res.then === 'function') {
+                  res.then(resolve, reject);
+              }
+          } catch (e) {
+              reject(e);
+          }
+      });
+  }
+  ```
+
+--------------------------------------------------------------------------------
+17. FONTS PRE-LOADING IN CANVAS GAME LOOPS
+--------------------------------------------------------------------------------
+Context: Avoid fallback font "unstyled text pop-in" flashes when rendering text on HTML5 Canvas layers immediately during initial layout cycles.
+Replication:
+  Defer the main game boot initialization execution block (`run()`) until the browser confirms the custom font resources are active via the CSS Font Loading API, wrapping it with a safety fallback timeout (e.g. 1.5 seconds) to ensure the game still boots if the Font API hangs:
+  ```javascript
+  window.addEventListener('DOMContentLoaded', () => {
+      let booted = false;
+      const initializeGameSafely = () => {
+          if (booted) return;
+          booted = true;
+          initializeGame();
+      };
+      // Safety fallback: boot anyway after 1.5 seconds in case the Font API hangs
+      const safetyTimeout = setTimeout(initializeGameSafely, 1500);
+
+      if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
+          document.fonts.ready.then(() => {
+              clearTimeout(safetyTimeout);
+              initializeGameSafely();
+          }).catch(() => {
+              clearTimeout(safetyTimeout);
+              initializeGameSafely();
+          });
+      } else {
+          clearTimeout(safetyTimeout);
+          initializeGameSafely();
+      }
+  });
+  ```
+
+--------------------------------------------------------------------------------
+18. DEFERRED / LAZY BACKGROUND ASSET LOADING
+--------------------------------------------------------------------------------
+Context: Accelerate boot speed and reduce network loading time by preloading only critical assets on startup and downloading remaining heavier resources in the background.
+Replication:
+  A) Identify and load critical startup assets (e.g. main BGM, loader graphic) to satisfy the initial loading bar block.
+  B) Once the initial loader completes, fire background promises to fetch/decode the remaining assets asynchronously:
+     ```javascript
+     // 1. Initial boot phase
+     const criticalAssets = [loadImage('spark_particle'), loadAudio('ambient_music')];
+     await Promise.all(criticalAssets);
+     dismissLoadingScreen();
+     
+     // 2. Background phase (doesn't block starting the gameplay)
+     Promise.all([
+         loadAudio('collision_sfx'),
+         loadAudio('victory_sfx'),
+         loadImage('confetti_asset')
+     ]).then(() => {
+         console.log("Deferred background assets loaded.");
+     });
+     ```
+
+--------------------------------------------------------------------------------
+19. RESIZEOBSERVER COMPATIBILITY FALLBACK
+--------------------------------------------------------------------------------
+Context: Prevent ReferenceError crashes on older mobile/desktop browsers (e.g. iOS < 13.4, Safari < 13.1) that do not support the ResizeObserver API.
+Replication:
+  Check for ResizeObserver availability. If missing, fall back to a window resize listener, and clean up accordingly:
+  ```javascript
+  // Initialization
+  if (window.ResizeObserver) {
+      this._ro = new ResizeObserver(resize);
+      this._ro.observe(container);
+  } else {
+      this._onResize = resize;
+      window.addEventListener('resize', this._onResize);
+  }
+
+  // Teardown
+  if (this._ro) {
+      this._ro.disconnect();
+  } else if (this._onResize) {
+      window.removeEventListener('resize', this._onResize);
+  }
+  ```
+
+--------------------------------------------------------------------------------
+20. SAFE LOCALSTORAGE ACCESS FOR INCOGNITO & IFRAME ACCESSIBILITY
+--------------------------------------------------------------------------------
+Context: Prevent security exception crashes (DOMException: SecurityError) when accessing localStorage in browsers running in private/incognito mode, or sandboxed within third-party game portal iframes.
+Replication:
+  Wrap all storage calls in try-catch blocks and fall back to in-memory state objects:
+  ```javascript
+  const storageFallback = {};
+
+  function safeGetItem(key) {
+      try {
+          return localStorage.getItem(key);
+      } catch (e) {
+          return storageFallback[key] || null;
+      }
+  }
+
+  function safeSetItem(key, value) {
+      try {
+          localStorage.setItem(key, value);
+      } catch (e) {
+          storageFallback[key] = value;
+      }
+  }
+  ```
+
+--------------------------------------------------------------------------------
+21. HTML5 AUDIO GESTURE UNLOCKING FOR GAME LOOPS
+--------------------------------------------------------------------------------
+Context: Mobile browsers reject `.play()` calls on HTML5 Audio elements inside asynchronous requestAnimationFrame game loops. They must be pre-unlocked during a synchronous user gesture callback.
+Replication:
+  Trigger play and immediate pause actions during the first user interaction event:
+  ```javascript
+  function unlockHTML5Audio(audioElement) {
+      const playPromise = audioElement.play();
+      if (playPromise !== undefined) {
+          playPromise.then(() => {
+              // Pause immediately if it should not play yet
+              audioElement.pause();
+          }).catch(e => { /* catch browser rejection */ });
+      }
+  }
+
+  // Triggered on user interaction (e.g. initial tap):
+  window.addEventListener('pointerdown', () => {
+      unlockHTML5Audio(bgMusicElement);
+  });
+  ```

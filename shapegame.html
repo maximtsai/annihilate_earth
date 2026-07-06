@@ -1,0 +1,3994 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Gravity Stack</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://unpkg.com/poly-decomp@0.3.0/build/decomp.js"></script>
+    <style>
+        :root {
+            --transition-fast: 150ms;
+            --transition-normal: 300ms;
+            --transition-slow: 500ms;
+            --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
+            --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+            --space-xs: 8px;
+            --space-sm: 16px;
+            --space-md: 24px;
+            --space-lg: 32px;
+            --space-xl: 48px;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            overscroll-behavior: none;
+            touch-action: none;
+            -ms-touch-action: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 20px;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        button,
+        .scroll-arrow,
+        .shape-slot,
+        .level-btn,
+        input[type="range"] {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #game-world {
+            position: relative;
+            width: 720px;
+            height: 1280px;
+            overflow: hidden;
+            background-color: #C1DFE7;
+            transition: background-color 1.2s ease-in-out;
+            transform-origin: center center;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 720px;
+            height: 1280px;
+            will-change: transform;
+            z-index: 0;
+            transition: z-index 0s;
+        }
+
+        #game-canvas.dragging {
+            z-index: 200;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 720px;
+            height: 1280px;
+            pointer-events: none;
+        }
+
+        .ui-overlay>* {
+            pointer-events: auto;
+        }
+
+        #shape-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 720px;
+            height: 152px;
+            background: rgba(30, 30, 50, 0.9);
+            border-top: 3px solid rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+            transition: background 150ms ease, box-shadow 150ms ease;
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0 96px 0;
+            padding: 0 96px max(0px, env(safe-area-inset-bottom, 0px));
+            box-sizing: border-box;
+            gap: 16px;
+            scrollbar-width: none;
+            scroll-behavior: smooth;
+            touch-action: none;
+            z-index: 210;
+        }
+
+        #shape-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scroll-arrow {
+            position: absolute;
+            bottom: 0;
+            width: 96px;
+            height: 149px;
+            height: calc(149px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            box-sizing: border-box;
+            background: rgba(30, 30, 50, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 1);
+            font-size: 40px;
+            cursor: pointer;
+            z-index: 211;
+            border-top: 3px solid rgba(255, 255, 255, 0.15);
+            user-select: none;
+            transition: background var(--transition-fast), color var(--transition-fast);
+        }
+
+        .scroll-arrow:hover:not(.disabled) {
+            background: rgba(45, 45, 75, 0.95);
+        }
+
+        .scroll-arrow:active:not(.disabled) {
+            background: rgba(50, 50, 80, 1);
+        }
+
+        .scroll-arrow.disabled {
+            color: rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+            cursor: default;
+        }
+
+        #scroll-left {
+            left: 0;
+        }
+
+        #scroll-right {
+            right: 0;
+        }
+
+        .shape-slot {
+            flex-shrink: 0;
+            width: 114px;
+            height: 114px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 16px;
+            border: 2.5px solid rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: transform var(--transition-fast) var(--ease-out),
+                opacity var(--transition-normal) var(--ease-out),
+                background var(--transition-fast) var(--ease-out);
+            will-change: transform;
+            animation: slotBounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        @keyframes slotBounceIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .shape-slot:hover:not(.used) {
+            background: rgba(255, 255, 255, 0.35);
+            border-color: rgba(255, 255, 255, 0.75);
+            transform: scale(1.08) translateY(-4px);
+            box-shadow: 0 6px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .shape-slot:active {
+            transform: scale(0.95);
+        }
+
+        .shape-slot.used {
+            opacity: 0.3;
+            pointer-events: none;
+            filter: grayscale(1);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .shape-slot canvas {
+            width: 95px;
+            height: 95px;
+        }
+
+        #bottom-bar {
+            display: none;
+        }
+
+        #hud {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 250;
+        }
+
+        .top-btn {
+            width: 96px;
+            height: 96px;
+            background: #1E1E32;
+            color: #ffffff;
+            border: none;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform var(--transition-fast) var(--ease-out), background var(--transition-fast), box-shadow var(--transition-fast);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .top-btn:hover {
+            background: #3B82F6;
+            transform: scale(1.15);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+        }
+
+        .top-btn:active {
+            transform: scale(0.9);
+        }
+
+        #level-display {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 38px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            background: #1E1E32;
+            height: 96px;
+            padding: 0 30px;
+            box-sizing: border-box;
+            border-radius: 18px;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #level-display span {
+            display: inline-block;
+            will-change: transform;
+        }
+
+        @keyframes levelContainerBounce {
+            0% {
+                transform: scale(1);
+            }
+
+            40% {
+                transform: scale(1.12);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes levelTextBounce {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.35);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        #level-display.animate {
+            animation: levelContainerBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #level-display.animate span {
+            animation: levelTextBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #timer-display {
+            position: absolute;
+            top: 96px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Fredoka', sans-serif;
+            font-size: 112px;
+            /* Increased 16 units from 96px */
+            font-weight: 700;
+            color: #3FE3A9;
+            /* Lighter emerald green */
+            padding: 20px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity var(--transition-normal) var(--ease-out), color var(--transition-normal);
+            text-shadow: 0 4px 20px rgba(4, 120, 87, 0.9), 0 0 15px rgba(6, 95, 70, 0.8);
+            /* More opaque, darker green shadow */
+            z-index: 260;
+            /* Increased to ensure it's above gameplay overlays */
+        }
+
+        #timer-display.golden {
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+        }
+
+        #timer-display.interrupted {
+            color: #EF4444 !important;
+            text-shadow: 0 4px 12px rgba(239, 68, 68, 0.6) !important;
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s !important;
+        }
+
+        #timer-display.visible {
+            opacity: 1;
+        }
+
+        @keyframes timer-pop {
+            0% {
+                transform: translateX(-50%) scale(0.5);
+                opacity: 0;
+            }
+
+            50% {
+                transform: translateX(-50%) scale(1.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .timer-appearing {
+            animation: timer-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both !important;
+        }
+
+        @keyframes zoom-shake {
+            0% {
+                transform: scale(1) translate(0, 0);
+            }
+
+            5% {
+                transform: scale(1.02) translate(-3px, 2px);
+            }
+
+            10% {
+                transform: scale(1.02) translate(2px, -3px);
+            }
+
+            15% {
+                transform: scale(1.02) translate(-4px, -1px);
+            }
+
+            20% {
+                transform: scale(1.02) translate(3px, 3px);
+            }
+
+            25% {
+                transform: scale(1.02) translate(-2px, 1px);
+            }
+
+            30% {
+                transform: scale(1.02) translate(2px, -2px);
+            }
+
+            35% {
+                transform: scale(1.01) translate(-1px, 2px);
+            }
+
+            40% {
+                transform: scale(1.01) translate(1px, -1px);
+            }
+
+            45% {
+                transform: scale(1.01) translate(-2px, 1px);
+            }
+
+            50% {
+                transform: scale(1.005) translate(1px, -1px);
+            }
+
+            60% {
+                transform: scale(1.005) translate(0, 0);
+            }
+
+            100% {
+                transform: scale(1) translate(0, 0);
+            }
+        }
+
+        .zoom-shaking {
+            animation: zoom-shake 1.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+        }
+
+        /* Modals and Overlays */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 110;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1E1E32;
+            /* Cohesive dark blue color matching the rest of the UI */
+            color: #ffffff;
+            /* White text */
+            border-radius: 24px;
+            padding: 32px;
+            width: 500px;
+            max-width: 80%;
+            box-sizing: border-box;
+            position: relative;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            font-family: 'Fredoka', sans-serif;
+            border: 4px solid #6B7280;
+            /* Grey outline stroke instead of blue */
+            font-size: 34px;
+            /* Bigger popup text */
+        }
+
+        .modal-content h2 {
+            font-size: 44px;
+            /* Bigger modal headers */
+            margin-top: 0;
+            margin-bottom: 24px;
+            color: #ffffff;
+            /* White headers */
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            width: 96px;
+            height: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #ffffff;
+            /* White close button for dark backdrop */
+            transition: color var(--transition-fast), transform var(--transition-fast);
+        }
+
+        .modal-close:hover {
+            color: #EF4444;
+            transform: scale(1.15);
+        }
+
+        /* Options specific styling */
+        .volume-slider-group {
+            margin-bottom: 32px;
+            text-align: left;
+        }
+
+        .volume-slider-group label {
+            display: block;
+            font-size: 32px;
+            /* Bigger labels */
+            color: #E2E8F0;
+            /* Soft light-blue grey for readability */
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .volume-slider-group input[type="range"] {
+            width: 100%;
+            height: 18px;
+            /* Bigger track */
+            border-radius: 9px;
+            background: #2E2E4A;
+            /* Cohesive dark blue background */
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        /* Webkit Thumb */
+        .volume-slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 48px;
+            /* 48px touch-friendly thumb */
+            height: 48px;
+            border-radius: 50%;
+            background: #3B82F6;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+            transition: transform var(--transition-fast) var(--ease-out), background var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .volume-slider-group input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+            /* Distinct hover effect */
+            background: #60A5FA;
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.8);
+        }
+
+        .volume-slider-group input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.4);
+            background: #93C5FD;
+        }
+
+        /* Firefox Thumb */
+        .volume-slider-group input[type="range"]::-moz-range-thumb {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            background: #3B82F6;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+            transition: transform var(--transition-fast) var(--ease-out), background var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .volume-slider-group input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.25);
+            /* Distinct hover effect */
+            background: #60A5FA;
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.8);
+        }
+
+        .volume-slider-group input[type="range"]::-moz-range-thumb:active {
+            transform: scale(1.4);
+            background: #93C5FD;
+        }
+
+        /* Level select grid styling */
+        .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            justify-content: center;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .levels-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .levels-grid::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .levels-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .levels-grid::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        .level-btn {
+            background: #2E2E4A;
+            /* Cohesive dark blue/grey button */
+            color: #ffffff;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            font-size: 32px;
+            font-weight: 700;
+            height: 96px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform var(--transition-fast) var(--ease-bounce),
+                background var(--transition-fast),
+                border-color var(--transition-fast),
+                box-shadow var(--transition-fast);
+        }
+
+        .level-btn:hover:not(.active) {
+            background: #3E3E64;
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: scale(1.08);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+        }
+
+        .level-btn:active {
+            transform: scale(0.9);
+        }
+
+        .level-btn.active {
+            background: #10B981;
+            /* Premium emerald green for active level fits Victory perfectly */
+            color: white;
+            border-color: #34D399;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+
+        #victory-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: transparent;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 200px;
+            /* Moved down 80px (from 120px) */
+            z-index: 100;
+        }
+
+        .victory-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 32px;
+        }
+
+        #victory-screen.show {
+            display: flex;
+        }
+
+        #victory-screen h1 {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 56px;
+            font-weight: 700;
+            color: #FFD700;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            margin: 0;
+            opacity: 0;
+        }
+
+        #victory-screen.show h1 {
+            animation: victoryTextPop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) both,
+                victoryTextFloat 3s ease-in-out infinite alternate 1s;
+        }
+
+        #victory-screen.show #victory-thanks {
+            animation: victoryTextPop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+
+        @keyframes victoryTextPop {
+            0% {
+                transform: scale(0.3) translateY(-100px) rotate(-10deg);
+                opacity: 0;
+            }
+
+            60% {
+                transform: scale(1.15) translateY(10px) rotate(3deg);
+            }
+
+            80% {
+                transform: scale(0.95) translateY(-5px) rotate(-1deg);
+            }
+
+            100% {
+                transform: scale(1) translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes victoryTextFloat {
+            0% {
+                transform: translateY(0) scale(1);
+            }
+
+            100% {
+                transform: translateY(-8px) scale(1.03);
+            }
+        }
+
+        #victory-screen button {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 53px;
+            /* 10% bigger (from 48px) */
+            font-weight: 600;
+            color: white;
+            background: #10B981;
+            border: none;
+            border-radius: 24px;
+            /* 10% bigger (from 22px) */
+            padding: 24px 74px;
+            /* 10% bigger (from 22px 67px) */
+            cursor: pointer;
+            transition: transform var(--transition-fast) var(--ease-bounce),
+                background var(--transition-fast),
+                opacity var(--transition-fast);
+            min-width: 147px;
+            /* 10% bigger (from 134px) */
+            min-height: 147px;
+            /* 10% bigger (from 134px) */
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        #victory-screen.show button {
+            animation: buttonBounceIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        #victory-screen.show #next-level-btn {
+            animation-delay: 0.4s;
+        }
+
+        #next-level-btn {
+            overflow: hidden;
+            /* Contain the shine flash */
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+            transition: transform var(--transition-fast) var(--ease-bounce),
+                background var(--transition-fast),
+                opacity var(--transition-fast),
+                box-shadow var(--transition-fast) !important;
+        }
+
+        #next-level-btn.shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -150%;
+            width: 240px;
+            height: 200%;
+            background: linear-gradient(to right,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.8) 50%,
+                    rgba(255, 255, 255, 0) 100%);
+            transform: rotate(25deg);
+            pointer-events: none;
+            animation: shineFlash 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes shineFlash {
+            0% {
+                left: -150%;
+            }
+
+            100% {
+                left: 150%;
+            }
+        }
+
+        #next-level-btn:hover {
+            box-shadow: 0 0 35px rgba(16, 185, 129, 0.8) !important;
+        }
+
+        #victory-screen button.secondary {
+            background: #4B5563;
+            /* Grey look */
+            font-size: 32px;
+            padding: 16px 48px;
+            min-width: 320px;
+            min-height: 96px;
+            border-radius: 20px;
+            margin-top: 8px;
+        }
+
+        #victory-screen.show #victory-level-select-btn {
+            animation-delay: 0.55s;
+        }
+
+        @keyframes buttonBounceIn {
+            0% {
+                transform: scale(0) translateY(50px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        #victory-screen button:hover {
+            opacity: 0.88;
+            transform: scale(1.05) !important;
+        }
+
+        #victory-screen button:active {
+            transform: scale(0.95) !important;
+        }
+
+        #restart-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            background: rgba(30, 30, 50, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: none;
+            transition: background var(--transition-fast), transform var(--transition-fast);
+        }
+
+        #restart-btn:hover {
+            background: rgba(50, 50, 80, 0.85);
+            transform: scale(1.05);
+        }
+
+        /* Loading Screen CSS */
+        #drag-tooltip {
+            position: absolute;
+            bottom: 170px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1E1E32;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 600;
+            font-size: 24px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 300;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+        #drag-tooltip.visible {
+            opacity: 1;
+        }
+
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 720px;
+            height: 1280px;
+            background-color: #D0E1FD;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            transition: opacity 500ms ease-in-out;
+            pointer-events: auto;
+        }
+
+        #loading-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 720px;
+            height: 1280px;
+            z-index: 1;
+        }
+
+        #loading-text {
+            position: absolute;
+            bottom: 220px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 38px;
+            font-weight: 700;
+            color: #1E293B;
+            letter-spacing: 6px;
+            z-index: 2;
+            animation: pulse-loading 1.5s infinite ease-in-out;
+            text-shadow: 0 2px 8px rgba(255, 255, 255, 0.6);
+        }
+
+        #loading-bar-container {
+            position: absolute;
+            bottom: 160px;
+            width: 360px;
+            height: 14px;
+            background: rgba(30, 41, 59, 0.15);
+            border-radius: 7px;
+            overflow: hidden;
+            z-index: 2;
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        #loading-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #10B981, #059669);
+            border-radius: 7px;
+            transition: width 100ms linear;
+        }
+
+        @keyframes pulse-loading {
+
+            0%,
+            100% {
+                opacity: 0.6;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+        }
+
+        .recycle-pulse-ui {
+            position: absolute;
+            border: 10px solid #FFD700;
+            border-radius: 16px;
+            pointer-events: none;
+            z-index: 300;
+            animation: uiPulseGrow 1.4s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            box-sizing: border-box;
+        }
+
+        @keyframes uiPulseGrow {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+                border-width: 10px;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.6);
+                opacity: 0;
+                border-width: 7px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-world">
+        <!-- Loading Screen -->
+        <div id="loading-screen">
+            <canvas id="loading-canvas" width="720" height="1280"></canvas>
+            <div id="loading-text">LOADING...</div>
+            <div id="loading-bar-container">
+                <div id="loading-bar-fill"></div>
+            </div>
+        </div>
+
+        <canvas id="game-canvas" width="720" height="1280"></canvas>
+        <div class="ui-overlay">
+            <div id="hud">
+                <button id="level-select-btn" class="top-btn">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </button>
+                <div id="level-display"><span>Level 1</span></div>
+                <button id="options-btn" class="top-btn">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1 2-2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                </button>
+                <div id="timer-display">3.0s</div>
+            </div>
+            <div id="shape-bar"></div>
+            <div id="scroll-left" class="scroll-arrow">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </div>
+            <div id="scroll-right" class="scroll-arrow">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </div>
+            <div id="tutorial-hand"
+                style="position: absolute; display: none; pointer-events: none; z-index: 220; font-size: 102px; text-align: center; width: 120px; height: 120px; line-height: 120px; margin-left: -60px; margin-top: -60px; transform-origin: center; text-shadow: 3px 4px 6px rgba(0,0,0,0.35);">
+                🖐️</div>
+
+            <!-- Options Modal -->
+            <div id="options-modal" class="modal">
+                <div class="modal-content">
+                    <button class="modal-close" id="options-close">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h2>Options</h2>
+                    <div class="volume-slider-group">
+                        <label>🎵 Background Music</label>
+                        <input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                    <div class="volume-slider-group">
+                        <label>🔊 Sound Effects</label>
+                        <input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.5">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Level Select Modal -->
+            <div id="level-select-modal" class="modal">
+                <div class="modal-content">
+                    <button class="modal-close" id="level-select-close">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h2>Select Level</h2>
+                    <div id="levels-grid" class="levels-grid">
+                        <!-- level buttons generated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="drag-tooltip">DRAG AND DROP SHAPES</div>
+            <div id="victory-screen">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                    <h1 id="victory-title">Level Complete!</h1>
+                    <div id="victory-thanks"
+                        style="display: none; font-family: 'Fredoka', sans-serif; font-size: 36px; color: #ECE4D0; text-align: center; max-width: 550px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); line-height: 1.4;">
+                        Thank you for playing!</div>
+                </div>
+                <div class="victory-buttons">
+                    <button id="next-level-btn"
+                        style="display: flex; align-items: center; justify-content: center; gap: 16px;">
+                        Next Level
+                        <svg width="53" height="53" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                    <button id="victory-level-select-btn" class="secondary">
+                        Level Select
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /*
+         * GRAVITY STACK
+         * A meditative physics puzzle game where players stack geometric shapes
+         * to reach a target height. Uses Matter.js with an optimized fixed timestep
+         * for realistic and stable 2D physics.
+         * Features drag-and-drop with rotation around grab point, spark effects
+         * on collision, and a recycling system.
+         */
+
+        // Clean up any existing game loops, event listeners, or audio contexts from previous runs
+        if (window.gameCleanup) {
+            try {
+                window.gameCleanup();
+            } catch (e) {
+                console.error("Cleanup error:", e);
+            }
+        }
+
+        // Close and clean up previous AudioContext to avoid "too many audio contexts" browser error
+        if (window.gameAudioCtx) {
+            try {
+                window.gameAudioCtx.close();
+            } catch (e) { }
+        }
+
+        // Keep track of resources to clean up later
+        const activeEventListeners = [];
+        function addCleanEventListener(target, type, listener, options) {
+            target.addEventListener(type, listener, options);
+            activeEventListeners.push({ target, type, listener, options });
+        }
+
+        let activeAnimationFrameId = null;
+        function safeRequestAnimationFrame(callback) {
+            const id = requestAnimationFrame(callback);
+            activeAnimationFrameId = id;
+            return id;
+        }
+
+        // Web Audio Context Management
+        let audioCtx;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            window.gameAudioCtx = audioCtx;
+        } catch (e) {
+            console.error("Web Audio API not supported:", e);
+        }
+
+        async function run(mode) {
+            const config = window.gameConfig;
+            const canvas = document.getElementById('game-canvas');
+            const ctx = canvas.getContext('2d');
+            const shapeBar = document.getElementById('shape-bar');
+            const scrollLeftBtn = document.getElementById('scroll-left');
+            const scrollRightBtn = document.getElementById('scroll-right');
+            const timerDisplay = document.getElementById('timer-display');
+            const levelDisplay = document.getElementById('level-display');
+            const victoryScreen = document.getElementById('victory-screen');
+            const nextLevelBtn = document.getElementById('next-level-btn');
+            const victoryLevelSelectBtn = document.getElementById('victory-level-select-btn');
+            const tutorialHand = document.getElementById('tutorial-hand');
+            const victoryTitle = document.getElementById('victory-title');
+            const victoryThanks = document.getElementById('victory-thanks');
+
+            // Color Utilities (Defined early for loading screen and main game)
+            function lightenColor(hex, percent) {
+                const num = parseInt(hex.replace('#', ''), 16);
+                const r = Math.min(255, (num >> 16) + percent);
+                const g = Math.min(255, ((num >> 8) & 0xff) + percent);
+                const b = Math.min(255, (num & 0xff) + percent);
+                return `rgb(${r},${g},${b})`;
+            }
+
+            function darkenColor(hex, factor = 0.35) {
+                const num = parseInt(hex.replace('#', ''), 16);
+                const r = Math.floor((num >> 16) * factor);
+                const g = Math.floor(((num >> 8) & 0xff) * factor);
+                const b = Math.floor((num & 0xff) * factor);
+                return `rgb(${r},${g},${b})`;
+            }
+
+            // Standard "Back.easeOut" curve - eases past 1 then settles back, giving a
+            // satisfying little overshoot "pop". Used whenever a shape spawns into the world.
+            function backEaseOut(x) {
+                const c1 = 1.70158;
+                const c3 = c1 + 1;
+                return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+            }
+
+            // Bodies.fromVertices positions a body so its *centroid* sits at (x, y), not its
+            // bounding-box center. For asymmetric shapes (e.g. triangles) that creates a visible
+            // offset versus where the rest of the game assumes the shape's center to be.
+            // This nudges the body afterward so its bounding-box center lands exactly on (x, y).
+            function recenterBodyToBounds(body, targetX, targetY) {
+                const bcx = (body.bounds.max.x + body.bounds.min.x) / 2;
+                const bcy = (body.bounds.max.y + body.bounds.min.y) / 2;
+                Body.setPosition(body, {
+                    x: body.position.x + (targetX - bcx),
+                    y: body.position.y + (targetY - bcy)
+                });
+            }
+
+            // Setup Loading Screen Animation
+            const loadingScreen = document.getElementById('loading-screen');
+            const loadingCanvas = document.getElementById('loading-canvas');
+            const lctx = loadingCanvas.getContext('2d');
+
+            // Reset loading screen state (make it visible in case of re-run)
+            loadingScreen.style.opacity = '1';
+            loadingScreen.style.display = 'flex';
+
+            let loadingDone = false;
+            // Real asset-load progress: critical assets gate dismissal, so the bar
+            // tracks how many of them have finished rather than an arbitrary timer.
+            let assetsLoaded = 0;
+            const assetsTotal = 2;
+            let displayedProgress = 0;
+
+            // Define loading shapes
+            const loadingShapes = [
+                {
+                    type: 'rectangle',
+                    width: 240,
+                    height: 80,
+                    color: '#D97706',
+                    spawnTime: 0.2,
+                    targetY: 850, // Lands on virtual ground at 850
+                    x: 360,
+                    y: -100,
+                    vy: 0,
+                    isLanded: false,
+                    bounces: 0,
+                    squishX: 1.0,
+                    squishY: 1.0,
+                    squishVx: 0,
+                    squishVy: 0
+                },
+                {
+                    type: 'square',
+                    width: 140,
+                    height: 140,
+                    color: '#059669',
+                    spawnTime: 0.8,
+                    targetY: 740, // 850 - 40 - 70
+                    x: 360,
+                    y: -150,
+                    vy: 0,
+                    isLanded: false,
+                    bounces: 0,
+                    squishX: 1.0,
+                    squishY: 1.0,
+                    squishVx: 0,
+                    squishVy: 0
+                },
+                {
+                    type: 'hexagon',
+                    width: 150,
+                    height: 120,
+                    color: '#DB2777',
+                    spawnTime: 1.4,
+                    targetY: 610, // 740 - 70 - 60
+                    x: 360,
+                    y: -180,
+                    vy: 0,
+                    isLanded: false,
+                    bounces: 0,
+                    squishX: 1.0,
+                    squishY: 1.0,
+                    squishVx: 0,
+                    squishVy: 0
+                },
+                {
+                    type: 'square',
+                    width: 120,
+                    height: 120,
+                    color: '#7C3AED',
+                    spawnTime: 2.0,
+                    targetY: 490, // 610 - 60 - 60
+                    x: 360,
+                    y: -220,
+                    vy: 0,
+                    isLanded: false,
+                    bounces: 0,
+                    squishX: 1.0,
+                    squishY: 1.0,
+                    squishVx: 0,
+                    squishVy: 0
+                },
+                {
+                    type: 'triangle',
+                    width: 160,
+                    height: 130,
+                    color: '#2563EB',
+                    spawnTime: 2.6,
+                    targetY: 365, // 490 - 60 - 65
+                    x: 360,
+                    y: -260,
+                    vy: 0,
+                    isLanded: false,
+                    bounces: 0,
+                    squishX: 1.0,
+                    squishY: 1.0,
+                    squishVx: 0,
+                    squishVy: 0
+                }
+            ];
+
+            let loadingTime = 0;
+            let lastLoadingTime = performance.now();
+            let loadingAnimId = null;
+
+            function updateLoadingScreen(timestamp) {
+                let dt = (timestamp - lastLoadingTime) / 1000;
+                dt = Math.min(dt, 0.11);
+                lastLoadingTime = timestamp;
+                loadingTime += dt;
+
+                lctx.clearRect(0, 0, 720, 1280);
+
+                // Draw a clean, elegant thin platform for the loading screen shapes
+                lctx.fillStyle = '#1E293B';
+                lctx.fillRect(160, 890, 400, 10);
+
+                // Update loading bar to reflect real asset progress (smoothed so it
+                // eases toward the true value instead of snapping).
+                const targetProgress = loadingDone ? 100 : (assetsLoaded / assetsTotal) * 100;
+                displayedProgress += (targetProgress - displayedProgress) * Math.min(1, dt * 14);
+                const fillEl = document.getElementById('loading-bar-fill');
+                if (fillEl) {
+                    fillEl.style.width = `${displayedProgress}%`;
+                }
+
+                const gravity = 6720; // Gravity in px/s^2 (Increased 20% x2)
+                const restitution = 0.3; // Bounce factor
+
+                loadingShapes.forEach((p) => {
+                    if (loadingTime < p.spawnTime) return;
+
+                    if (!p.isLanded) {
+                        p.vy += gravity * dt;
+                        p.y += p.vy * dt;
+
+                        if (p.y >= p.targetY) {
+                            p.y = p.targetY;
+                            p.vy = -p.vy * restitution;
+                            p.bounces++;
+
+                            // Trigger squash & stretch on impact
+                            p.squishVy = -p.vy * 0.015;
+                            p.squishVx = -p.squishVy;
+
+                            if (Math.abs(p.vy) < 15 || p.bounces >= 4) {
+                                p.vy = 0;
+                                p.isLanded = true;
+                            }
+                        }
+                    }
+
+                    // Spring physics for squash & stretch
+                    const k = 250; // spring stiffness
+                    const d = 18;  // spring damping
+                    const ax = -k * (p.squishX - 1.0) - d * p.squishVx;
+                    const ay = -k * (p.squishY - 1.0) - d * p.squishVy;
+                    p.squishVx += ax * dt;
+                    p.squishVy += ay * dt;
+                    p.squishX += p.squishVx * dt;
+                    p.squishY += p.squishVy * dt;
+
+                    // Render shape
+                    lctx.save();
+                    lctx.translate(p.x, p.y);
+                    lctx.scale(p.squishX, p.squishY);
+
+                    lctx.fillStyle = p.color;
+                    lctx.strokeStyle = darkenColor(p.color, 0.35);
+                    lctx.lineWidth = 8;
+                    lctx.shadowColor = 'rgba(0,0,0,0.15)';
+                    lctx.shadowBlur = 6;
+                    lctx.shadowOffsetY = 3;
+
+                    lctx.beginPath();
+                    if (p.type === 'rectangle' || p.type === 'square') {
+                        // Slight trapezoid look just like in main game previews
+                        const w = p.width;
+                        const h = p.height;
+                        const slope = p.type === 'rectangle' ? 0.15 : 0;
+                        const topW = w * (1 - 2 * slope);
+                        lctx.moveTo(-topW / 2, -h / 2);
+                        lctx.lineTo(topW / 2, -h / 2);
+                        lctx.lineTo(w / 2, h / 2);
+                        lctx.lineTo(-w / 2, h / 2);
+                    } else if (p.type === 'hexagon') {
+                        const w = p.width;
+                        const h = p.height;
+                        const side = w / 4;
+                        lctx.moveTo(-side, -h / 2);
+                        lctx.lineTo(side, -h / 2);
+                        lctx.lineTo(w / 2, 0);
+                        lctx.lineTo(side, h / 2);
+                        lctx.lineTo(-side, h / 2);
+                        lctx.lineTo(-w / 2, 0);
+                    } else if (p.type === 'triangle') {
+                        const w = p.width;
+                        const h = p.height;
+                        lctx.moveTo(0, -h / 2);
+                        lctx.lineTo(-w / 2, h / 2);
+                        lctx.lineTo(w / 2, h / 2);
+                    }
+                    lctx.closePath();
+                    lctx.fill();
+                    lctx.shadowColor = 'transparent';
+                    lctx.stroke();
+
+                    lctx.restore();
+                });
+
+                // Dismiss as soon as the critical assets are ready.
+                if (loadingDone) {
+                    // Smoothly fade out loading screen
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                        cancelAnimationFrame(loadingAnimId);
+                    }, 500);
+                    return; // Stop animation loop
+                }
+
+                loadingAnimId = requestAnimationFrame(updateLoadingScreen);
+            }
+
+            // Start loading screen animation loop immediately
+            loadingAnimId = requestAnimationFrame(updateLoadingScreen);
+
+            // Asset loading
+            const assetCache = {};
+            const audioBuffers = {};
+
+            function loadImage(id) {
+                return new Promise((resolve) => {
+                    const info = lib.getAsset(id);
+                    if (!info) { resolve(null); return; }
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => { assetCache[id] = img; resolve(img); };
+                    img.onerror = () => resolve(null);
+                    img.src = info.url;
+                });
+            }
+
+            let musicVolume = 0.5;
+            let sfxVolume = 0.5;
+            let musicSource = null;
+            let musicGainNode = null;
+            let tabHidden = false;
+            let wakeLockObj = null;
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            document.addEventListener('visibilitychange', () => {
+                tabHidden = document.hidden;
+                if (musicGainNode) {
+                    musicGainNode.gain.value = tabHidden ? 0 : musicVolume;
+                }
+                if (tabHidden && wakeLockObj) {
+                    wakeLockObj.release().catch(() => {});
+                    wakeLockObj = null;
+                } else if (!tabHidden) {
+                    requestWakeLock();
+                }
+            });
+
+            function loadAudio(id) {
+                return new Promise((resolve) => {
+                    const info = lib.getAsset(id);
+                    if (!info || !audioCtx) { resolve(null); return; }
+                    fetch(info.url)
+                        .then(r => r.arrayBuffer())
+                        .then(buf => audioCtx.decodeAudioData(buf))
+                        .then(decoded => { audioBuffers[id] = decoded; resolve(decoded); })
+                        .catch(() => resolve(null));
+                });
+            }
+
+            function playSound(id, volume = 0.5) {
+                if (!audioCtx || !audioBuffers[id]) return;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const source = audioCtx.createBufferSource();
+                const gain = audioCtx.createGain();
+                source.buffer = audioBuffers[id];
+                gain.gain.value = volume * sfxVolume * (tabHidden ? 0 : 1);
+
+                // Pitch modulation juice
+                source.playbackRate.value = 0.92 + Math.random() * 0.16;
+
+                source.connect(gain);
+                gain.connect(audioCtx.destination);
+                source.start(0);
+                return source;
+            }
+
+            function playMusic(id) {
+                if (!audioCtx || !audioBuffers[id]) return;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                if (musicSource) {
+                    try { musicSource.stop(); } catch (e) { }
+                }
+                musicSource = audioCtx.createBufferSource();
+                musicSource.buffer = audioBuffers[id];
+                musicSource.loop = true;
+                musicGainNode = audioCtx.createGain();
+                musicGainNode.gain.value = musicVolume;
+                musicSource.connect(musicGainNode);
+                musicGainNode.connect(audioCtx.destination);
+                musicSource.start(0);
+            }
+
+            function setMusicVolume(val) {
+                musicVolume = val;
+                if (musicGainNode) {
+                    musicGainNode.gain.value = musicVolume;
+                }
+            }
+
+            function playBellSound() {
+                if (!audioCtx) return;
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const now = audioCtx.currentTime;
+                const rootFreq = 880; // A5
+                const partials = [1.0, 2.0, 2.4, 3.0, 4.2];
+                const gains = [0.35, 0.18, 0.12, 0.08, 0.05];
+                const decays = [1.8, 1.2, 0.9, 0.6, 0.4];
+
+                partials.forEach((mult, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(rootFreq * mult, now);
+
+                    gainNode.gain.setValueAtTime(0, now);
+                    gainNode.gain.linearRampToValueAtTime(gains[idx] * sfxVolume, now + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + decays[idx]);
+
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + decays[idx]);
+                });
+            }
+
+            // Load critical assets first (to not interfere with initial loading).
+            // Count each one as it resolves so the loading bar shows real progress.
+            const trackCritical = (p) => p.then((r) => { assetsLoaded++; return r; });
+            await Promise.all([
+                trackCritical(loadImage('spark_particle')),
+                trackCritical(loadAudio('ambient_music')),
+            ]);
+
+            loadingDone = true;
+
+            // Defer loading of heavy sounds and confetti pieces so they load in the background
+            Promise.all([
+                loadImage('confetti_piece_1'),
+                loadImage('confetti_piece_2'),
+                loadImage('confetti_piece_3'),
+                loadImage('confetti_piece_4'),
+                loadAudio('collision_sound'),
+                loadAudio('recycle_sound'),
+                loadAudio('victory_sound'),
+                loadAudio('heavy_thud_sound'),
+            ]).then(() => {
+                lib.log("Deferred assets successfully loaded in the background.");
+            }).catch((err) => {
+                lib.log("Error loading deferred assets: " + err);
+            });
+
+            // Start background music or setup user interaction trigger
+            const startAudioOnInteraction = () => {
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume().then(() => {
+                        if (!musicSource) {
+                            playMusic('ambient_music');
+                        }
+                    });
+                } else {
+                    if (!musicSource) {
+                        playMusic('ambient_music');
+                    }
+                }
+                document.removeEventListener('pointerdown', startAudioOnInteraction);
+                document.removeEventListener('click', startAudioOnInteraction);
+            };
+            addCleanEventListener(document, 'pointerdown', startAudioOnInteraction);
+            addCleanEventListener(document, 'click', startAudioOnInteraction);
+
+            // Try to start immediately in case autoplay is permitted
+            try {
+                playMusic('ambient_music');
+            } catch (e) {
+                lib.log("Autoplay blocked, waiting for user gesture");
+            }
+
+            // Show game parameters
+            lib.showGameParameters({
+                name: 'Gravity Stack Settings',
+                params: {
+                    'Target Height': { key: 'levels.0.targetHeight', type: 'slider', min: 200, max: 800, step: 50 },
+                    'Stability Time': { key: 'settings.stabilityTime', type: 'slider', min: 2, max: 10, step: 0.1 },
+                    'Gravity': { key: 'settings.gravity', type: 'slider', min: 0.1, max: 2.0, step: 0.1 },
+                    'Bounciness': { key: 'settings.restitution', type: 'slider', min: 0.0, max: 0.8, step: 0.1 },
+                }
+            });
+
+            // Physics setup
+            const Engine = Matter.Engine,
+                World = Matter.World,
+                Bodies = Matter.Bodies,
+                Body = Matter.Body,
+                Constraint = Matter.Constraint,
+                Events = Matter.Events,
+                Vector = Matter.Vector;
+
+            // Collision categories so a dragged shape can ignore walls/floor while
+            // still colliding with other shapes.
+            const CAT_SHAPE = 0x0001;
+            const CAT_WALL = 0x0002;
+            const CAT_GROUND = 0x0004;
+
+            let engine, world, ground, walls;
+            let shapeBodies = []; // bodies in the world
+            let shapeSlots = []; // UI slot data
+            let particles = [];
+            const particlePool = [];
+            let recyclePulses = []; // Expanding ring effects on recycle
+            let confettiParticles = [];
+            const confettiPool = [];
+            let ambientParticles = [];
+            let dragState = null; // { body, constraint, target, grabWorld, fromUI, slotIndex }
+            let infoCallout = null;
+            let stabilityTimer = 0;
+            let countdownActive = false;
+            let levelWon = false;
+            let currentLevel = 0;
+            let shakeAmount = 0;
+            let backgroundDimAlpha = 0;
+            let outlineFade = 1.0;
+            let structureFade = 0;
+            let emptyTime = 0;
+            let handTimer = 0;
+            let tapCount = 0;
+            const dragTooltip = document.getElementById('drag-tooltip');
+            let tooltipTimeout;
+
+            // Target Line Glowing Ascending Sparkles
+            let targetLineParticles = [];
+            function updateTargetLineParticles(dt, level) {
+                if (levelWon || shapeBodies.length === 0) {
+                    targetLineParticles = [];
+                    return;
+                }
+                const targetY = GROUND_Y - level.targetHeight;
+                let aboveTarget = false;
+                for (const body of shapeBodies) {
+                    if (body.isStatic) continue;
+                    if (body.bounds.min.y < targetY) {
+                        aboveTarget = true;
+                        break;
+                    }
+                }
+                // Spawn ascending sparkles from the line
+                if (aboveTarget && !levelWon && Math.random() < 0.22) {
+                    targetLineParticles.push({
+                        x: 40 + Math.random() * 640,
+                        y: targetY,
+                        vy: -35 - Math.random() * 55, // float upwards
+                        life: 1.0,
+                        decay: 0.015 + Math.random() * 0.02,
+                        size: 3 + Math.random() * 5,
+                        color: stabilityTimer > 0 ? '#10B981' : '#D97706'
+                    });
+                }
+                for (let i = targetLineParticles.length - 1; i >= 0; i--) {
+                    const p = targetLineParticles[i];
+                    p.y += p.vy * dt;
+                    p.life -= p.decay * dt * 60;
+                    if (p.life <= 0) {
+                        targetLineParticles.splice(i, 1);
+                    }
+                }
+            }
+            function drawTargetLineParticles() {
+                ctx.save();
+                for (const p of targetLineParticles) {
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.shadowColor = p.color;
+                    ctx.shadowBlur = 6;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // Tap-on-empty-space background ripples
+            let backgroundRipples = [];
+            function spawnBackgroundRipple(x, y) {
+                if (reducedMotion) return;
+                backgroundRipples.push({
+                    x, y,
+                    age: 0,
+                    duration: 0.65,
+                    maxRadius: 70 + Math.random() * 50
+                });
+            }
+            function updateBackgroundRipples(dt) {
+                for (let i = backgroundRipples.length - 1; i >= 0; i--) {
+                    const r = backgroundRipples[i];
+                    r.age += dt;
+                    if (r.age >= r.duration) {
+                        backgroundRipples.splice(i, 1);
+                    }
+                }
+            }
+            function drawBackgroundRipples() {
+                ctx.save();
+                for (const r of backgroundRipples) {
+                    const t = r.age / r.duration;
+                    const alpha = (1 - t);
+                    const radius = r.maxRadius * (1 - Math.pow(1 - t, 3)); // cubic ease out
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.lineWidth = 3.5 * (1 - t);
+                    ctx.beginPath();
+                    ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            const GROUND_Y = 1127; // Moved just above the 1128 UI_TOP
+            const UI_TOP = 1128; // 1280 - 152 (height of shape-bar)
+
+            function initPhysics() {
+                engine = Engine.create({ enableSleeping: true });
+                engine.gravity.y = config.settings.gravity;
+                world = engine.world;
+
+                const wallFilter = { category: CAT_WALL, mask: 0xFFFFFFFF };
+                const groundFilter = { category: CAT_GROUND, mask: 0xFFFFFFFF };
+                ground = Bodies.rectangle(360, GROUND_Y + 100, 720, 200, { isStatic: true, friction: 4.0, frictionStatic: 5.0, label: 'ground', collisionFilter: groundFilter });
+                const wallL = Bodies.rectangle(-10, GROUND_Y / 2, 20, GROUND_Y, { isStatic: true, label: 'wall', collisionFilter: wallFilter });
+                const wallR = Bodies.rectangle(730, GROUND_Y / 2, 20, GROUND_Y, { isStatic: true, label: 'wall', collisionFilter: wallFilter });
+                // Invisible ceiling 100px above the top of the screen so thrown shapes
+                // can't fly off into the void (bottom face sits at y = -100).
+                const ceiling = Bodies.rectangle(360, -200, 760, 200, { isStatic: true, label: 'wall', collisionFilter: wallFilter });
+                walls = [ground, wallL, wallR, ceiling];
+                World.add(world, walls);
+
+                // Give the currently-dragged shape extra gravity so it falls/sags faster.
+                // Runs every physics tick (forces are cleared each tick), adding
+                // (DRAG_GRAVITY_MULT - 1) extra g's on top of the normal gravity Matter
+                // applies. Uses the body's (halved) mass so the result is a true 2x accel.
+                Events.on(engine, 'beforeUpdate', () => {
+                    if (!dragState || !dragState.body) return;
+                    const b = dragState.body;
+                    b.force.y += b.mass * engine.gravity.y * engine.gravity.scale * (DRAG_GRAVITY_MULT - 1);
+                });
+
+                // Collision events for sparks
+                Events.on(engine, 'collisionStart', (event) => {
+                    if (mode === 'edit' || levelWon) return;
+                    let maxVel = 0;
+                    for (const pair of event.pairs) {
+                        const vel = Vector.magnitude(Vector.sub(pair.bodyA.velocity, pair.bodyB.velocity));
+                        if (vel > 0.4) {
+                            const contact = pair.collision.supports[0] || pair.collision.parentA?.position || pair.bodyA.position;
+                            const px = contact.x || (pair.bodyA.position.x + pair.bodyB.position.x) / 2;
+                            const py = contact.y || (pair.bodyA.position.y + pair.bodyB.position.y) / 2;
+                            spawnSparks(px, py, Math.min(vel, 15));
+                            playSound('collision_sound', Math.min(vel / 15, 0.6));
+
+                            // Juicy dynamic squash & stretch on impact!
+                            const impactFactor = Math.min(vel * 0.015, 0.3);
+                            if (!pair.bodyA.isStatic && pair.bodyA.label === 'shape' && pair.bodyA.squishVy !== undefined) {
+                                pair.bodyA.squishVy = impactFactor;
+                                pair.bodyA.squishVx = -impactFactor;
+                            }
+                            if (!pair.bodyB.isStatic && pair.bodyB.label === 'shape' && pair.bodyB.squishVy !== undefined) {
+                                pair.bodyB.squishVy = impactFactor;
+                                pair.bodyB.squishVx = -impactFactor;
+                            }
+
+                            if (vel > maxVel) {
+                                maxVel = vel;
+                            }
+                        }
+                    }
+                    if (maxVel > 0.4) {
+                        // Play heavy thud sound for collisions that cause screenshake
+                        playSound('heavy_thud_sound', Math.min(maxVel / 15, 1.0));
+
+                        // Highly sensitive screenshake: smaller threshold and more responsive scaling
+                        const addedShake = Math.min(maxVel * 1.5, 12);
+                        shakeAmount = Math.max(shakeAmount, addedShake);
+                    }
+                });
+            }
+
+            function getParticleFromPool() {
+                if (particlePool.length > 0) {
+                    const p = particlePool.pop();
+                    p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; p.life = 1.0; p.decay = 0; p.size = 0;
+                    p.isDust = false; p.growth = 0; p.isTimerPart = false; p.color = '';
+                    return p;
+                }
+                return {
+                    x: 0, y: 0, vx: 0, vy: 0, life: 1.0, decay: 0, size: 0,
+                    isDust: false, growth: 0, isTimerPart: false, color: ''
+                };
+            }
+
+            function spawnSparks(x, y, intensity) {
+                if (reducedMotion) return;
+                const count = Math.floor(3 + intensity * 1.5);
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = (1 + Math.random() * 3) * (intensity / 5);
+                    const p = getParticleFromPool();
+                    p.x = x; p.y = y;
+                    p.vx = Math.cos(angle) * speed;
+                    p.vy = Math.sin(angle) * speed - 2;
+                    p.life = 1.0;
+                    p.decay = 0.02 + Math.random() * 0.03;
+                    p.size = 6.4 + Math.random() * 9.6;
+                    particles.push(p);
+                }
+
+                // Spawn soft expanding impact dust clouds (only for higher impact collisions)
+                if (intensity >= 4.0) {
+                    const dustCount = Math.floor(2 + intensity * 0.8);
+                    for (let i = 0; i < dustCount; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = (0.2 + Math.random() * 0.6) * (intensity / 5);
+                        const p = getParticleFromPool();
+                        p.x = x; p.y = y;
+                        p.vx = Math.cos(angle) * speed;
+                        p.vy = Math.sin(angle) * speed - 0.5;
+                        p.life = 0.8;
+                        p.decay = 0.02 + Math.random() * 0.02;
+                        p.size = 14 + Math.random() * 12;
+                        p.isDust = true;
+                        p.growth = 0.45 + Math.random() * 0.55;
+                        particles.push(p);
+                    }
+                }
+            }
+
+            function spawnRecyclePulse(x, y) {
+                recyclePulses.push({
+                    x, y,
+                    age: 0,
+                    duration: 0.4
+                });
+            }
+
+            function spawnTimerExplosion(x, y) {
+                if (reducedMotion) return;
+                const count = 65;
+                const colors = ['#10B981', '#34D399', '#6EE7B7', '#ffffff', '#FFD700'];
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 14;
+                    const p = getParticleFromPool();
+                    p.x = x; p.y = y;
+                    p.vx = Math.cos(angle) * speed;
+                    p.vy = Math.sin(angle) * speed - 1.5;
+                    p.life = 1.0;
+                    p.decay = 0.008 + Math.random() * 0.015;
+                    p.size = 12 + Math.random() * 18;
+                    p.color = colors[Math.floor(Math.random() * colors.length)];
+                    p.isTimerPart = true;
+                    particles.push(p);
+                }
+            }
+
+            function getConfettiFromPool() {
+                if (confettiPool.length > 0) {
+                    return confettiPool.pop();
+                }
+                return {
+                    x: 0, y: 0, vx: 0, vy: 0, rot: 0, rotSpeed: 0, type: 0,
+                    age: 0, delay: 0, life: 1.0
+                };
+            }
+
+            function spawnConfetti() {
+                if (reducedMotion) return;
+                // Spawn 42 confetti pieces (further 25% reduction from 56), utilizing our pool
+                for (let i = 0; i < 42; i++) {
+                    const p = getConfettiFromPool();
+                    p.x = 360 + (Math.random() - 0.5) * 400;
+                    p.y = -50 - Math.random() * 200;
+                    p.vx = (Math.random() - 0.5) * 4;
+                    p.vy = 2 + Math.random() * 3;
+                    p.rot = Math.random() * Math.PI * 2;
+                    p.rotSpeed = (Math.random() - 0.5) * 0.2;
+                    p.type = Math.floor(Math.random() * 4);
+                    p.age = 0;
+                    p.delay = 1.5 + Math.random() * 3.5; // 1.5 to 5 seconds delay (reduced by 1s)
+                    p.life = 1.0;
+                    p.sizeScale = 0.7 + Math.random() * 1.0; // Random size 70% to 170% (increased variance)
+                    confettiParticles.push(p);
+                }
+            }
+
+            // Shape creation
+            function getLevelData() {
+                const levels = config.levels;
+                return levels[Math.min(currentLevel, levels.length - 1)];
+            }
+
+            // Geometric "imperfection": real-world pieces aren't machine-perfect, so we
+            // nudge each vertex a little — a trapezoid ends up with one side higher than
+            // the other, etc. The amount is tiny on level 1 and grows each level (tuned
+            // to keep scaling sensibly toward an eventual 12 levels). The jitter for a
+            // given piece is computed once and cached on its shapeDef so it stays the
+            // same shape across re-spawns and level resets. Ice cubes never call this.
+            const IMPERFECT_BASE = 0.022;  // level-1 jitter as a fraction of shape size
+            const IMPERFECT_STEP = 0.018;  // added per level thereafter
+            const IMPERFECT_MAX = 0.16;   // clamp so shapes stay convex/sane
+
+            // How trapezoidal the rectangular blocks are (0 = a true rectangle). Level 1
+            // is nearly rectangular and the sides slant more each level.
+            const TRAP_SLOPE_BASE = 0.04;
+            const TRAP_SLOPE_STEP = 0.015;
+            const TRAP_SLOPE_MAX = 0.12;
+
+            function seededRandom(seed) {
+                const x = Math.sin(seed) * 10000;
+                return x - Math.floor(x);
+            }
+
+            function imperfectVerts(shapeDef, baseVerts, w, h) {
+                // Recompute only if the level or shape size changed; otherwise reuse so
+                // the piece keeps a stable silhouette across re-spawns and resets.
+                const key = currentLevel + ':' + w + 'x' + h;
+                if (shapeDef._imperfectVerts && shapeDef._imperfectKey === key) {
+                    return shapeDef._imperfectVerts;
+                }
+                const amp = Math.min(IMPERFECT_MAX, IMPERFECT_BASE + currentLevel * IMPERFECT_STEP);
+                const jx = amp * w, jy = amp * h;
+
+                // Deterministic seed based on level, width, and height
+                const seedBase = currentLevel * 1000 + w * 17 + h * 31;
+                const out = baseVerts.map((v, idx) => {
+                    const rx = seededRandom(seedBase + idx * 2);
+                    const ry = seededRandom(seedBase + idx * 2 + 1);
+                    return {
+                        x: v.x + (rx * 2 - 1) * jx,
+                        y: v.y + (ry * 2 - 1) * jy,
+                    };
+                });
+                shapeDef._imperfectVerts = out;
+                shapeDef._imperfectKey = key;
+                return out;
+            }
+
+            function createShapeBody(shapeDef, x, y) {
+                let body;
+                const level = getLevelData();
+                const noImperfect = shapeDef.isStatic || shapeDef.noImperfect;
+                const isFirstShape = (level && level.shapes && level.shapes[0] === shapeDef) || noImperfect;
+
+                const opts = {
+                    restitution: config.settings.restitution,
+                    friction: shapeDef.friction !== undefined ? shapeDef.friction : 0.95,
+                    frictionStatic: shapeDef.isIce ? (shapeDef.friction !== undefined ? shapeDef.friction : 0.1) : 30.0,
+                    density: shapeDef.isRolling ? 0.00125 : 0.005,
+                    frictionAir: 0.025,
+                    label: 'shape',
+                    collisionFilter: { category: CAT_SHAPE, mask: 0xFFFFFFFF },
+                    isStatic: shapeDef.isStatic || false,
+                };
+
+                if (shapeDef.type === 'rectangle') {
+                    if (shapeDef.isIce || isFirstShape) {
+                        // Ice or first shape is always a perfect cube/rectangle — no imperfection, no slope.
+                        body = Bodies.rectangle(x, y, shapeDef.width, shapeDef.height, opts);
+                    } else {
+                        // Level-scaled trapezoid: nearly rectangular on level 1, more
+                        // slanted later. Then jitter it for imperfection.
+                        const w = shapeDef.width, h = shapeDef.height;
+                        const slope = Math.min(TRAP_SLOPE_MAX, TRAP_SLOPE_BASE + currentLevel * TRAP_SLOPE_STEP);
+                        const topW = w * (1 - 2 * slope);
+                        const base = [
+                            { x: -topW / 2, y: -h / 2 },
+                            { x: topW / 2, y: -h / 2 },
+                            { x: w / 2, y: h / 2 },
+                            { x: -w / 2, y: h / 2 },
+                        ];
+                        body = Bodies.fromVertices(x, y, imperfectVerts(shapeDef, base, w, h), opts);
+                        recenterBodyToBounds(body, x, y);
+                    }
+                } else if (shapeDef.type === 'triangle') {
+                    const w = shapeDef.width;
+                    const h = shapeDef.height;
+                    const base = [
+                        { x: 0, y: -h / 2 },
+                        { x: -w / 2, y: h / 2 },
+                        { x: w / 2, y: h / 2 },
+                    ];
+                    const verts = isFirstShape ? base : imperfectVerts(shapeDef, base, w, h);
+                    body = Bodies.fromVertices(x, y, verts, opts);
+                    // fromVertices centers on centroid, not bbox center - realign so
+                    // the shape actually sits where the rest of the game expects it.
+                    recenterBodyToBounds(body, x, y);
+                } else if (shapeDef.type === 'circle') {
+                    body = Bodies.circle(x, y, shapeDef.radius, opts);
+                } else if (shapeDef.type === 'polygon' && shapeDef.vertices) {
+                    const xs = shapeDef.vertices.map(v => v.x);
+                    const ys = shapeDef.vertices.map(v => v.y);
+                    const w = Math.max(...xs) - Math.min(...xs);
+                    const h = Math.max(...ys) - Math.min(...ys);
+                    const verts = isFirstShape ? shapeDef.vertices : imperfectVerts(shapeDef, shapeDef.vertices, w, h);
+                    // Enable poly-decomp for concave shapes if available
+                    if (window.decomp) {
+                        Matter.Common.setDecomp(decomp);
+                    }
+                    body = Bodies.fromVertices(x, y, verts, opts, true);
+                    recenterBodyToBounds(body, x, y);
+                    // For concave shapes that poly-decomp split into multiple convex
+                    // parts, body.vertices is the convex hull — useless for rendering.
+                    // Store the original vertex path so drawBody can render the true
+                    // concave silhouette (Canvas2D fills concave paths just fine).
+                    // Convex polygons (parts.length === 1) don't need this; their
+                    // body.vertices already matches the visual perfectly.
+                    if (body.parts.length > 1) {
+                        const vxs = verts.map(v => v.x);
+                        const vys = verts.map(v => v.y);
+                        const cxOff = (Math.min(...vxs) + Math.max(...vxs)) / 2;
+                        const cyOff = (Math.min(...vys) + Math.max(...vys)) / 2;
+                        // body.position may differ from (x,y) by a centroid-vs-bbox
+                        // offset introduced by recenterBodyToBounds, so adjust.
+                        const dx = body.position.x - x;
+                        const dy = body.position.y - y;
+                        body.originalVerts = verts.map(v => ({
+                            x: v.x - cxOff - dx,
+                            y: v.y - cyOff - dy
+                        }));
+                    }
+                } else {
+                    body = Bodies.rectangle(x, y, shapeDef.width || 100, shapeDef.height || 100, opts);
+                }
+
+                const color = shapeDef.color || '#D97706';
+                body.shapeColor = color;
+                body.lightColor = lightenColor(color, 20);
+                body.darkColor = darkenColor(color, 0.35);
+                body.shapeDef = shapeDef;
+                // Local vertical half-extent (captured at angle 0) for the cached fill gradient.
+                body.gradHalf = (body.bounds.max.y - body.bounds.min.y) / 2;
+
+                // Squash & stretch initializers
+                body.squishX = 1.0;
+                body.squishY = 1.0;
+                body.squishVx = 0;
+                body.squishVy = 0;
+
+                // Quick Back.easeOut "pop" whenever a shape is spawned into the world
+                body.spawnAnim = { start: performance.now(), duration: 350 };
+
+                if (shapeDef.isIce || shapeDef.isRolling || shapeDef.isStatic) {
+                    infoCallout = {
+                        body: body,
+                        timer: 0,
+                        active: true,
+                        text: shapeDef.isIce ? 'SLIPPERY' : shapeDef.isStatic ? 'UNMOVABLE' : 'ROLLS AROUND:\nKEEP IT STEADY!'
+                    };
+                }
+
+                if (shapeDef.angularVelocity) {
+                    Body.setAngularVelocity(body, shapeDef.angularVelocity);
+                }
+
+                return body;
+            }
+
+            function updateScrollButtons() {
+                const scrollLeft = shapeBar.scrollLeft;
+                const maxScroll = shapeBar.scrollWidth - shapeBar.clientWidth;
+
+                if (scrollLeft <= 2) {
+                    scrollLeftBtn.classList.add('disabled');
+                } else {
+                    scrollLeftBtn.classList.remove('disabled');
+                }
+
+                if (scrollLeft >= maxScroll - 2) {
+                    scrollRightBtn.classList.add('disabled');
+                } else {
+                    scrollRightBtn.classList.remove('disabled');
+                }
+            }
+
+            // UI setup
+            function buildShapeUI() {
+                shapeBar.innerHTML = '';
+                shapeSlots = [];
+                const level = getLevelData();
+
+                level.shapes.forEach((shapeDef, i) => {
+                    const slot = document.createElement('div');
+                    slot.className = 'shape-slot';
+                    slot.dataset.index = i;
+                    slot.style.animationDelay = `${i * 0.1}s`; // 0.1s interval bounce-in cascade!
+
+                    const miniCanvas = document.createElement('canvas');
+                    miniCanvas.width = 100;
+                    miniCanvas.height = 100;
+                    drawShapePreview(miniCanvas, shapeDef);
+                    slot.appendChild(miniCanvas);
+                    shapeBar.appendChild(slot);
+
+                    const isUsed = !!shapeDef.startOnScreen;
+                    if (isUsed) {
+                        slot.classList.add('used');
+                    }
+
+                    shapeSlots.push({ element: slot, shapeDef, used: isUsed, bodyRef: null });
+                });
+
+                // Reset scroll position to left
+                shapeBar.scrollLeft = 0;
+                // Update scroll arrow disabled state
+                setTimeout(updateScrollButtons, 50);
+            }
+
+            function spawnStartingShapes() {
+                const level = getLevelData();
+                level.shapes.forEach((shapeDef, i) => {
+                    if (shapeDef.startOnScreen) {
+                        const x = 360;
+                        let h = shapeDef.height || (shapeDef.radius ? shapeDef.radius * 2 : 100);
+                        if (shapeDef.type === 'polygon' && shapeDef.vertices) {
+                            const ys = shapeDef.vertices.map(v => v.y);
+                            h = Math.max(...ys) - Math.min(...ys);
+                        }
+                        const y = GROUND_Y - h / 2 - (shapeDef.isStatic ? 5 : 10) + (shapeDef.yOffset || 0);
+                        const body = createShapeBody(shapeDef, x, y);
+                        body.slotIndex = i;
+                        World.add(world, body);
+                        shapeBodies.push(body);
+                        if (shapeSlots[i]) {
+                            shapeSlots[i].bodyRef = body;
+                        }
+                    }
+                });
+            }
+
+            function drawShapePreview(cvs, shapeDef) {
+                const c = cvs.getContext('2d');
+                c.clearRect(0, 0, 100, 100);
+                c.save();
+                c.translate(50, 50);
+
+                // 10% bigger: base size was 80, now 88
+                const previewSize = 88;
+                let w = shapeDef.width;
+                let h = shapeDef.height;
+                if (shapeDef.type === 'circle') {
+                    w = shapeDef.radius * 2;
+                    h = shapeDef.radius * 2;
+                } else if (shapeDef.type === 'polygon' && shapeDef.vertices) {
+                    const xs = shapeDef.vertices.map(v => v.x);
+                    const ys = shapeDef.vertices.map(v => v.y);
+                    w = Math.max(...xs) - Math.min(...xs);
+                    h = Math.max(...ys) - Math.min(...ys);
+                }
+
+                const scale = Math.min(previewSize / (w || 100), previewSize / (h || 100));
+                c.scale(scale, scale);
+
+                c.fillStyle = shapeDef.color;
+                c.strokeStyle = darkenColor(shapeDef.color, 0.35);
+                c.lineWidth = 5 / scale;
+
+                if (shapeDef.type === 'rectangle') {
+                    const w = shapeDef.width, h = shapeDef.height;
+                    const slope = shapeDef.isIce ? 0 : 0.15;
+                    const topW = w * (1 - 2 * slope);
+                    c.beginPath();
+                    c.moveTo(-topW / 2, -h / 2);
+                    c.lineTo(topW / 2, -h / 2);
+                    c.lineTo(w / 2, h / 2);
+                    c.lineTo(-w / 2, h / 2);
+                    c.closePath();
+                    c.fill();
+                    c.stroke();
+
+                    if (shapeDef.isIce) {
+                        c.save();
+                        // Draw a beautiful blue-tinted inner border
+                        c.strokeStyle = 'rgba(186, 242, 248, 0.9)';
+                        c.lineWidth = 4 / scale;
+                        c.strokeRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12);
+
+                        // Draw diagonal glossy shine (Higher contrast)
+                        c.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                        c.beginPath();
+                        c.moveTo(-w / 2 + 10, -h / 2 + 10);
+                        c.lineTo(-w / 2 + w * 0.45, -h / 2 + 10);
+                        c.lineTo(-w / 2 + 10, -h / 2 + h * 0.45);
+                        c.closePath();
+                        c.fill();
+
+                        c.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                        c.beginPath();
+                        c.moveTo(-w / 2 + w * 0.55, -h / 2 + 10);
+                        c.lineTo(-w / 2 + w * 0.75, -h / 2 + 10);
+                        c.lineTo(-w / 2 + 10, -h / 2 + h * 0.75);
+                        c.lineTo(-w / 2 + 10, -h / 2 + h * 0.55);
+                        c.closePath();
+                        c.fill();
+                        c.restore();
+                    }
+                } else if (shapeDef.type === 'triangle') {
+                    const w = shapeDef.width, h = shapeDef.height;
+                    c.beginPath();
+                    c.moveTo(0, -h / 2);
+                    c.lineTo(-w / 2, h / 2);
+                    c.lineTo(w / 2, h / 2);
+                    c.closePath();
+                    c.fill();
+                    c.stroke();
+                } else if (shapeDef.type === 'circle') {
+                    const radius = shapeDef.radius;
+                    c.beginPath();
+                    c.arc(0, 0, radius, 0, Math.PI * 2);
+                    c.closePath();
+                    c.fill();
+                    c.stroke();
+                } else if (shapeDef.type === 'polygon' && shapeDef.vertices) {
+                    const xs = shapeDef.vertices.map(v => v.x);
+                    const ys = shapeDef.vertices.map(v => v.y);
+                    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+                    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+
+                    c.beginPath();
+                    c.moveTo(shapeDef.vertices[0].x - cx, shapeDef.vertices[0].y - cy);
+                    for (let i = 1; i < shapeDef.vertices.length; i++) {
+                        c.lineTo(shapeDef.vertices[i].x - cx, shapeDef.vertices[i].y - cy);
+                    }
+                    c.closePath();
+                    c.fill();
+                    c.stroke();
+                }
+                c.restore();
+            }
+
+            // Drawing
+            function drawBackground() {
+                // Background is handled by CSS on #game-world for optimal compositor performance.
+                // We no longer draw it on the canvas context every frame.
+            }
+
+            function drawGround() {
+                ctx.fillStyle = '#374151';
+                // Extend floor fully down to the bottom of the screen
+                ctx.fillRect(0, GROUND_Y, 720, 1280 - GROUND_Y);
+            }
+
+            function drawTargetLine(level = getLevelData()) {
+                const lineY = GROUND_Y - level.targetHeight;
+
+                ctx.save();
+
+                // Draw a beautiful soft glowing neon aura around the line when a shape is above it
+                let aboveTarget = false;
+                for (const body of shapeBodies) {
+                    if (body.isStatic) continue;
+                    if (body.bounds.min.y < lineY) {
+                        aboveTarget = true;
+                        break;
+                    }
+                }
+
+                if (aboveTarget) {
+                    const glowGrad = ctx.createLinearGradient(0, lineY - 20, 0, lineY + 20);
+                    const glowColor = stabilityTimer > 0 ? 'rgba(63, 227, 169, 0.22)' : 'rgba(217, 119, 6, 0.16)';
+                    glowGrad.addColorStop(0, 'rgba(255,255,255,0)');
+                    glowGrad.addColorStop(0.5, glowColor);
+                    glowGrad.addColorStop(1, 'rgba(255,255,255,0)');
+                    ctx.fillStyle = glowGrad;
+                    ctx.fillRect(0, lineY - 20, 720, 40);
+                }
+
+                ctx.setLineDash([12, 8]);
+                ctx.strokeStyle = stabilityTimer > 0 ? '#3FE3A9' : '#D97706';
+                ctx.lineWidth = 5;
+                ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 500) * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(20, lineY);
+                ctx.lineTo(700, lineY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.font = '600 32px Fredoka';
+                ctx.fillStyle = stabilityTimer > 0 ? '#3FE3A9' : '#D97706';
+                ctx.textAlign = 'left';
+                ctx.fillText('TARGET', 24, lineY - 10);
+                ctx.restore();
+            }
+
+            function drawHeightMeter(level = getLevelData()) {
+                if (shapeBodies.length === 0 || levelWon) return;
+
+                const targetY = GROUND_Y - level.targetHeight;
+
+                let highestY = GROUND_Y;
+                for (const body of shapeBodies) {
+                    if (body.isStatic) continue;
+                    if (body.bounds.min.y < highestY) {
+                        highestY = body.bounds.min.y;
+                    }
+                }
+
+                if (highestY >= GROUND_Y) return;
+
+                const currentHeight = GROUND_Y - highestY;
+                const percentage = Math.min(100, Math.floor((currentHeight / level.targetHeight) * 100));
+
+                const isActiveColor = countdownActive || (highestY < targetY);
+                const themeColor = isActiveColor ? '#3FE3A9' : '#ffffff';
+                const lineAlpha = isActiveColor ? 0.6 : 0.35;
+
+                ctx.save();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = themeColor;
+                ctx.globalAlpha = lineAlpha;
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(100, highestY);
+                ctx.lineTo(620, highestY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Draw a cute badge on the right
+                ctx.globalAlpha = 1.0;
+                ctx.font = '600 27px Fredoka';
+                ctx.fillStyle = themeColor;
+                ctx.textAlign = 'right';
+                ctx.fillText(`${percentage}% STACKED`, 620, highestY - 8);
+                ctx.restore();
+            }
+
+            function drawBody(body) {
+                const verts = body.vertices;
+                ctx.save();
+
+                if (body.isGhost) {
+                    ctx.globalAlpha = 0.5;
+                }
+
+                // Quick Back.easeOut pop-in scale when this body just spawned
+                let scale = 1;
+                if (body.spawnAnim) {
+                    const elapsed = performance.now() - body.spawnAnim.start;
+                    const t = Math.min(elapsed / body.spawnAnim.duration, 1);
+                    scale = backEaseOut(t);
+                    if (t >= 1) {
+                        body.spawnAnim = null;
+                    }
+                }
+
+                // Drop shadow — no blur. Canvas shadowBlur is the most expensive 2D op
+                // and was paid per shape every frame; a hard offset shadow is ~free.
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 4;
+
+                // Draw relative to the body's own center so the pop animation scales
+                // around the shape's middle instead of the canvas origin.
+                ctx.translate(body.position.x, body.position.y);
+
+                // Dynamic squash and stretch
+                const sX = (body.squishX !== undefined) ? body.squishX : 1.0;
+                const sY = (body.squishY !== undefined) ? body.squishY : 1.0;
+                ctx.scale(scale * sX, scale * sY);
+
+                ctx.beginPath();
+                if (body.circleRadius) {
+                    ctx.arc(0, 0, body.circleRadius, 0, Math.PI * 2);
+                } else if (body.originalVerts) {
+                    // Concave polygon: use the original local-space vertices, rotated by
+                    // the body's current angle so the visual matches the physics body.
+                    const cos = Math.cos(body.angle);
+                    const sin = Math.sin(body.angle);
+                    const ov = body.originalVerts;
+                    const rx0 = ov[0].x * cos - ov[0].y * sin;
+                    const ry0 = ov[0].x * sin + ov[0].y * cos;
+                    ctx.moveTo(rx0, ry0);
+                    for (let i = 1; i < ov.length; i++) {
+                        const rx = ov[i].x * cos - ov[i].y * sin;
+                        const ry = ov[i].x * sin + ov[i].y * cos;
+                        ctx.lineTo(rx, ry);
+                    }
+                } else {
+                    ctx.moveTo(verts[0].x - body.position.x, verts[0].y - body.position.y);
+                    for (let i = 1; i < verts.length; i++) {
+                        ctx.lineTo(verts[i].x - body.position.x, verts[i].y - body.position.y);
+                    }
+                }
+                ctx.closePath();
+
+                // Fill with a screen-vertical gradient, built once per body and reused.
+                // Colors and extent never change, so reallocating it every frame was
+                // pure garbage; spans the shape's local height (captured at spawn).
+                if (!body.fillGradient) {
+                    const half = body.gradHalf || (body.circleRadius ? body.circleRadius : (body.bounds.max.y - body.bounds.min.y) / 2);
+                    const g = ctx.createLinearGradient(0, -half, 0, half);
+                    g.addColorStop(0, body.lightColor || '#fbbf24');
+                    g.addColorStop(1, body.shapeColor || '#D97706');
+                    body.fillGradient = g;
+                }
+                ctx.fillStyle = body.fillGradient;
+                ctx.fill();
+
+                ctx.shadowColor = 'transparent';
+                ctx.strokeStyle = body.darkColor || '#78350f';
+                ctx.lineWidth = 9;
+                ctx.stroke();
+
+                if (body.shapeDef && body.shapeDef.isIce) {
+                    ctx.save();
+                    ctx.rotate(body.angle);
+                    const w = body.shapeDef.width;
+                    const h = body.shapeDef.height;
+
+                    // Draw a beautiful blue-tinted inner border
+                    ctx.strokeStyle = 'rgba(186, 242, 248, 0.9)';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12);
+
+                    // Draw diagonal glossy shine (Higher contrast)
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                    ctx.beginPath();
+                    ctx.moveTo(-w / 2 + 10, -h / 2 + 10);
+                    ctx.lineTo(-w / 2 + w * 0.45, -h / 2 + 10);
+                    ctx.lineTo(-w / 2 + 10, -h / 2 + h * 0.45);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                    ctx.beginPath();
+                    ctx.moveTo(-w / 2 + w * 0.55, -h / 2 + 10);
+                    ctx.lineTo(-w / 2 + w * 0.75, -h / 2 + 10);
+                    ctx.lineTo(-w / 2 + 10, -h / 2 + h * 0.75);
+                    ctx.lineTo(-w / 2 + 10, -h / 2 + h * 0.55);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }
+
+            function drawParticles() {
+                for (const p of particles) {
+                    ctx.save();
+                    ctx.globalAlpha = p.life;
+                    if (p.isDust) {
+                        ctx.fillStyle = `rgba(241, 245, 249, ${p.life * 0.45})`;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (p.isTimerPart) {
+                        // Bright glowing particles for the timer explosion
+                        ctx.fillStyle = p.color;
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 15;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (assetCache['spark_particle']) {
+                        ctx.drawImage(assetCache['spark_particle'], p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
+                    } else {
+                        ctx.fillStyle = `rgba(255, 215, 0, ${p.life})`;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            }
+
+            function drawConfetti() {
+                const confImgs = [
+                    assetCache['confetti_piece_1'],
+                    assetCache['confetti_piece_2'],
+                    assetCache['confetti_piece_3'],
+                    assetCache['confetti_piece_4'],
+                ];
+                for (const p of confettiParticles) {
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot);
+                    ctx.scale(p.sizeScale || 1.0, p.sizeScale || 1.0);
+                    ctx.globalAlpha = p.life;
+                    const img = confImgs[p.type];
+                    if (img) {
+                        ctx.drawImage(img, -18, -18, 36, 36);
+                    } else {
+                        ctx.fillStyle = ['#FFD700', '#10B981', '#3B82F6', '#FF6B6B'][p.type];
+                        ctx.fillRect(-12, -6, 24, 12);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // Drag and drop logic
+            let pointerPos = { x: 0, y: 0 };
+
+            function getPointerPosFromEvent(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = 720 / rect.width;
+                const scaleY = 1280 / rect.height;
+                if (e.changedTouches) {
+                    const touch = e.changedTouches[0];
+                    return { x: (touch.clientX - rect.left) * scaleX, y: (touch.clientY - rect.top) * scaleY };
+                }
+                return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+            }
+
+            function findBodyAtPoint(x, y) {
+                for (const body of shapeBodies) {
+                    if (Matter.Bounds.contains(body.bounds, { x, y })) {
+                        if (Matter.Vertices.contains(body.vertices, { x, y })) {
+                            return body;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            function startDragFromUI(slotIndex, pos) {
+                if (levelWon) return;
+                const slot = shapeSlots[slotIndex];
+                if (slot.used) return;
+
+                slot.used = true;
+                slot.element.classList.add('used');
+
+                const shapeDef = slot.shapeDef;
+                const body = createShapeBody(shapeDef, pos.x, pos.y - 50);
+
+                // Pulled from the tray: collides only with walls and ceiling, avoiding
+                // shapes to prevent bulldozing them while you position.
+                body.isGhost = true;
+                body.collisionFilter.mask = CAT_WALL;
+                applyDragMass(body);
+                Body.setVelocity(body, { x: 0, y: 0 });
+                Body.setAngularVelocity(body, 0);
+
+                World.add(world, body);
+                shapeBodies.push(body);
+
+                slot.bodyRef = body;
+                body.slotIndex = slotIndex;
+
+                // Grab from the body's center when pulled out of the tray.
+                const grabOffset = { x: 0, y: 0 };
+                dragState = {
+                    body,
+                    target: { x: pos.x, y: pos.y },
+                    grabWorld: { x: pos.x, y: pos.y },
+                    constraint: attachDragConstraint(body, grabOffset, pos),
+                    fromUI: true,
+                    slotIndex
+                };
+            }
+
+
+            function startDragFromWorld(body, pos) {
+                if (levelWon) return;
+                if (body.isStatic) return;
+                // Record the grabbed point in the body's local frame so the shape can
+                // swing around that exact spot regardless of how it later rotates.
+                // Matter takes pointB as an offset from the body center (in the body's
+                // frame at creation time), so pass the plain world-space grab offset —
+                // NOT an inverse-rotated one, which is wrong for already-rotated bodies.
+                const grabOffset = { x: pos.x - body.position.x, y: pos.y - body.position.y };
+
+                // Stay a normal dynamic body so other shapes can push it, but stop it
+                // colliding with the floor while held (so it can be dragged down to recycle).
+                // It still collides with other shapes and screen boundaries/walls.
+                body.dragPrevMask = body.collisionFilter.mask;
+                body.collisionFilter.mask = CAT_SHAPE | CAT_WALL;
+                applyDragMass(body);
+                Body.setVelocity(body, { x: 0, y: 0 });
+                Body.setAngularVelocity(body, 0);
+                dragState = {
+                    body,
+                    target: { x: pos.x, y: pos.y },
+                    grabWorld: { x: pos.x, y: pos.y },
+                    constraint: attachDragConstraint(body, grabOffset, pos),
+                    fromUI: false,
+                    slotIndex: body.slotIndex
+                };
+                canvas.classList.add('dragging');
+            }
+
+            // --- Drag feel tunables -------------------------------------------------
+            // Dragging is a soft spring constraint from the grabbed point to the pointer.
+            // The shape stays a normal dynamic body — gravity makes it hang/swing from the
+            // grab point, other shapes can push it, and it pushes them by its own mass.
+            const DRAG_STIFFNESS = 0.08; // 0..1 — higher = tighter/snappier follow
+            const DRAG_DAMPING = 0.10; // reduces wobble/overshoot
+            const DRAG_MASS_SCALE = 0.01; // held shapes weigh 10% as much when bumping others
+            const DRAG_GRAVITY_MULT = 10; // ...but fall under this many times normal gravity
+
+            // Tie the grabbed point on the body to the pointer with a zero-length spring.
+            // Because the anchor is an offset point on the body, the pull also produces
+            // torque, so the shape naturally swings around where it was grabbed.
+            function attachDragConstraint(body, grabOffset, pos) {
+                const constraint = Constraint.create({
+                    bodyB: body,
+                    pointB: { x: grabOffset.x, y: grabOffset.y },
+                    pointA: { x: pos.x, y: pos.y },
+                    stiffness: DRAG_STIFFNESS,
+                    damping: DRAG_DAMPING,
+                    length: 0,
+                });
+                World.add(world, constraint);
+                return constraint;
+            }
+
+            // While held, a shape weighs less in collisions (so it shoves the stack
+            // around less and is pushed back more easily). The extra fall speed is
+            // handled separately by the 'beforeUpdate' gravity boost in initPhysics.
+            function applyDragMass(body) {
+                body.dragPrevMass = body.mass;
+                Body.setMass(body, body.mass * DRAG_MASS_SCALE);
+            }
+            function restoreDragMass(body) {
+                if (body.dragPrevMass !== undefined) {
+                    Body.setMass(body, body.dragPrevMass);
+                    delete body.dragPrevMass;
+                }
+            }
+
+            function updateDrag(pos) {
+                if (!dragState) return;
+
+                // Clamp pointer target coordinates to stay horizontally inside screen.
+                let tx = Math.max(3, Math.min(717, pos.x));
+                let ty = pos.y;
+
+                // Clamp vertical target to GROUND_Y - 10 if in play area to prevent dragging shapes into floor
+                if (pos.y < UI_TOP) {
+                    ty = Math.min(ty, GROUND_Y - 10);
+                }
+
+                dragState.target.x = tx;
+                dragState.target.y = ty;
+                dragState.pointerY = pos.y; // raw pointer for recycle detection
+
+                // Move the spring anchor; physics does the rest in Engine.update.
+                if (dragState.constraint) {
+                    dragState.constraint.pointA.x = tx;
+                    dragState.constraint.pointA.y = ty;
+                }
+
+                // Highlight bar if dragging back into the tray
+                if (pos.y > UI_TOP) {
+                    shapeBar.style.background = 'rgba(60, 60, 130, 0.98)';
+                    shapeBar.style.boxShadow = '0 -12px 40px rgba(120, 100, 255, 0.55), 0 -4px 16px rgba(180, 140, 255, 0.35)';
+                } else {
+                    shapeBar.style.background = 'rgba(30, 30, 50, 0.9)';
+                    shapeBar.style.boxShadow = 'none';
+                }
+            }
+
+            // The engine integrates the drag constraint during Engine.update; here we
+            // just read the anchor straight off the constraint (Matter keeps pointB in
+            // sync with the body's rotation) so the indicator can never drift from it.
+            function updateDragPhysics() {
+                if (!dragState || !dragState.constraint) return;
+                const { body, constraint } = dragState;
+                dragState.grabWorld = {
+                    x: body.position.x + constraint.pointB.x,
+                    y: body.position.y + constraint.pointB.y
+                };
+            }
+
+            function endDrag(pos) {
+                if (!dragState) return;
+                const { body, slotIndex, constraint } = dragState;
+
+                // Remove the drag spring first so the body is free.
+                if (constraint) World.remove(world, constraint);
+
+                // Restore full weight now that it's no longer being dragged.
+                restoreDragMass(body);
+
+                // Check if dropped back in UI area - recycle
+                if (pos.y > UI_TOP) {
+                    recycleShape(body, slotIndex);
+                } else {
+                    // Restore full collisions (walls/floor included). The body keeps its
+                    // current physics velocity, so it throws and settles naturally.
+                    body.isGhost = false;
+                    body.collisionFilter.mask = (body.dragPrevMask !== undefined) ? body.dragPrevMask : 0xFFFFFFFF;
+                    delete body.dragPrevMask;
+
+                    // One-frame safety net: if the shape escaped past a wall or through
+                    // the floor during the drag, snap it back and zero the outward velocity.
+                    requestAnimationFrame(() => {
+                        if (!shapeBodies.includes(body) || body.isStatic) return;
+                        const margin = 5;
+                        const minX = margin, maxX = 720 - margin;
+                        const bw = (body.bounds.max.x - body.bounds.min.x) / 2;
+                        const bh = (body.bounds.max.y - body.bounds.min.y) / 2;
+                        const bx = body.position.x;
+                        const by = body.position.y;
+                        if (bx - bw < minX) {
+                            Body.setPosition(body, { x: minX + bw, y: by });
+                            if (body.velocity.x < 0) Body.setVelocity(body, { x: 0, y: body.velocity.y });
+                        } else if (bx + bw > maxX) {
+                            Body.setPosition(body, { x: maxX - bw, y: by });
+                            if (body.velocity.x > 0) Body.setVelocity(body, { x: 0, y: body.velocity.y });
+                        }
+                        if (by + bh > GROUND_Y) {
+                            Body.setPosition(body, { x: body.position.x, y: GROUND_Y - bh });
+                            Body.setVelocity(body, { x: body.velocity.x, y: 0 });
+                        }
+                    });
+                }
+
+                shapeBar.style.background = 'rgba(30, 30, 50, 0.9)';
+                shapeBar.style.boxShadow = 'none';
+                canvas.classList.remove('dragging');
+                dragState = null;
+                stabilityTimer = 0;
+            }
+
+            function recycleShape(body, slotIndex) {
+                World.remove(world, body);
+                shapeBodies = shapeBodies.filter(b => b !== body);
+
+                if (slotIndex !== undefined && shapeSlots[slotIndex]) {
+                    const slot = shapeSlots[slotIndex];
+                    slot.used = false;
+                    slot.element.classList.remove('used');
+                    slot.bodyRef = null;
+
+                    // Create recycle animation on top of the slot as an HTML overlay
+                    const rect = slot.element.getBoundingClientRect();
+                    const containerRect = document.getElementById('game-world').getBoundingClientRect();
+                    const x = rect.left - containerRect.left + rect.width / 2;
+                    const y = rect.top - containerRect.top + rect.height / 2;
+
+                    const pulseEl = document.createElement('div');
+                    pulseEl.className = 'recycle-pulse-ui';
+                    pulseEl.style.left = `${x}px`;
+                    pulseEl.style.top = `${y}px`;
+                    pulseEl.style.width = `${rect.width}px`;
+                    pulseEl.style.height = `${rect.height}px`;
+                    document.querySelector('.ui-overlay').appendChild(pulseEl);
+
+                    // Remove overlay element after animation completes
+                    setTimeout(() => pulseEl.remove(), 1000);
+                }
+                playSound('recycle_sound', 0.5);
+            }
+
+            // Event listeners for play mode
+            function setupPlayControls() {
+                // Scroll arrow functionality
+                addCleanEventListener(scrollLeftBtn, 'click', () => {
+                    shapeBar.scrollBy({ left: -228, behavior: 'smooth' });
+                });
+                addCleanEventListener(scrollRightBtn, 'click', () => {
+                    shapeBar.scrollBy({ left: 228, behavior: 'smooth' });
+                });
+
+                // Listen to scroll events on shapeBar to dynamically update disabled state of arrows
+                addCleanEventListener(shapeBar, 'scroll', updateScrollButtons);
+
+                // Handle shape bar touches separately
+                let barScrolling = false;
+                let barStartX = 0;
+                let barStartY = 0;
+                let barScrollLeft = 0;
+                let dragStartedFromBar = false;
+                let dragStartSlot = null;
+                let dragDecided = false;
+
+                // Momentum scrolling variables
+                let scrollVelocity = 0;
+                let lastClientX = 0;
+                let lastMoveTime = 0;
+                let momentumFrameId = null;
+
+                function stopMomentumScroll() {
+                    if (momentumFrameId) {
+                        cancelAnimationFrame(momentumFrameId);
+                        momentumFrameId = null;
+                    }
+                }
+
+                // Expose to global so we can clean up in gameCleanup()
+                window.stopMomentumScrollGlobal = stopMomentumScroll;
+
+                function centerSlot(slotEl) {
+                    if (!slotEl) return;
+                    const containerWidth = shapeBar.clientWidth;
+                    const slotWidth = slotEl.clientWidth;
+                    const targetScrollLeft = slotEl.offsetLeft - (containerWidth / 2) + (slotWidth / 2);
+                    shapeBar.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+                }
+
+                addCleanEventListener(shapeBar, 'pointerdown', (e) => {
+                    if (dragState) return; // ignore a second touch point while already dragging
+                    e.preventDefault();
+                    stopMomentumScroll();
+                    // Capture pointer so touch drag isn't cancelled when leaving the bar element
+                    shapeBar.setPointerCapture(e.pointerId);
+                    barStartX = e.clientX;
+                    barStartY = e.clientY;
+                    barScrollLeft = shapeBar.scrollLeft;
+                    barScrolling = true;
+                    dragStartedFromBar = true;
+                    dragDecided = false;
+
+                    // Initialize momentum tracking
+                    lastClientX = e.clientX;
+                    lastMoveTime = performance.now();
+                    scrollVelocity = 0;
+
+                    // Check if on a slot
+                    const slotEl = e.target.closest('.shape-slot');
+                    if (slotEl && !slotEl.classList.contains('used')) {
+                        dragStartSlot = parseInt(slotEl.dataset.index);
+                        centerSlot(slotEl);
+                    } else {
+                        dragStartSlot = null;
+                    }
+                });
+
+                addCleanEventListener(document, 'pointermove', (e) => {
+                    if (dragState) {
+                        tapCount = 0; // Reset tap count if a drag is active
+                        dragTooltip.classList.remove('visible');
+                        e.preventDefault();
+                        const pos = getPointerPosFromEvent(e);
+                        pointerPos = pos;
+                        updateDrag(pos);
+                        return;
+                    }
+
+                    if (barScrolling && dragStartedFromBar) {
+                        const dx = e.clientX - barStartX;
+                        const dy = e.clientY - barStartY;
+                        const movedEnough = Math.abs(dx) > 8 || Math.abs(dy) > 8;
+
+                        // Re-check on EVERY move (not just once) whether the gesture has
+                        // become a pull-out of the tray — vertical-dominant or clearly
+                        // upward motion. This lets a drag start even if the gesture began
+                        // looking like a horizontal scroll, instead of latching to scroll.
+                        if (dragStartSlot !== null && movedEnough && (Math.abs(dy) >= Math.abs(dx) || dy < -5)) {
+                            const pos = getPointerPosFromEvent(e);
+                            // Release pointer capture before starting field drag
+                            try { shapeBar.releasePointerCapture(e.pointerId); } catch (ex) { }
+                            startDragFromUI(dragStartSlot, pos);
+                            tapCount = 0;
+                            dragTooltip.classList.remove('visible');
+                            canvas.classList.add('dragging');
+                            dragStartedFromBar = false;
+                            barScrolling = false;
+                            return;
+                        }
+
+                        // Otherwise it's a horizontal scroll once past the threshold.
+                        if (movedEnough) {
+                            dragDecided = true;
+                            shapeBar.scrollLeft = barScrollLeft - dx;
+
+                            // Calculate velocity
+                            const now = performance.now();
+                            const dt = (now - lastMoveTime) / 1000;
+                            if (dt > 0) {
+                                scrollVelocity = (e.clientX - lastClientX) / dt;
+                            }
+                            lastClientX = e.clientX;
+                            lastMoveTime = now;
+                        }
+                    }
+                });
+
+                addCleanEventListener(document, 'pointerup', (e) => {
+                    // Release pointer capture if still held
+                    try { shapeBar.releasePointerCapture(e.pointerId); } catch (ex) { }
+
+                    // If it was a potential tap on a shape button from the bar
+                    if (dragStartedFromBar && !dragDecided && dragStartSlot !== null && !dragState) {
+                        tapCount++;
+                        if (tapCount >= 2) {
+                            showDragTooltip();
+                        }
+                    }
+
+                    if (dragState) {
+                        const pos = getPointerPosFromEvent(e);
+                        endDrag(pos);
+                        canvas.classList.remove('dragging');
+                    }
+
+                    // Apply momentum scroll if they were horizontal scrolling
+                    if (barScrolling && dragDecided && Math.abs(scrollVelocity) > 100) {
+                        stopMomentumScroll();
+                        const decay = 0.94;
+                        let lastStepTime = performance.now();
+                        const updateMomentum = () => {
+                            const now = performance.now();
+                            const dt = Math.min((now - lastStepTime) / 1000, 0.1);
+                            lastStepTime = now;
+
+                            if (Math.abs(scrollVelocity) < 15) {
+                                momentumFrameId = null;
+                                updateScrollButtons();
+                                return;
+                            }
+                            shapeBar.scrollLeft -= scrollVelocity * dt;
+                            scrollVelocity *= Math.pow(decay, dt * 60);
+                            updateScrollButtons();
+                            momentumFrameId = requestAnimationFrame(updateMomentum);
+                        };
+                        momentumFrameId = requestAnimationFrame(updateMomentum);
+                    }
+
+                    barScrolling = false;
+                    dragStartedFromBar = false;
+                    dragStartSlot = null;
+                    dragDecided = false;
+                });
+
+                addCleanEventListener(document, 'pointercancel', (e) => {
+                    // Treat cancelled pointer same as pointerup to prevent stuck drags
+                    if (dragState) {
+                        const pos = getPointerPosFromEvent(e);
+                        endDrag(pos);
+                        canvas.classList.remove('dragging');
+                    }
+                    stopMomentumScroll();
+                    barScrolling = false;
+                    dragStartedFromBar = false;
+                    dragStartSlot = null;
+                    dragDecided = false;
+                });
+
+                // Canvas interactions for world shapes
+                addCleanEventListener(canvas, 'pointerdown', (e) => {
+                    if (dragState) return;
+                    const pos = getPointerPosFromEvent(e);
+                    if (pos.y >= UI_TOP) return; // In UI area
+
+                    const body = findBodyAtPoint(pos.x, pos.y);
+                    if (body) {
+                        e.preventDefault();
+                        startDragFromWorld(body, pos);
+                        tapCount = 0;
+                        dragTooltip.classList.remove('visible');
+                    } else {
+                        // Tap on empty space! Spawn background ripple
+                        spawnBackgroundRipple(pos.x, pos.y);
+                    }
+                });
+
+                // Also handle pointermove/pointerup on canvas for when drag started from world
+                addCleanEventListener(canvas, 'pointermove', (e) => {
+                    if (dragState) {
+                        e.preventDefault();
+                        const pos = getPointerPosFromEvent(e);
+                        pointerPos = pos;
+                        updateDrag(pos);
+                    }
+                });
+
+                addCleanEventListener(canvas, 'pointerup', (e) => {
+                    if (dragState) {
+                        const pos = getPointerPosFromEvent(e);
+                        endDrag(pos);
+                    }
+                });
+            }
+
+            function triggerCountdownStart() {
+                timerDisplay.classList.remove('interrupted');
+
+                // Text pop animation
+                timerDisplay.classList.remove('timer-appearing');
+                void timerDisplay.offsetWidth; // Force reflow
+                timerDisplay.classList.add('timer-appearing');
+
+                // Subtle zoom in and screenshake
+                canvas.classList.remove('zoom-shaking');
+                void canvas.offsetWidth; // Force reflow
+                canvas.classList.add('zoom-shaking');
+
+                // Soft bell note
+                playBellSound();
+
+                // Particle explosion at the timer position
+                spawnTimerExplosion(360, 160);
+            }
+
+            function triggerInterrupted() {
+                countdownActive = false;
+                timerDisplay.classList.add('interrupted');
+                timerDisplay.classList.remove('visible');
+                timerDisplay.classList.remove('timer-appearing');
+            }
+
+            // Stability check
+            function checkStability(dt, level = getLevelData()) {
+                if (levelWon || shapeBodies.length === 0) return;
+
+                const targetY = GROUND_Y - level.targetHeight;
+
+                // Check if any shape is above target
+                let aboveTarget = false;
+                for (const body of shapeBodies) {
+                    if (body.isStatic) continue;
+                    if (body.bounds.min.y < targetY) {
+                        aboveTarget = true;
+                        break;
+                    }
+                }
+
+                if (!aboveTarget) {
+                    if (countdownActive) {
+                        triggerInterrupted();
+                    }
+                    stabilityTimer = 0;
+                    return;
+                }
+
+                // Check all shapes are stable
+                let allStable = true;
+                for (const body of shapeBodies) {
+                    if (body.isStatic) continue;
+                    const speed = Vector.magnitude(body.velocity);
+                    if (speed > 0.88) {
+                        allStable = false;
+                        break;
+                    }
+                    if (Math.abs(body.angularVelocity) > 0.045) {
+                        allStable = false;
+                        break;
+                    }
+                }
+
+                const totalTime = config.settings.stabilityTime || 3.4;
+
+                if (allStable && !dragState) {
+                    stabilityTimer += dt;
+                    const remaining = Math.max(0, (totalTime - stabilityTimer));
+
+                    // Countdown visuals and dimming only show up when countdown is <= 3s (i.e. stabilityTimer has run for totalTime - 3.0s)
+                    const showVisuals = (stabilityTimer >= (totalTime - 3.0));
+
+                    if (showVisuals) {
+                        if (!countdownActive) {
+                            countdownActive = true;
+                            triggerCountdownStart();
+                        }
+                        timerDisplay.textContent = remaining.toFixed(1) + 's';
+                        timerDisplay.classList.add('visible');
+                    } else {
+                        timerDisplay.classList.remove('visible');
+                    }
+
+                    if (stabilityTimer >= totalTime) {
+                        timerDisplay.textContent = '0.0s';
+                        timerDisplay.classList.add('golden');
+                        winLevel();
+                        countdownActive = false;
+                    }
+                } else {
+                    if (countdownActive) {
+                        triggerInterrupted();
+                    }
+                    stabilityTimer = 0;
+                }
+            }
+
+            function winLevel() {
+                levelWon = true;
+
+                const isFinalLevel = (currentLevel === config.levels.length - 1);
+                if (isFinalLevel) {
+                    victoryTitle.textContent = 'Victory!\nGame Complete';
+                    victoryThanks.style.display = 'block';
+                    nextLevelBtn.style.display = 'none';
+                } else {
+                    victoryTitle.textContent = 'Level Complete!';
+                    victoryThanks.style.display = 'none';
+                    nextLevelBtn.style.display = 'flex';
+                }
+
+                victoryScreen.classList.add('show');
+                playSound('victory_sound', 0.7);
+                spawnConfetti();
+                shapeBar.style.display = 'none';
+                scrollLeftBtn.style.display = 'none';
+                scrollRightBtn.style.display = 'none';
+
+                // Add a bright diagonal shine to the next level button 1s after victory appear
+                setTimeout(() => {
+                    if (levelWon && !isFinalLevel) {
+                        nextLevelBtn.classList.add('shine');
+                    }
+                }, 1000);
+            }
+
+            function resetLevel() {
+                // Remove all shape bodies
+                for (const body of shapeBodies) {
+                    World.remove(world, body);
+                }
+                shapeBodies = [];
+                // Recycle active particles back to pool
+                while (particles.length > 0) {
+                    particlePool.push(particles.pop());
+                }
+                recyclePulses = [];
+                targetLineParticles = [];
+                backgroundRipples = [];
+
+                // Recycle active confetti back to pool to avoid garbage collection
+                while (confettiParticles.length > 0) {
+                    confettiPool.push(confettiParticles.pop());
+                }
+                stabilityTimer = 0;
+                countdownActive = false;
+                backgroundDimAlpha = 0;
+                outlineFade = 1.0;
+                structureFade = 0;
+                emptyTime = 0;
+                handTimer = 0;
+                tapCount = 0;
+                dragTooltip.classList.remove('visible');
+                infoCallout = null;
+                if (tutorialHand) tutorialHand.style.display = 'none';
+                canvas.classList.remove('zoom-shaking');
+                nextLevelBtn.classList.remove('shine');
+                levelWon = false;
+                dragState = null;
+                victoryScreen.classList.remove('show');
+                timerDisplay.classList.remove('visible');
+                timerDisplay.classList.remove('timer-appearing');
+                timerDisplay.classList.remove('golden');
+                timerDisplay.classList.remove('interrupted');
+                shapeBar.style.display = 'flex';
+                scrollLeftBtn.style.display = 'flex';
+                scrollRightBtn.style.display = 'flex';
+                buildShapeUI();
+                updateLevelDisplay();
+                spawnStartingShapes();
+            }
+
+            function nextLevel() {
+                if (currentLevel < config.levels.length - 1) {
+                    currentLevel++;
+                }
+                resetLevel();
+            }
+
+            function updateLevelDisplay() {
+                const levelText = `Level ${currentLevel + 1}`;
+                const span = levelDisplay.querySelector('span');
+
+                // Dynamically update the CSS gradient based on the current level.
+                // Levels 1-2 (currentLevel 0-1) use C1DFE7 -> FBF4E5.
+                // Levels 3+ (currentLevel 2+) get unique, soft, gentle pastel combinations.
+                const gameWorldEl = document.getElementById('game-world');
+                if (gameWorldEl) {
+                    let topColor = '#C1DFE7';
+                    let bottomColor = '#FBF4E5';
+
+                    if (currentLevel === 2) { // Level 3
+                        topColor = '#D2E3C8';
+                        bottomColor = '#F5EBEB';
+                    } else if (currentLevel === 3) { // Level 4
+                        topColor = '#E3D5CA';
+                        bottomColor = '#F5F5F7';
+                    } else if (currentLevel === 4) { // Level 5
+                        topColor = '#D8E2DC';
+                        bottomColor = '#FFE5D9';
+                    } else if (currentLevel === 5) { // Level 6
+                        topColor = '#E8E8E4';
+                        bottomColor = '#FAD2E1';
+                    } else if (currentLevel === 6) { // Level 7
+                        topColor = '#E2E2E2';
+                        bottomColor = '#FFF1E6';
+                    } else if (currentLevel >= 7) { // Level 8+
+                        topColor = '#F0E6EF';
+                        bottomColor = '#E8F1F2';
+                    }
+
+                    gameWorldEl.style.backgroundColor = topColor;
+                    gameWorldEl.style.backgroundImage = 'none';
+                }
+                if (span) {
+                    span.textContent = levelText;
+                } else {
+                    levelDisplay.textContent = levelText;
+                }
+
+                // Trigger animations
+                levelDisplay.classList.remove('animate');
+                void levelDisplay.offsetWidth; // Force reflow
+                levelDisplay.classList.add('animate');
+            }
+
+            function showDragTooltip() {
+                dragTooltip.classList.add('visible');
+                clearTimeout(tooltipTimeout);
+                tooltipTimeout = setTimeout(() => {
+                    dragTooltip.classList.remove('visible');
+                }, 2500);
+            }
+
+            addCleanEventListener(nextLevelBtn, 'click', nextLevel);
+
+            const openLevelSelect = () => {
+                // Generate level buttons dynamically
+                levelsGrid.innerHTML = '';
+                config.levels.forEach((level, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = `level-btn${index === currentLevel ? ' active' : ''}`;
+                    btn.textContent = `${index + 1}`;
+                    btn.addEventListener('click', () => {
+                        currentLevel = index;
+                        resetLevel();
+                        levelSelectModal.classList.remove('show');
+                    });
+                    levelsGrid.appendChild(btn);
+                });
+                levelSelectModal.classList.add('show');
+            };
+
+            addCleanEventListener(victoryLevelSelectBtn, 'click', openLevelSelect);
+
+            const optionsModal = document.getElementById('options-modal');
+            const optionsClose = document.getElementById('options-close');
+            const musicVolumeSlider = document.getElementById('music-volume');
+            const sfxVolumeSlider = document.getElementById('sfx-volume');
+
+            const levelSelectModal = document.getElementById('level-select-modal');
+            const levelSelectClose = document.getElementById('level-select-close');
+            const levelsGrid = document.getElementById('levels-grid');
+
+            // Options Button handler
+            addCleanEventListener(document.getElementById('options-btn'), 'click', () => {
+                musicVolumeSlider.value = musicVolume;
+                sfxVolumeSlider.value = sfxVolume;
+                optionsModal.classList.add('show');
+            });
+
+            addCleanEventListener(optionsClose, 'click', () => {
+                optionsModal.classList.remove('show');
+            });
+
+            addCleanEventListener(musicVolumeSlider, 'input', (e) => {
+                setMusicVolume(parseFloat(e.target.value));
+            });
+
+            addCleanEventListener(sfxVolumeSlider, 'input', (e) => {
+                sfxVolume = parseFloat(e.target.value);
+            });
+
+            // Level Select Button handler
+            addCleanEventListener(document.getElementById('level-select-btn'), 'click', openLevelSelect);
+
+            addCleanEventListener(levelSelectClose, 'click', () => {
+                levelSelectModal.classList.remove('show');
+            });
+
+            // Close modal if clicking background
+            addCleanEventListener(window, 'click', (e) => {
+                if (e.target === optionsModal) {
+                    optionsModal.classList.remove('show');
+                }
+                if (e.target === levelSelectModal) {
+                    levelSelectModal.classList.remove('show');
+                }
+            });
+
+            // Update particles
+            function updateParticles(dt) {
+                const fpsScale = dt * 60;
+                let writeIdx = 0;
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    if (p.isDust) {
+                        p.x += p.vx * fpsScale;
+                        p.y += p.vy * fpsScale;
+                        p.vy *= Math.pow(0.98, fpsScale);
+                        p.vx *= Math.pow(0.98, fpsScale);
+                        p.size += p.growth * fpsScale;
+                    } else {
+                        p.x += p.vx * fpsScale;
+                        p.y += p.vy * fpsScale;
+                        p.vy += 0.15 * fpsScale;
+                    }
+                    p.life -= p.decay * fpsScale;
+
+                    if (p.life > 0) {
+                        particles[writeIdx] = p;
+                        writeIdx++;
+                    } else {
+                        particlePool.push(p);
+                    }
+                }
+                particles.length = writeIdx;
+
+                // Update recycle pulses
+                for (let i = recyclePulses.length - 1; i >= 0; i--) {
+                    const p = recyclePulses[i];
+                    p.age += dt;
+                    if (p.age >= p.duration) {
+                        recyclePulses.splice(i, 1);
+                    }
+                }
+
+                writeIdx = 0;
+                for (let i = 0; i < confettiParticles.length; i++) {
+                    const p = confettiParticles[i];
+                    p.x += p.vx * fpsScale;
+                    p.y += p.vy * fpsScale;
+                    p.rot += p.rotSpeed * fpsScale;
+                    p.vx *= Math.pow(0.99, fpsScale);
+
+                    // Update age and fade out after a 3-7s delay
+                    p.age += dt;
+                    if (p.age < p.delay) {
+                        p.life = 1.0;
+                    } else if (p.age < p.delay + 2.0) {
+                        // Fade out over 2 seconds
+                        p.life = 1.0 - (p.age - p.delay) / 2.0;
+                    } else {
+                        p.life = 0;
+                    }
+
+                    // Recycle if offscreen or completely faded out
+                    if (p.y <= 1300 && p.life > 0) {
+                        confettiParticles[writeIdx] = p;
+                        writeIdx++;
+                    } else {
+                        confettiPool.push(p);
+                    }
+                }
+                confettiParticles.length = writeIdx;
+            }
+
+            function updateAmbientParticles(dt) {
+                if (reducedMotion) { ambientParticles = []; return; }
+                while (ambientParticles.length < 16) {
+                    ambientParticles.push({
+                        x: Math.random() * 720,
+                        y: Math.random() * 1100,
+                        size: 3 + Math.random() * 5,
+                        speedY: -10 - Math.random() * 20,
+                        swaySpeed: 0.8 + Math.random() * 1.5,
+                        swayWidth: 15 + Math.random() * 25,
+                        seed: Math.random() * 100,
+                        alpha: 0,
+                        targetAlpha: 0.15 + Math.random() * 0.35,
+                        phase: 'fadeIn'
+                    });
+                }
+
+                for (let i = ambientParticles.length - 1; i >= 0; i--) {
+                    const p = ambientParticles[i];
+                    p.y += p.speedY * dt;
+                    const sway = Math.sin(Date.now() / 1000 * p.swaySpeed + p.seed) * p.swayWidth * dt;
+                    p.x += sway;
+
+                    if (p.phase === 'fadeIn') {
+                        p.alpha += dt * 0.5;
+                        if (p.alpha >= p.targetAlpha) {
+                            p.alpha = p.targetAlpha;
+                            p.phase = 'alive';
+                        }
+                    } else if (p.phase === 'alive') {
+                        if (p.y < 150 || Math.random() < 0.005) {
+                            p.phase = 'fadeOut';
+                        }
+                    } else if (p.phase === 'fadeOut') {
+                        p.alpha -= dt * 0.5;
+                    }
+
+                    if (p.y < -20 || p.x < -50 || p.x > 770 || p.alpha <= 0) {
+                        ambientParticles.splice(i, 1);
+                    }
+                }
+            }
+
+            function drawAmbientParticles() {
+                ctx.save();
+                for (const p of ambientParticles) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // Edit mode
+            function setupEditMode() {
+                buildShapeUI();
+                updateLevelDisplay();
+
+                const level = getLevelData();
+
+                let previewBodies = [];
+                level.shapes.forEach((shapeDef, i) => {
+                    const x = 200 + i * 200;
+                    const y = GROUND_Y - shapeDef.height / 2;
+                    const body = createShapeBody(shapeDef, x, y);
+                    previewBodies.push(body);
+                });
+
+                function editLoop() {
+                    ctx.clearRect(0, 0, 720, 1280);
+                    drawBackground();
+                    drawGround();
+                    drawTargetLine();
+
+                    for (let i = 0; i < previewBodies.length; i++) {
+                        drawBody(previewBodies[i]);
+                    }
+
+                    // Edit mode label
+                    ctx.save();
+                    ctx.font = '600 24px Fredoka';
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('EDIT MODE - Adjust parameters in settings', 360, 60);
+                    ctx.restore();
+
+                    safeRequestAnimationFrame(editLoop);
+                }
+                editLoop();
+            }
+
+            // Main game loop
+            function setupPlayMode() {
+                initPhysics();
+                buildShapeUI();
+                setupPlayControls();
+                updateLevelDisplay();
+                spawnStartingShapes();
+
+                let lastTime = performance.now();
+                let accumulator = 0;
+                const fixedTimeStep = 1000 / 60; // 16.66 ms fixed time step for physics engine stability
+
+                const cubicEaseOut = (t) => 1 - Math.pow(1 - t, 3);
+
+                function gameLoop(timestamp) {
+                    let dt = (timestamp - lastTime) / 1000;
+                    dt = Math.min(dt, 0.11);
+                    lastTime = timestamp;
+
+                    // Level data is constant for the frame — fetch once and thread it
+                    // through the per-frame consumers instead of re-fetching in each.
+                    const level = getLevelData();
+
+                    // Update physics using stable fixed timestep accumulator.
+                    // (Gravity is set once in initPhysics and doesn't change during play.)
+                    accumulator += dt * 1000;
+                    while (accumulator >= fixedTimeStep) {
+                        Engine.update(engine, fixedTimeStep);
+                        accumulator -= fixedTimeStep;
+                    }
+
+                    // Track the grabbed point for the drag indicator (physics already
+                    // moved the body via the constraint during Engine.update above).
+                    updateDragPhysics();
+
+                    // Update stability
+                    checkStability(dt, level);
+
+                    // Update particles
+                    updateParticles(dt);
+
+                    // Update ambient particles
+                    updateAmbientParticles(dt);
+
+                    // Update shape body squish spring physics
+                    // Update shape body squish spring physics
+                    const squishK = 220;
+                    const squishD = 14;
+                    for (const body of shapeBodies) {
+                        if (body.squishX !== undefined) {
+                            const ax = -squishK * (body.squishX - 1.0) - squishD * body.squishVx;
+                            const ay = -squishK * (body.squishY - 1.0) - squishD * body.squishVy;
+                            body.squishVx += ax * dt;
+                            body.squishVy += ay * dt;
+                            body.squishX += body.squishVx * dt;
+                            body.squishY += body.squishVy * dt;
+                        }
+                    }
+
+                    // Update target line particles and background ripples
+                    updateTargetLineParticles(dt, level);
+                    updateBackgroundRipples(dt);
+
+                    // Smoothly interpolate background dim depending on whether countdown is active
+                    const targetDimAlpha = countdownActive ? 0.45 : 0.0;
+                    backgroundDimAlpha += (targetDimAlpha - backgroundDimAlpha) * dt * 8;
+
+                    // Update outline fade and hand guide for Level 1
+                    if (currentLevel === 0) {
+                        if (shapeBodies.length === 0) {
+                            outlineFade = Math.min(1, outlineFade + dt * 2.5);
+                            structureFade = 0;
+                            emptyTime += dt;
+                            if (emptyTime >= 2.5) {
+                                handTimer += dt;
+                                if (handTimer > 4.2) {
+                                    handTimer = 0; // Loop the sequence
+                                }
+                            } else {
+                                handTimer = 0;
+                            }
+                        } else {
+                            outlineFade = Math.max(0, outlineFade - dt * 2.5);
+
+                            // Structural ghost logic: appears after 1st piece is placed, disappears when 2nd is moved
+                            if (shapeBodies.length === 1 && !dragState) {
+                                structureFade = Math.min(1.0, structureFade + dt * 2.0);
+                            } else if (shapeBodies.length > 1 || (shapeBodies.length === 1 && dragState && dragState.fromUI)) {
+                                structureFade = Math.max(0, structureFade - dt * 2.5);
+                            }
+
+                            if (shapeBodies.length === 1) {
+                                emptyTime += dt;
+                                if (emptyTime >= 2.5) {
+                                    handTimer += dt;
+                                    if (handTimer > 4.2) {
+                                        handTimer = 0;
+                                    }
+                                } else {
+                                    handTimer = 0;
+                                }
+                            } else {
+                                emptyTime = 0;
+                                handTimer = 0;
+                            }
+                        }
+                    } else {
+                        emptyTime = 0;
+                        handTimer = 0;
+                    }
+
+                    // Decay screenshake
+                    if (shakeAmount > 0) {
+                        shakeAmount -= dt * 30; // Decays smoothly in fractions of a second
+                        if (shakeAmount < 0) shakeAmount = 0;
+                    }
+
+                    // Render
+                    ctx.clearRect(0, 0, 720, 1280);
+
+                    ctx.save();
+                    if (shakeAmount > 0) {
+                        const dx = (Math.random() - 0.5) * shakeAmount;
+                        const dy = (Math.random() - 0.5) * shakeAmount;
+                        ctx.translate(dx, dy);
+                    }
+
+                    drawBackground();
+                    drawBackgroundRipples();
+                    drawAmbientParticles();
+                    drawGround();
+
+                    // Smooth dimming layer over background and ground (below shape bodies)
+                    if (backgroundDimAlpha > 0) {
+                        ctx.save();
+                        ctx.fillStyle = `rgba(15, 23, 42, ${backgroundDimAlpha})`;
+                        ctx.fillRect(0, 0, 720, 1280);
+                        ctx.restore();
+                    }
+
+                    // Draw Level 1 tutorial outline
+                    if (currentLevel === 0 && outlineFade > 0.01) {
+                        const firstShape = level.shapes[0];
+                        if (firstShape) {
+                            const pulse = 0.6 + 0.3 * Math.sin(Date.now() / 300);
+                            const finalAlpha = pulse * outlineFade;
+
+                            ctx.save();
+                            ctx.globalAlpha = finalAlpha;
+                            ctx.strokeStyle = '#000000';
+                            ctx.lineWidth = 10; // x2.5 thicker (from 4 to 10)
+                            ctx.setLineDash([8, 6]);
+
+                            const outlineX = 360;
+                            const targetY = GROUND_Y - level.targetHeight;
+                            const outlineY = targetY + 270 - (firstShape.height / 2); // Moved 330px down from -60 offset (originally 380px down, now 50px up)
+
+                            ctx.translate(outlineX, outlineY);
+                            ctx.beginPath();
+                            if (firstShape.type === 'rectangle') {
+                                const w = firstShape.width;
+                                const h = firstShape.height;
+                                const slope = firstShape.isIce ? 0 : 0.15;
+                                const topW = w * (1 - 2 * slope);
+                                ctx.moveTo(-topW / 2, -h / 2);
+                                ctx.lineTo(topW / 2, -h / 2);
+                                ctx.lineTo(w / 2, h / 2);
+                                ctx.lineTo(-w / 2, h / 2);
+                            } else if (firstShape.type === 'triangle') {
+                                const w = firstShape.width;
+                                const h = firstShape.height;
+                                ctx.moveTo(0, -h / 2);
+                                ctx.lineTo(-w / 2, h / 2);
+                                ctx.lineTo(w / 2, h / 2);
+                            } else if (firstShape.type === 'circle') {
+                                ctx.arc(0, 0, firstShape.radius, 0, Math.PI * 2);
+                            } else {
+                                const w = firstShape.width || 100;
+                                const h = firstShape.height || 100;
+                                ctx.rect(-w / 2, -h / 2, w, h);
+                            }
+                            ctx.closePath();
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    }
+
+                    // Draw structural goal ghost for Level 1
+                    if (currentLevel === 0 && structureFade > 0.01) {
+                        ctx.save();
+                        ctx.globalAlpha = structureFade * 0.45;
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 6;
+                        ctx.setLineDash([8, 6]);
+
+                        const drawGhost = (shapeDef, x, y) => {
+                            ctx.save();
+                            ctx.translate(x, y);
+                            ctx.beginPath();
+                            if (shapeDef.type === 'rectangle') {
+                                const w = shapeDef.width;
+                                const h = shapeDef.height;
+                                const slope = 0.15;
+                                const topW = w * (1 - 2 * slope);
+                                ctx.moveTo(-topW / 2, -h / 2);
+                                ctx.lineTo(topW / 2, -h / 2);
+                                ctx.lineTo(w / 2, h / 2);
+                                ctx.lineTo(-w / 2, h / 2);
+                            } else if (shapeDef.type === 'triangle') {
+                                const w = shapeDef.width;
+                                const h = shapeDef.height;
+                                ctx.moveTo(0, -h / 2);
+                                ctx.lineTo(-w / 2, h / 2);
+                                ctx.lineTo(w / 2, h / 2);
+                            }
+                            ctx.closePath();
+                            ctx.stroke();
+                            ctx.restore();
+                        };
+
+                        const shapes = level.shapes;
+                        // Shape 0 (1st trapezoid) starting from ground
+                        drawGhost(shapes[0], 360, GROUND_Y - 60);
+                        // Shape 1 (2nd trapezoid) stacked on 1st
+                        drawGhost(shapes[1], 360, GROUND_Y - 120 - 60);
+                        // Shape 2 (triangle) on top
+                        drawGhost(shapes[2], 360, GROUND_Y - 240 - 117);
+
+                        ctx.restore();
+                    }
+
+                    // Draw hand guide for Level 1
+                    let handActive = false;
+                    if (currentLevel === 0 && emptyTime >= 2.5 && handTimer > 0) {
+                        const firstShape = level.shapes[0];
+                        if (firstShape) {
+                            const targetY = GROUND_Y - level.targetHeight;
+                            const outlineX = 360;
+                            const outlineY = targetY + 270 - (firstShape.height / 2);
+
+                            const handEndY = outlineY + 15;
+                            const startX = outlineX - 85;
+                            const startY = outlineY + 15;
+
+                            let handX = startX;
+                            let handY = startY;
+                            let handEmoji = "🖐️";
+                            let alpha = 0;
+
+                            const cubicEaseInOut = (t) => {
+                                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                            };
+
+                            if (handTimer <= 1.2) {
+                                // Stage 1: Move from startY to second shape button
+                                const ratio = handTimer / 1.2;
+                                const eased = cubicEaseInOut(ratio);
+                                handX = startX + (259 - startX) * eased;
+                                handY = startY + (1204 - startY) * eased;
+                                handEmoji = "🖐️";
+                                alpha = handTimer < 0.2 ? Math.pow(handTimer / 0.2, 0.5) : 1;
+                            } else if (handTimer <= 1.6) {
+                                // Stage 2: Grab at button
+                                handX = 259;
+                                handY = 1204;
+                                handEmoji = "👆";
+                                alpha = 1;
+                            } else if (handTimer <= 2.8) {
+                                // Stage 3: Move from button to trapezoid outline
+                                const ratio = (handTimer - 1.6) / 1.2;
+                                const eased = cubicEaseInOut(ratio);
+                                handX = 259 + (outlineX - 259) * eased;
+                                handY = 1204 + (handEndY - 1204) * eased;
+                                handEmoji = "👆";
+                                alpha = 1;
+                            } else if (handTimer <= 3.4) {
+                                // Stage 4: Fade out and release
+                                const ratio = (handTimer - 2.8) / 0.6;
+                                handX = outlineX;
+                                handY = handEndY;
+                                handEmoji = "🖐️";
+                                alpha = Math.max(0, 1 - ratio);
+                            } else {
+                                // Stage 5: Rest
+                                alpha = 0;
+                            }
+
+                            // Reduced bounce scale during initial appear
+                            let handScale = 1.0;
+                            if (handTimer < 0.3) {
+                                const t = handTimer / 0.3;
+                                handScale = 1.0 - 0.7 * Math.exp(-t * 5) * Math.cos(t * Math.PI * 2);
+                            }
+
+                            if (alpha > 0) {
+                                handActive = true;
+                                tutorialHand.style.display = 'block';
+                                tutorialHand.style.left = `${handX}px`;
+                                tutorialHand.style.top = `${handY}px`;
+                                tutorialHand.style.opacity = alpha;
+                                tutorialHand.style.transform = `scale(${handScale})`;
+                                if (tutorialHand.textContent !== handEmoji) {
+                                    tutorialHand.textContent = handEmoji;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!handActive) {
+                        tutorialHand.style.display = 'none';
+                    }
+
+                    // Draw shape bodies
+                    for (let i = 0; i < shapeBodies.length; i++) {
+                        drawBody(shapeBodies[i]);
+                    }
+
+                    // Draw info callout if active
+                    if (infoCallout && infoCallout.active) {
+                        if (!shapeBodies.includes(infoCallout.body)) {
+                            infoCallout.active = false;
+                        } else {
+                            infoCallout.timer += dt;
+                            if (infoCallout.timer >= 5.5) {
+                                infoCallout.active = false;
+                            } else {
+                                let opacity = 1.0;
+                                if (infoCallout.timer > 5.0) {
+                                    opacity = 1.0 - (infoCallout.timer - 5.0) / 0.5;
+                                }
+
+                                const body = infoCallout.body;
+                                const cx = body.position.x;
+                                const cy = body.position.y;
+
+                                // Determine shape width for pointer offset
+                                let shapeWidth = 100;
+                                if (body.circleRadius) {
+                                    shapeWidth = body.circleRadius * 2;
+                                } else if (body.shapeDef && body.shapeDef.width) {
+                                    shapeWidth = body.shapeDef.width;
+                                }
+
+                                const halfW = shapeWidth / 2;
+
+                                // Point to the right edge of the shape
+                                const targetX = cx + halfW + 6 - 100;
+                                const targetY = cy;
+
+                                // Start of the pointing line
+                                const startX = Math.min(610, Math.max(cx + halfW + 40, cx + halfW + 120)) - 100;
+                                const startY = cy - 25;
+
+                                ctx.save();
+                                ctx.globalAlpha = opacity;
+
+                                // Draw the thin dark dotted line pointing to the shape
+                                ctx.strokeStyle = '#1E293B';
+                                ctx.lineWidth = 2.5;
+                                ctx.lineCap = 'round';
+                                ctx.setLineDash([5, 5]);
+                                ctx.beginPath();
+                                ctx.moveTo(startX, startY);
+                                ctx.lineTo(targetX, targetY);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+
+                                // Draw a tiny dot at the right end of the line
+                                ctx.fillStyle = '#1E293B';
+                                ctx.beginPath();
+                                ctx.arc(startX, startY, 4, 0, Math.PI * 2);
+                                ctx.fill();
+
+                                // Draw text above the right part of the line
+                                ctx.font = '700 28px Fredoka';
+                                ctx.textAlign = 'center';
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeStyle = '#ffffff';
+                                ctx.lineWidth = 6;
+
+                                const lines = infoCallout.text.split('\n');
+                                lines.forEach((line, idx) => {
+                                    const yPos = startY - 14 - (lines.length - 1 - idx) * 32;
+                                    ctx.strokeText(line, startX, yPos);
+                                    ctx.fillStyle = '#1E293B';
+                                    ctx.fillText(line, startX, yPos);
+                                });
+
+                                ctx.restore();
+                            }
+                        }
+                    }
+
+
+                    // Draw target line (fully bright on top of dimming layer and blocks)
+                    drawTargetLine(level);
+                    drawHeightMeter(level);
+                    drawTargetLineParticles();
+
+
+                    // Draw drag indicator: a marker on the grabbed point and a thin
+                    // line stretching to the pointer to convey the pull/drag force.
+                    if (dragState) {
+                        const gp = dragState.grabWorld;
+                        const tp = dragState.target;
+                        const stretch = Math.hypot(tp.x - gp.x, tp.y - gp.y);
+                        // More stretch -> warmer, more opaque line to read as more force.
+                        const tension = Math.min(1, stretch / 160);
+
+                        ctx.save();
+                        // Force line from grab point to the pointer.
+                        ctx.lineCap = 'round';
+                        ctx.strokeStyle = `rgba(59, 130, 246, ${0.35 + tension * 0.45})`;
+                        ctx.lineWidth = 5 + tension * 3;
+                        ctx.beginPath();
+                        ctx.moveTo(gp.x, gp.y);
+                        ctx.lineTo(tp.x, tp.y);
+                        ctx.stroke();
+
+                        // Small pointer end-cap.
+                        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+                        ctx.beginPath();
+                        ctx.arc(tp.x, tp.y, 5, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Grab-point indicator (white core + black ring).
+                        ctx.beginPath();
+                        ctx.arc(gp.x, gp.y, 10, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                        ctx.fill();
+                        ctx.lineWidth = 6;
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    // Draw recycle pulses
+                    if (recyclePulses.length > 0) {
+                        ctx.save();
+                        for (const p of recyclePulses) {
+                            const t = Math.min(1, p.age / p.duration);
+                            const alpha = 1 - t;
+                            const scale = cubicEaseOut(t);
+
+                            ctx.globalAlpha = alpha;
+
+                            // Standard circular pulse for world recycling
+                            const radius = 20 + 120 * scale;
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 8 * (1 - t);
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+                            ctx.stroke();
+
+                            // Faint inner secondary ring for a more professional feel
+                            ctx.lineWidth = 3 * (1 - t);
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, radius * 0.75, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                        ctx.restore();
+                    }
+
+                    drawParticles();
+
+                    if (levelWon) {
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                        ctx.fillRect(0, 0, 720, 1280);
+                        ctx.restore();
+                    }
+
+                    drawConfetti();
+
+                    ctx.restore();
+
+                    safeRequestAnimationFrame(gameLoop);
+                }
+                gameLoop(lastTime);
+            }
+
+            // Set up cleanup handler for host re-run or switching modes
+            window.gameCleanup = () => {
+                if (activeAnimationFrameId) {
+                    cancelAnimationFrame(activeAnimationFrameId);
+                }
+                if (loadingAnimId) {
+                    cancelAnimationFrame(loadingAnimId);
+                }
+                // Cancel momentum scrolling
+                if (window.stopMomentumScrollGlobal) {
+                    window.stopMomentumScrollGlobal();
+                }
+                activeEventListeners.forEach(({ target, type, listener, options }) => {
+                    target.removeEventListener(type, listener, options);
+                });
+                recyclePulses = [];
+                if (musicSource) {
+                    try { musicSource.stop(); } catch (e) { }
+                }
+            };
+
+            // Responsive scaling
+            function resizeGame() {
+                const world = document.getElementById('game-world');
+                const sx = window.innerWidth / 720;
+                const sy = window.innerHeight / 1280;
+                const s = Math.min(sx, sy);
+                world.style.transform = `scale(${s})`;
+            }
+            window.addEventListener('resize', resizeGame);
+            resizeGame();
+
+            // Screen Wake Lock + Orientation Lock
+            async function requestWakeLock() {
+                try {
+                    wakeLockObj = await navigator.wakeLock.request('screen');
+                } catch (e) { /* not supported */ }
+            }
+            requestWakeLock();
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('portrait').catch(() => {});
+            }
+
+            // Initialize
+            if (mode === 'edit') {
+                setupEditMode();
+            } else {
+                setupPlayMode();
+            }
+        }
+    </script>
+</body>
+
+</html>

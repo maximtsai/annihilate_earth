@@ -3,6 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Annihilate Earth</title>
     <link rel="stylesheet" href="style.css">
     <script>
@@ -44,7 +48,7 @@
         </div>
         <canvas id="background-canvas"></canvas>
         <div id="game-container">
-            <canvas id="game-canvas"></canvas>
+            <canvas id="game-canvas" tabindex="0"></canvas>
             <canvas id="hidden-canvas"></canvas>
         </div>
 
@@ -302,13 +306,20 @@
                                     id="shake-btn-full">FULL</button>
                             </div>
                         </div>
-                        <div class="options-group" style="margin-top: 5px;">
-                            <label class="checkbox-container">
-                                <input type="checkbox" id="fullscreen-checkbox">
-                                <span class="checkbox-custom"></span>
-                                <span class="checkbox-label-text" id="fullscreen-label-text">🖥️ FULL SCREEN</span>
-                            </label>
-                        </div>
+        <div class="options-group" style="margin-top: 5px;">
+            <label class="checkbox-container">
+                <input type="checkbox" id="fullscreen-checkbox">
+                <span class="checkbox-custom"></span>
+                <span class="checkbox-label-text" id="fullscreen-label-text">🖥️ FULL SCREEN</span>
+            </label>
+        </div>
+        <div class="options-group" style="margin-top: 5px;">
+            <label class="checkbox-container">
+                <input type="checkbox" id="vibration-checkbox" checked>
+                <span class="checkbox-custom"></span>
+                <span class="checkbox-label-text" id="vibration-label-text">📳 VIBRATION</span>
+            </label>
+        </div>
                         <div class="options-group" style="margin-top: 10px; display: flex; justify-content: center;">
                             <button id="options-reset-btn" class="options-reset-button">⚠️ RESET PROGRESS ⚠️</button>
                         </div>

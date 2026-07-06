@@ -63,7 +63,16 @@ class SoundManager {
                 try {
                     const response = await fetch(asset.url);
                     const arrayBuffer = await response.arrayBuffer();
-                    const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+                    const audioBuffer = await new Promise((resolve, reject) => {
+                        try {
+                            const res = this.context.decodeAudioData(arrayBuffer, resolve, reject);
+                            if (res && typeof res.then === 'function') {
+                                res.then(resolve, reject);
+                            }
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
                     this.buffers[id] = audioBuffer;
                 } catch (e) {
                     console.error(`Failed to load sound: ${id}`, e);

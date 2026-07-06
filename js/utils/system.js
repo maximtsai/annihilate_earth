@@ -71,15 +71,48 @@ function toggleFullscreen(enable) {
     }
 }
 
+// Safe LocalStorage fallback wrapper
+const storageFallback = {};
+
+window.safeLocalStorage = {
+    getItem: function(key) {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+                return window.CrazyGames.SDK.data.getItem(key);
+            }
+            return localStorage.getItem(key);
+        } catch (e) {
+            return storageFallback[key] !== undefined ? storageFallback[key] : null;
+        }
+    },
+    setItem: function(key, value) {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+                window.CrazyGames.SDK.data.setItem(key, String(value));
+            } else {
+                localStorage.setItem(key, value);
+            }
+        } catch (e) {
+            storageFallback[key] = String(value);
+        }
+    },
+    removeItem: function(key) {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
+                window.CrazyGames.SDK.data.removeItem(key);
+            } else {
+                localStorage.removeItem(key);
+            }
+        } catch (e) {
+            delete storageFallback[key];
+        }
+    }
+};
+
 // 4. Configuration & State Persistence Helpers
 const saveGameState = async (state) => {
     try {
-        const serialized = JSON.stringify(state);
-        if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
-            window.CrazyGames.SDK.data.setItem('annihilate_earth_save', serialized);
-        } else {
-            localStorage.setItem('annihilate_earth_save', serialized);
-        }
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
         return { success: true };
     } catch (e) {
         console.error('Failed to save state', e);
@@ -89,12 +122,7 @@ const saveGameState = async (state) => {
 
 const getGameState = async () => {
     try {
-        let saved = null;
-        if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
-            saved = window.CrazyGames.SDK.data.getItem('annihilate_earth_save');
-        } else {
-            saved = localStorage.getItem('annihilate_earth_save');
-        }
+        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
         return { state: saved ? JSON.parse(saved) : null, success: true };
     } catch (e) {
         console.error('Failed to load state', e);
