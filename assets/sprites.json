@@ -10,10 +10,10 @@
 },
 "duck.png":
 {
-	"frame": {"x":482,"y":1050,"w":75,"h":67},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":75,"h":67},
+	"frame": {"x":1264,"y":896,"w":69,"h":61},
+	"rotated": true,
+	"trimmed": true,
+	"spriteSourceSize": {"x":3,"y":3,"w":69,"h":61},
 	"sourceSize": {"w":75,"h":67}
 },
 "earth-glow.png":
@@ -90,7 +90,7 @@
 },
 "smoke_missile.webp":
 {
-	"frame": {"x":1264,"y":896,"w":50,"h":50},
+	"frame": {"x":1264,"y":967,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -98,7 +98,7 @@
 },
 "smoke_standard.webp":
 {
-	"frame": {"x":1264,"y":948,"w":50,"h":50},
+	"frame": {"x":1264,"y":1019,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -143,6 +143,6 @@
 	"format": "RGBA8888",
 	"size": {"w":1934,"h":1191},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:191431eaa927937cb966cadc1024ed3d:4f7c01ce418be03277723217e274e631:1eabdf11f75e3a4fe3147baf7b5be24b$"
+	"smartupdate": "$TexturePacker:SmartUpdate:4d02612433a4b4a43f4b66eeac38eddc:d1126352dd91a3ac8ee1d82c04c77f77:1eabdf11f75e3a4fe3147baf7b5be24b$"
 }
 }

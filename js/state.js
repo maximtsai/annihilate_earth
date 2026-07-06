@@ -1,5 +1,5 @@
 var canvas, ctx, hiddenCanvas, hiddenCtx, bgCanvas, bgCtx, soundManager, fistImage;
-var spriteOrange, spriteBrightYellow, spriteSmokeStandard, spriteSmokeMissile, spriteVermillionRed, spriteLightOrange, spriteWhiteGold;
+var spriteOrange, spriteBrightYellow, spriteSmokeStandard, spriteSmokeMissile, spriteVermillionRed, spriteLightOrange, spriteWhiteGold, spriteDuck;
 var supportsGlow = true;
 var earthGlow, marsGlow, neptuneGlow, jupiterGlow, neutronStarGlow, sunCorona, sunCoreGlow, magmaCoreGlow;
 var SCREEN_W = 1600;
@@ -41,7 +41,8 @@ class ParticlePool {
                 color: '',
                 type: '',
                 moonExhaust: false,
-                isComet: false
+                isComet: false,
+                isFreeze: false
             });
         }
     }
@@ -78,6 +79,7 @@ class ParticlePool {
             p.type = properties.type;
             p.moonExhaust = !!properties.moonExhaust;
             p.isComet = !!properties.isComet;
+            p.isFreeze = !!properties.isFreeze;
         }
     }
 
@@ -198,6 +200,7 @@ function saveOptions(options) {
         if (options.musicVolume !== undefined) state.musicVolume = options.musicVolume;
         if (options.language !== undefined) state.language = options.language;
         if (options.screenShake !== undefined) state.screenShake = options.screenShake;
+        if (options.vibration !== undefined) state.vibration = options.vibration;
     });
 }
 
@@ -205,6 +208,7 @@ let initiallyUnlockedPlanets = new Set(['earth']);
 let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
 let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
+const ALL_LOCKED_WEAPONS = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword', 'drill'];
 let claimedPlanetSpinners = [];
 let unlockedTooltipShown = false;
 window.shouldShowUnlockTooltipOnNextPlanet = false;
@@ -215,6 +219,7 @@ function saveClaimedPlanetSpinners() {
     });
 }
 
+
 function isWeaponUnlocked(wid) {
     return unlockedWeapons.includes(wid);
 }
@@ -224,10 +229,10 @@ function saveUnlockedWeapons() {
         state.unlockedWeapons = unlockedWeapons;
     });
     try {
-        const saved = safeLocalStorage.getItem('annihilate_earth_save');
+        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
         const state = saved ? JSON.parse(saved) : {};
         state.unlockedWeapons = unlockedWeapons;
-        safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
     } catch (e) {
         console.warn('Failed to save unlocked weapons immediately:', e);
     }
@@ -238,18 +243,17 @@ function saveUnlockedTooltipShown() {
         state.unlockedTooltipShown = unlockedTooltipShown;
     });
     try {
-        const saved = safeLocalStorage.getItem('annihilate_earth_save');
+        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
         const state = saved ? JSON.parse(saved) : {};
         state.unlockedTooltipShown = unlockedTooltipShown;
-        safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
     } catch (e) {
         console.warn('Failed to save unlocked tooltip state:', e);
     }
 }
 
 function unlockRandomWeapon() {
-    const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet'];
-    const lockedRemaining = allLockedWeapons.filter(wid => !unlockedWeapons.includes(wid));
+    const lockedRemaining = ALL_LOCKED_WEAPONS.filter(wid => !unlockedWeapons.includes(wid));
     if (lockedRemaining.length > 0) {
         const randomIndex = Math.floor(Math.random() * lockedRemaining.length);
         const weaponToUnlock = lockedRemaining[randomIndex];
@@ -474,7 +478,7 @@ let showPointer = false;
 let weaponAmmo = {
     nuke: 18,
     bowling: 15,
-    mysterybox: 3,
+    mysterybox: 4,
     drill: 5
 };
 
@@ -553,6 +557,7 @@ let activeFistVisualExplosions = [];
 let activeStars = [];
 let activeStarProjectiles = [];
 let activeMysteryBoxes = [];
+let activeFallingDucks = [];
 let activeDrills = [];
 let fistStuckCount = 0;
 let isHolding = false;
@@ -625,3 +630,4 @@ function fbm(x, y, octaves = 5) {
 
 let currentLanguage = 'en';
 let currentScreenShakeSetting = 'full';
+let vibrationEnabled = true;

@@ -189,21 +189,31 @@ function setLoadingProgress(pct, status) {
 
 setLoadingProgress(10, (translations[currentLanguage] || translations['en']).loadingAudio || 'Initializing audio system...');
 soundManager = new SoundManager();
-const soundIds = [
-    'sfx_launch_heavy',
-    'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large',
-    'sfx_laser_fire', 'sfx_gamma_charge', 'sfx_gamma_beam',
-    'sfx_sword_fly', 'sfx_sword_stab', 'sfx_victory',
+const criticalSoundIds = [
+    'bgm_gentle_space',
     'sfx_ui_switch', 'sfx_ui_scroll',
-    'sfx_sword_rumble_loop', 'sfx_sword_pullout', 'sfx_gamma_warning',
-    'sfx_laser_crack', 'sfx_bowling_pins',
-    'sfx_black_hole_disappear', 'sfx_black_hole_spawn',
-    'sfx_nom_short', 'sfx_fist_impact', 'bgm_gentle_space',
-    'sfx_mystical_moon_explosion', 'sfx_holy_shine',
-    'sfx_laser_hum', 'sfx_magical_star_fade', 'sfx_magical_star_shot', 'sfx_magical_star_shot2',
-    'sfx_freeze', 'sfx_shatter', 'sfx_lightning', 'sfx_error', 'sfx_void_body', 'sfx_quack'
+    'sfx_launch_heavy',
+    'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large'
 ];
-soundIds.forEach(id => soundManager.load(id));
+criticalSoundIds.forEach(id => soundManager.load(id));
+
+window.deferredSoundIds = [
+    'sfx_laser_fire', 'sfx_laser_hum', 'sfx_laser_crack',
+    'sfx_gamma_charge', 'sfx_gamma_beam', 'sfx_gamma_warning',
+    'sfx_sword_fly', 'sfx_sword_stab', 'sfx_sword_pullout', 'sfx_sword_rumble_loop', 'sfx_holy_shine',
+    'sfx_bowling_pins',
+    'sfx_black_hole_spawn', 'sfx_black_hole_disappear',
+    'sfx_nom_short',
+    'sfx_fist_impact',
+    'sfx_mystical_moon_explosion',
+    'sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade',
+    'sfx_freeze', 'sfx_shatter',
+    'sfx_lightning',
+    'sfx_void_body',
+    'sfx_quack',
+    'sfx_error',
+    'sfx_victory'
+];
 
 // Spritesheet Atlas Loading & Extraction Logic
 const atlasImage = new Image();
@@ -251,6 +261,7 @@ function loadSpritesAtlas() {
                 spriteBrightYellow = extractSprite('bright_yellow.webp');
                 spriteSmokeStandard = extractSprite('smoke_standard.webp');
                 spriteSmokeMissile = extractSprite('smoke_missile.webp');
+                spriteDuck = extractSprite('duck.png');
 
                 // Planet and core glows
                 earthGlow = extractSprite('earth-glow.png');
@@ -345,8 +356,6 @@ function getGradientCanvas(color) {
     return offCanvas;
 }
 
-let gamePausedForAd = false;
-
 async function run(mode) {
     // Load spritesheet atlas assets first
     await loadSpritesAtlas();
@@ -432,7 +441,7 @@ async function run(mode) {
             uiContainer.style.height = '100%';
             uiContainer.style.transform = 'none';
         }
-        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1080));
+        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1280));
 
         const scaleHeight = (window.innerHeight * 0.88) / 720;
         const isLandscape = window.innerWidth >= window.innerHeight;
@@ -447,9 +456,9 @@ async function run(mode) {
         const optionsScale = Math.min(1.0, Math.min(optScaleW, optScaleH));
         document.documentElement.style.setProperty('--options-scale', optionsScale);
 
-        // Ad spin popup scale (base size 630x520)
-        const adScaleH = (window.innerHeight * 0.88) / 520;
-        const adScaleW = (window.innerWidth * 0.94) / 630;
+        // Ad spin popup scale (base size 693x572)
+        const adScaleH = (window.innerHeight * 0.88) / 572;
+        const adScaleW = (window.innerWidth * 0.94) / 693;
         const adSpinScale = Math.min(1.0, Math.min(adScaleW, adScaleH));
         document.documentElement.style.setProperty('--ad-spin-scale', adSpinScale);
     }
@@ -831,7 +840,8 @@ async function run(mode) {
                 laserLaunchTimer += deltaTime;
                 while (laserLaunchTimer >= laserInterval) {
                     if (lastLaserImpact && lastLaserImpact.local) {
-                        createExplosion(lastLaserImpact.local.x, lastLaserImpact.local.y, laserExplosionSize, 2, 'laser', false, true);
+                        const laserShake = (currentTier === 1) ? 0 : 2;
+                        createExplosion(lastLaserImpact.local.x, lastLaserImpact.local.y, laserExplosionSize, laserShake, 'laser', false, true);
                     }
                     if (laserTier3) {
                         laserPulseCount++;
@@ -2675,7 +2685,8 @@ async function run(mode) {
                                 size: w.explosionRadius * 1.3,
                                 color: 'rgba(0, 217, 255, 0.85)',
                                 type: 'explosion_ring',
-                                isComet: true
+                                isComet: true,
+                                isFreeze: true
                             });
 
 
@@ -2685,7 +2696,8 @@ async function run(mode) {
                                 vx: 0, vy: 0, life: 1.0, maxLife: 0.16,
                                 size: w.explosionRadius * 2.25,
                                 color: '0, 217, 255',
-                                type: 'circular_flash'
+                                type: 'circular_flash',
+                                isFreeze: true
                             });
 
                             // Debris particles (50 particles: mix of cyan/blue/white fire and smoke)
@@ -2747,6 +2759,9 @@ async function run(mode) {
 
             // Update active mystery boxes
             updateMysteryBoxes(deltaTime, dt60);
+            if (typeof updateFallingDucks === 'function') {
+                updateFallingDucks(deltaTime, dt60);
+            }
 
             // Update active drills
             if (typeof updateDrills === 'function') {
@@ -4100,6 +4115,66 @@ async function run(mode) {
             }
         });
 
+        // Draw active falling ducks
+        if (typeof activeFallingDucks !== 'undefined') {
+            activeFallingDucks.forEach(duck => {
+                ctx.save();
+                ctx.translate(duck.x, duck.y);
+                ctx.rotate(duck.angle);
+
+                const baseScale = 1.0;
+                ctx.scale(baseScale, baseScale);
+
+                if (spriteDuck) {
+                    const w = spriteDuck.width;
+                    const h = spriteDuck.height;
+                    ctx.drawImage(spriteDuck, -w / 2, -h / 2);
+
+                    if (duck.state === 'flashing_red') {
+                        const flashInterval = 0.07;
+                        const phase = Math.floor(duck.flashTimer / flashInterval) % 2;
+                        if (phase === 0) {
+                            ctx.save();
+                            ctx.globalCompositeOperation = 'source-atop';
+                            ctx.fillStyle = 'rgba(244, 67, 54, 0.65)';
+                            ctx.fillRect(-w / 2, -h / 2, w, h);
+                            ctx.restore();
+                        }
+                    }
+                } else {
+                    ctx.fillStyle = duck.state === 'flashing_red' && (Math.floor(duck.flashTimer / 0.07) % 2 === 0) ? '#f44336' : '#ffeb3b';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+
+                // Draw anticipation AOE circle right before exploding (last 0.14 seconds)
+                if (duck.state === 'flashing_red' && duck.flashTimer <= 0.18) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(duck.x, duck.y, duck.explosionSize, 0, Math.PI * 2);
+                    if (duck.flashTimer > 0.09) {
+                        // White flash phase
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                    } else {
+                        // Black flash phase (subtle dark border)
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+            });
+        }
+
         // Draw flying or penetrating bowling balls in screen space (higher depth)
         activeBowlingBalls.forEach(w => {
             if (w.state !== 'stuck') {
@@ -4992,16 +5067,45 @@ async function run(mode) {
     window.addEventListener('mousedown', triggerFirstClickGameplayStart, true);
     window.addEventListener('touchstart', triggerFirstClickGameplayStart, true);
 
-    // Prevent context menu from popping up on the canvas
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Prevent context menu from popping up on the page (CrazyGames common fixes)
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Prevent unwanted page scroll via mouse wheel and scroll through weapons if playing (CrazyGames common fixes)
+    window.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (window.gamePausedForAd) return;
+        if (typeof mode !== 'undefined' && mode === 'play' && typeof victoryTriggered !== 'undefined' && !victoryTriggered) {
+            const buttons = Array.from(document.querySelectorAll('.weapon-button'));
+            if (buttons.length > 0) {
+                const currentIndex = buttons.findIndex(btn => btn.classList.contains('selected'));
+                let nextIndex = currentIndex;
+                if (e.deltaY < 0) {
+                    // Scroll up: previous weapon
+                    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                } else if (e.deltaY > 0) {
+                    // Scroll down: next weapon
+                    nextIndex = (currentIndex + 1) % buttons.length;
+                }
+                if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < buttons.length) {
+                    buttons[nextIndex].click();
+                }
+            }
+        }
+    }, { passive: false });
 
     // Scale-aware input handler directly on gameWorld to allow clicks on black bars
     gameWorld.addEventListener('mousedown', (e) => {
-        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper')) {
+        if (window.gamePausedForAd) return;
+        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper') || e.target.closest('.level-select-toggle-wrapper')) {
             return;
         }
         if (gameMode === 'menu') {
             gameMode = 'gameplay';
+        }
+        if (canvas) canvas.focus(); // Focus canvas to redirect keyboard shortcuts
+        startBGM();
+        if (!gameplayStarted) {
+            gameplayStarted = true;
             if (window.PlatformBridge) {
                 window.PlatformBridge.gameplayStart();
             }
@@ -5032,6 +5136,7 @@ async function run(mode) {
         }
     });
     gameWorld.addEventListener('mousemove', (e) => {
+        if (window.gamePausedForAd) return;
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -5049,11 +5154,17 @@ async function run(mode) {
     });
 
     gameWorld.addEventListener('touchstart', (e) => {
-        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper')) {
+        if (window.gamePausedForAd) return;
+        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper') || e.target.closest('.level-select-toggle-wrapper')) {
             return;
         }
         if (gameMode === 'menu') {
             gameMode = 'gameplay';
+        }
+        if (canvas) canvas.focus(); // Focus canvas on touch gesture
+        startBGM();
+        if (!gameplayStarted) {
+            gameplayStarted = true;
             if (window.PlatformBridge) {
                 window.PlatformBridge.gameplayStart();
             }
@@ -5062,9 +5173,14 @@ async function run(mode) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
-        const touch = e.touches[0];
-        const x = (touch.clientX - rect.left) / scaleX;
-        const y = (touch.clientY - rect.top) / scaleY;
+
+        // Defensive coordinate check for mock touch profiles
+        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
+        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
+        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
+
+        const x = (clientX - rect.left) / scaleX;
+        const y = (clientY - rect.top) / scaleY;
         pointerX = x;
         pointerY = y;
         showPointer = true;
@@ -5084,21 +5200,27 @@ async function run(mode) {
             missileLaunchTimer = 0;
             spawnWeapon(x, y);
         }
-    });
+    }, { passive: false });
 
     gameWorld.addEventListener('touchmove', (e) => {
+        if (window.gamePausedForAd) return;
+        e.preventDefault(); // Prevents screen dragging/scrolling on mobile devices
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
-        const touch = e.touches[0];
-        pointerX = (touch.clientX - rect.left) / scaleX;
-        pointerY = (touch.clientY - rect.top) / scaleY;
-        showPointer = true;
 
+        // Defensive coordinate check for mock touch profiles
+        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
+        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
+        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
+
+        pointerX = (clientX - rect.left) / scaleX;
+        pointerY = (clientY - rect.top) / scaleY;
+        showPointer = true;
         if (gameMode === 'builder') {
             handlePlanetBuilderInput(pointerX, pointerY, 'move');
         }
-    });
+    }, { passive: false });
 
     function handleLightningRelease() {
         if (selectedWeapon === 'lightning') {
@@ -5125,6 +5247,7 @@ async function run(mode) {
     }
 
     window.addEventListener('mouseup', () => {
+        if (window.gamePausedForAd) return;
         if (gameMode === 'builder') {
             handlePlanetBuilderInput(null, null, 'up');
             return;
@@ -5136,6 +5259,7 @@ async function run(mode) {
     });
 
     window.addEventListener('touchend', () => {
+        if (window.gamePausedForAd) return;
         if (gameMode === 'builder') {
             handlePlanetBuilderInput(null, null, 'up');
             return;
@@ -5147,6 +5271,7 @@ async function run(mode) {
     });
 
     window.addEventListener('touchcancel', () => {
+        if (window.gamePausedForAd) return;
         if (gameMode === 'builder') {
             handlePlanetBuilderInput(null, null, 'up');
             return;
@@ -5172,6 +5297,16 @@ async function run(mode) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
+    window.addEventListener('beforeunload', () => {
+        if (soundManager && soundManager.context) {
+            soundManager.context.suspend().catch(() => { });
+        }
+    });
+    window.addEventListener('pagehide', () => {
+        if (soundManager && soundManager.context) {
+            soundManager.context.suspend().catch(() => { });
+        }
+    });
 
     // Weapon selections panel
     document.querySelectorAll('.weapon-button').forEach(button => {
@@ -5312,7 +5447,7 @@ async function run(mode) {
         uiHidden = !uiHidden;
         if (uiHidden) {
             uiContainer.classList.add('ui-hidden-mode');
-            
+
             // Remove existing notification if any
             const oldNotif = document.getElementById('ui-hidden-notification');
             if (oldNotif) oldNotif.remove();
@@ -5322,7 +5457,7 @@ async function run(mode) {
             const notif = document.createElement('div');
             notif.id = 'ui-hidden-notification';
             notif.textContent = 'UI Hidden with "H"';
-            
+
             // Append to game-world so it's visible even when ui-container is hidden
             const gameWorld = document.getElementById('game-world') || document.body;
             gameWorld.appendChild(notif);
@@ -5348,6 +5483,11 @@ async function run(mode) {
 
     // Keyboard shortcut hooks
     window.addEventListener('keydown', (e) => {
+        // Prevent default scrolling behavior on PageUp and PageDown (others are handled downstream)
+        if (['PageUp', 'PageDown'].includes(e.key)) {
+            e.preventDefault();
+        }
+
         if (window.gamePausedForAd) return;
 
         // Do not trigger game shortcuts if the user is typing in an input or textarea
@@ -5562,6 +5702,9 @@ async function run(mode) {
         const optFullscreen = document.getElementById('fullscreen-label-text');
         if (optFullscreen) optFullscreen.textContent = '🖥️ ' + (t.fullScreen || 'FULL SCREEN');
 
+        const optVibration = document.getElementById('vibration-label-text');
+        if (optVibration) optVibration.textContent = '📳 ' + (t.vibration || 'VIBRATION');
+
         if (optReset) optReset.textContent = '⚠️ ' + (t.resetProgress || 'RESET PROGRESS') + ' ⚠️';
 
         // Main Menu button in Options popup
@@ -5760,6 +5903,16 @@ async function run(mode) {
         soundManager.play('sfx_ui_switch');
         optionsOverlay.classList.add('show');
     });
+
+    // Extended invisible hit-area behind the options button (same size/position,
+    // scaled up) so taps just outside its clipped octagon shape still open options.
+    const optionsHitbox = document.getElementById('options-hitbox');
+    if (optionsHitbox) {
+        optionsHitbox.addEventListener('click', (e) => {
+            e.stopPropagation();
+            optionsBtn.click();
+        });
+    }
 
     optionsCloseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -6098,7 +6251,7 @@ async function run(mode) {
             }
 
             // Clear saved progress
-            safeLocalStorage.removeItem('annihilate_earth_save');
+            window.safeLocalStorage.removeItem('annihilate_earth_save');
 
             // Reset state variables
             unlockedPlanets = ['earth'];
@@ -6296,6 +6449,25 @@ async function run(mode) {
     document.addEventListener('mozfullscreenchange', updateFullscreenCheckbox);
     document.addEventListener('MSFullscreenChange', updateFullscreenCheckbox);
 
+    // Vibration Option Logic
+    const vibCheckbox = document.getElementById('vibration-checkbox');
+    if (vibCheckbox) {
+        vibCheckbox.addEventListener('change', (e) => {
+            vibrationEnabled = vibCheckbox.checked;
+            saveOptions({ vibration: vibrationEnabled });
+            soundManager.play('sfx_ui_switch');
+            if (vibrationEnabled && typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate(20); } catch (e) { }
+            }
+        });
+    }
+
+    function updateVibrationUI() {
+        if (vibCheckbox) {
+            vibCheckbox.checked = vibrationEnabled;
+        }
+    }
+
     // Setup scene
     updatePlanetButtons();
 
@@ -6328,6 +6500,10 @@ async function run(mode) {
             if (state.screenShake !== undefined) {
                 currentScreenShakeSetting = state.screenShake;
                 updateScreenShakeUI();
+            }
+            if (state.vibration !== undefined) {
+                vibrationEnabled = state.vibration;
+                updateVibrationUI();
             }
         }
 
@@ -6425,19 +6601,29 @@ async function run(mode) {
             showMainMenu();
             setupPlanetBuilderEvents();
         }, 400);
+
+        // Start loading deferred sounds the moment the main loading phase is finished
+        if (window.deferredSoundIds) {
+            window.deferredSoundIds.forEach(id => soundManager.load(id));
+        }
     }, 600);
 
     // Setup Loop
     let lastTime = performance.now();
 
     function gameLoop(timestamp) {
-        if (gamePausedForAd) {
+        if (window.gamePausedForAd) {
             lastTime = timestamp; // Prevent delta-time jump on resume
             requestAnimationFrame(gameLoop);
             return;
         }
-        const deltaTime = (timestamp - lastTime) / 1000;
+        let deltaTime = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
+
+        // Cap deltaTime to 0.1s to prevent physics/state explosion after backgrounding or lag spikes
+        if (deltaTime > 0.1) {
+            deltaTime = 0.1;
+        }
 
         update(deltaTime);
         render();
@@ -6450,5 +6636,25 @@ async function run(mode) {
 
 // Auto-run the game in local mode
 window.addEventListener('DOMContentLoaded', () => {
-    run('play');
+    let booted = false;
+    const initializeGameSafely = () => {
+        if (booted) return;
+        booted = true;
+        run('play');
+    };
+    // Safety fallback: boot anyway after 1.5 seconds in case the Font API hangs
+    const safetyTimeout = setTimeout(initializeGameSafely, 1500);
+
+    if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
+        document.fonts.ready.then(() => {
+            clearTimeout(safetyTimeout);
+            initializeGameSafely();
+        }).catch(() => {
+            clearTimeout(safetyTimeout);
+            initializeGameSafely();
+        });
+    } else {
+        clearTimeout(safetyTimeout);
+        initializeGameSafely();
+    }
 });

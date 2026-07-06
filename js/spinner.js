@@ -20,11 +20,12 @@ class WeaponSpinner {
             'bowling': { icon: '🎳', name: 'Bowling', color: '#ef4444' }, // Red
             'star': { icon: '⭐', name: 'Star', color: '#3b82f6' },     // Blue
             'comet': { icon: '❄️', name: 'Comet', color: '#06b6d4' },    // Cyan
-            'sword': { icon: '🗡️', name: 'Excalibur', color: '#60a5fa' } // Light Blue
+            'sword': { icon: '🗡️', name: 'Excalibur', color: '#60a5fa' }, // Light Blue
+            'drill': { icon: '⚙️', name: 'Drill', color: '#64748b' } // Slate
         };
 
         // Determine currently locked weapons
-        const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
+        const allLockedWeapons = ALL_LOCKED_WEAPONS;
         const currentUnlocked = (typeof unlockedWeapons !== 'undefined') ? unlockedWeapons : (window.unlockedWeapons || []);
         this.lockedWeapons = allLockedWeapons.filter(wid => !currentUnlocked.includes(wid));
 
@@ -91,10 +92,10 @@ class WeaponSpinner {
         this.leftPreview.className = 'weapon-spinner-preview left-preview';
         row.appendChild(this.leftPreview);
 
-        // 1. Create Canvas (420x180, which is 50% larger than 280x120)
+        // 1. Create Canvas (462x198, which is 10% larger than 420x180)
         this.canvas = document.createElement('canvas');
-        this.canvas.width = 420;
-        this.canvas.height = 180;
+        this.canvas.width = 462;
+        this.canvas.height = 198;
         this.canvas.className = 'weapon-spinner-canvas';
         this.ctx = this.canvas.getContext('2d');
         row.appendChild(this.canvas);

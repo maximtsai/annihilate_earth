@@ -1112,7 +1112,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
 
     // Erase using centralized core-aware terrain logic
     const icePopped = eraseTerrain(localX, localY, finalRadius, isCollision, weaponType);
- 
+
     // Play explosion sound
     if (!silent) {
         if (weaponType === 'laser') {
@@ -1178,6 +1178,16 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
         intensity: shakeIntensity,
         duration: weaponType === 'missile' ? 250 : 350
     };
+
+    // Haptic vibration feedback
+    if (vibrationEnabled && radius >= 20 && typeof navigator !== 'undefined' && navigator.vibrate) {
+        let vibrationDuration = Math.min(100, Math.floor(shakeIntensity * 8));
+        if (vibrationDuration > 10) {
+            try {
+                navigator.vibrate(vibrationDuration);
+            } catch (e) { }
+        }
+    }
 
     // Screen flash on big impacts
     if (shakeIntensity >= 15 && weaponType !== 'bowling') {
@@ -1608,7 +1618,7 @@ function triggerVictory() {
         // Setup the Victory Spinner
         const container = document.getElementById('victory-spinner-container');
         if (container) {
-            const allLockedWeapons = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword'];
+            const allLockedWeapons = ALL_LOCKED_WEAPONS;
             const hasLocked = allLockedWeapons.some(wid => !unlockedWeapons.includes(wid));
 
             if (restartBtn) {
@@ -1770,7 +1780,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     if (typeof weaponAmmo !== 'undefined') {
         weaponAmmo.nuke = 18;
         weaponAmmo.bowling = 15;
-        weaponAmmo.mysterybox = 3;
+        weaponAmmo.mysterybox = 4;
         weaponAmmo.drill = 5;
         if (typeof updateAmmoUI === 'function') {
             updateAmmoUI();
@@ -1810,6 +1820,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     activeStars = [];
     activeStarProjectiles = [];
     activeMysteryBoxes = [];
+    activeFallingDucks = [];
     if (typeof hasSpawnedBlackHoleFromMysteryBox !== 'undefined') {
         hasSpawnedBlackHoleFromMysteryBox = false;
     }
