@@ -1750,8 +1750,8 @@ canvas:focus {
 @media (orientation: portrait) {
 
     .hud-header {
-        max-height: 130px;
-        padding: calc(20px * var(--ui-scale)) calc(24px * var(--ui-scale)) calc(13px * var(--ui-scale)) calc(24px * var(--ui-scale));
+        max-height: 145px;
+        padding: calc(22px * var(--ui-scale)) calc(24px * var(--ui-scale)) calc(15px * var(--ui-scale)) calc(24px * var(--ui-scale));
     }
 
     .game-title {
@@ -1823,11 +1823,10 @@ canvas:focus {
         transform: translateX(-50%);
         width: 93%;
         max-width: 843px;
-        height: calc(11px + 184px * var(--ui-scale));
+        height: calc(26px + 158px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
         background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
-        box-shadow: 0 -5px 25px rgba(0, 217, 255, 0.2);
         clip-path: none;
         border-radius: 1px;
     }
@@ -1841,10 +1840,10 @@ canvas:focus {
     }
 
     .scroll-arrow {
-        flex: 0 0 calc(64px * var(--ui-scale));
-        width: calc(64px * var(--ui-scale));
-        height: calc(167px * var(--ui-scale));
-        font-size: calc(32px * var(--ui-scale));
+        flex: 0 0 calc(6px + 54px * var(--ui-scale));
+        width: calc(6px + 54px * var(--ui-scale));
+        height: calc(14px + 144px * var(--ui-scale));
+        font-size: calc(3px + 27px * var(--ui-scale));
     }
 
     #scroll-left-btn .arrow-text {
@@ -1878,10 +1877,10 @@ canvas:focus {
     }
 
     .weapon-button {
-        flex: 0 0 calc(177px * var(--ui-scale));
-        width: calc(177px * var(--ui-scale));
-        height: calc(167px * var(--ui-scale));
-        gap: calc(5px * var(--ui-scale));
+        flex: 0 0 calc(14px + 153px * var(--ui-scale));
+        width: calc(14px + 153px * var(--ui-scale));
+        height: calc(14px + 144px * var(--ui-scale));
+        gap: calc(1px + 4px * var(--ui-scale));
     }
 
     .weapon-icon {
@@ -1890,7 +1889,7 @@ canvas:focus {
 
     .weapon-name {
         font-size: calc((22px + var(--weapon-font-adjust)) * var(--ui-scale));
-        max-width: calc(177px * var(--ui-scale));
+        max-width: calc(14px + 153px * var(--ui-scale));
     }
 
     .lang-cjk .weapon-name {}
@@ -1954,7 +1953,7 @@ canvas:focus {
     }
 
     .weapon-cooldown {
-        font-size: calc(35px * var(--ui-scale));
+        font-size: calc(7px + 27px * var(--ui-scale));
     }
 
     .no-ammo-overlay {
@@ -1966,8 +1965,8 @@ canvas:focus {
     }
 
     #weapon-unlock-notification {
-        bottom: calc(108px * var(--ui-scale) + 12vh);
-        font-size: calc(32px * var(--ui-scale));
+        bottom: calc(108px * var(--ui-scale) + 18vh);
+        font-size: calc(44px * var(--ui-scale));
     }
 }
 
