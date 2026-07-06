@@ -2567,7 +2567,6 @@ html.no-glows *::after {
 
 /* Expand touch target hitboxes on mobile devices */
 .options-toggle,
-.options-popup-close,
 .scroll-arrow {
     position: relative;
 }
