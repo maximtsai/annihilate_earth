@@ -102,7 +102,8 @@ canvas:focus {
 }
 
 /* Scale game to fit viewport on smaller screens */
-@media (max-width: 1600px), (max-height: 900px) {
+@media (max-width: 1600px),
+(max-height: 900px) {
     #game-container {
         --container-scale: min(calc(100vw / 1600), calc(100vh / 900));
     }
@@ -453,8 +454,8 @@ canvas:focus {
     position: absolute;
     right: max(24px, env(safe-area-inset-right, 24px));
     top: max(15px, env(safe-area-inset-top, 15px));
-    width: calc(70px * var(--ui-scale));
-    height: calc(70px * var(--ui-scale));
+    width: calc(60px * var(--ui-scale) + 8px);
+    height: calc(60px * var(--ui-scale) + 8px);
     padding: 1.5px;
     background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
@@ -462,6 +463,21 @@ canvas:focus {
     z-index: 100;
     transition: all 150ms cubic-bezier(0.25, 0.8, 0.25, 1);
     box-sizing: border-box;
+}
+
+/* Invisible, larger hit-area sitting behind the options button so taps just
+   outside its clipped octagon shape still register, without changing its
+   visible size. */
+.options-hitbox {
+    position: absolute;
+    right: max(24px, env(safe-area-inset-right, 24px));
+    top: max(15px, env(safe-area-inset-top, 15px));
+    width: calc(60px * var(--ui-scale) + 8px);
+    height: calc(60px * var(--ui-scale) + 8px);
+    transform: scale(1.35);
+    background: transparent;
+    cursor: pointer;
+    z-index: 99;
 }
 
 .options-toggle-wrapper:hover {
@@ -496,8 +512,8 @@ canvas:focus {
 }
 
 .options-toggle svg {
-    width: calc(44px * var(--ui-scale));
-    height: calc(44px * var(--ui-scale));
+    width: calc(34px * var(--ui-scale) + 8px);
+    height: calc(34px * var(--ui-scale) + 8px);
     fill: #ffffff;
     filter: drop-shadow(0 0 4px rgba(0, 238, 255, 0.6));
     transition: filter 250ms ease;
@@ -1212,7 +1228,7 @@ canvas:focus {
 
 @media (orientation: portrait) {
     .weapon-ammo {
-        font-size: calc((20px + var(--font-adjust)) * var(--ui-scale));
+        font-size: calc((26px + var(--font-adjust)) * var(--ui-scale));
         font-weight: bold;
     }
 }
@@ -1648,13 +1664,13 @@ canvas:focus {
     .planet-selector {
         position: absolute;
         left: 50%;
-        top: calc(64px + 90px * var(--ui-scale));
+        top: calc(20px + 152px * var(--ui-scale));
         transform: translateX(-50%);
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
         width: 90%;
         max-width: 680px;
         height: auto;
@@ -1665,8 +1681,8 @@ canvas:focus {
 
     .planet-btn {
         font-size: calc((24px + var(--planet-font-adjust)) * var(--ui-scale));
-        width: calc(166px * var(--ui-scale));
-        height: calc(129px * var(--ui-scale));
+        width: calc(180px * var(--ui-scale));
+        height: calc(140px * var(--ui-scale));
         padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
         flex-shrink: 0;
     }
@@ -1707,9 +1723,9 @@ canvas:focus {
         right: auto;
         top: auto;
         transform: translateX(-50%);
-        width: 95%;
-        max-width: 860px;
-        height: calc(11px + 178px * var(--ui-scale));
+        width: 93%;
+        max-width: 843px;
+        height: calc(11px + 184px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
         background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
@@ -1727,9 +1743,9 @@ canvas:focus {
     }
 
     .scroll-arrow {
-        flex: 0 0 calc(58px * var(--ui-scale));
-        width: calc(58px * var(--ui-scale));
-        height: calc(157px * var(--ui-scale));
+        flex: 0 0 calc(64px * var(--ui-scale));
+        width: calc(64px * var(--ui-scale));
+        height: calc(167px * var(--ui-scale));
         font-size: calc(32px * var(--ui-scale));
     }
 
@@ -1756,17 +1772,17 @@ canvas:focus {
 
     .weapon-panel-inner {
         flex-direction: row;
-        gap: 6px;
-        padding: 0 10px;
+        gap: 4px;
+        padding: 0 6px;
         height: 100%;
         width: auto;
         align-items: center;
     }
 
     .weapon-button {
-        flex: 0 0 calc(167px * var(--ui-scale));
-        width: calc(167px * var(--ui-scale));
-        height: calc(157px * var(--ui-scale));
+        flex: 0 0 calc(177px * var(--ui-scale));
+        width: calc(177px * var(--ui-scale));
+        height: calc(167px * var(--ui-scale));
         gap: calc(5px * var(--ui-scale));
     }
 
@@ -1776,7 +1792,7 @@ canvas:focus {
 
     .weapon-name {
         font-size: calc((22px + var(--weapon-font-adjust)) * var(--ui-scale));
-        max-width: calc(167px * var(--ui-scale));
+        max-width: calc(177px * var(--ui-scale));
     }
 
     .lang-cjk .weapon-name {}
@@ -1786,13 +1802,18 @@ canvas:focus {
     }
 
     .options-toggle-wrapper {
-        width: calc(104px * var(--ui-scale));
-        height: calc(104px * var(--ui-scale));
+        width: calc(94px * var(--ui-scale) + 8px);
+        height: calc(94px * var(--ui-scale) + 8px);
+    }
+
+    .options-hitbox {
+        width: calc(94px * var(--ui-scale) + 8px);
+        height: calc(94px * var(--ui-scale) + 8px);
     }
 
     .options-toggle svg {
-        width: calc(65px * var(--ui-scale));
-        height: calc(65px * var(--ui-scale));
+        width: calc(55px * var(--ui-scale) + 8px);
+        height: calc(55px * var(--ui-scale) + 8px);
     }
 
     /* Scaling Options popup */
@@ -1862,7 +1883,7 @@ canvas:focus {
 
 @media (max-width: 660px) {
     .game-title {
-        font-size: calc((20px + var(--title-font-adjust)) * var(--ui-scale));
+        font-size: calc((28px + var(--title-font-adjust)) * var(--ui-scale));
     }
 }
 
@@ -2347,7 +2368,8 @@ html.no-glows *::after {
 }
 
 #switch-weapon-tooltip.tooltip-portrait .tooltip-label {
-    font-size: calc(28px * var(--ui-scale));
+    font-size: calc(34px * var(--ui-scale));
+    padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
 }
 
 /* Landscape: label on left, arrow pointing RIGHT */
@@ -2525,6 +2547,7 @@ html.no-glows *::after {
 .scroll-arrow {
     position: relative;
 }
+
 .options-toggle::after,
 .options-popup-close::after,
 .scroll-arrow::after {

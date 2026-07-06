@@ -104,7 +104,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
         const impact = findLaserImpact(spawnX, spawnY);
         if (impact.local) {
-            createExplosion(impact.local.x, impact.local.y, 7, 2, 'laser', false, true);
+            createExplosion(impact.local.x, impact.local.y, 7, 0, 'laser', false, true);
         }
         return;
     }
