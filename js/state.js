@@ -101,7 +101,6 @@ let gameMode = 'menu'; // 'menu', 'builder', 'gameplay'
 let planetRotation = 0;
 let planetScale = 1.0;
 let isPlanetSwitching = false;
-let victoryBeaconSent = false;
 let zoomProgress = 1.0;
 const ZOOM_DURATION = 1; // seconds
 

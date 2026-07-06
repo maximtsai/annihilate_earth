@@ -5617,16 +5617,6 @@ async function run(mode) {
             }, 800);
         }
 
-        const nextPlanetVal = getNextPlanet(currentPlanet);
-        const isNextPlanet = nextPlanetVal !== 'earth';
-        const victoryScreenVisible = document.getElementById('victory-screen').classList.contains('show');
-        if (victoryScreenVisible && isNextPlanet && !victoryBeaconSent) {
-            victoryBeaconSent = true;
-            if (window.PlatformBridge && window.PlatformBridge.platform === 'poki') {
-                navigator.sendBeacon('https://leveldata.poki.io/data', '5da267b2-074f-4740-b6a4-f487c29bc3d3');
-            }
-        }
-
         const proceedRestart = () => {
             const next = getNextPlanet(currentPlanet);
             const nextBtn = document.querySelector(`.level-select-btn[data-planet="${next}"]`);
@@ -6585,9 +6575,6 @@ async function run(mode) {
     // Dismiss loading screen after a brief delay
     if (window.PlatformBridge && typeof window.PlatformBridge.gameLoadingFinished === 'function') {
         window.PlatformBridge.gameLoadingFinished();
-    }
-    if (window.PlatformBridge && window.PlatformBridge.platform === 'poki') {
-        navigator.sendBeacon('https://leveldata.poki.io/data', '5da267b2-074f-4740-b6a4-f487c29bc3d3');
     }
 
     setTimeout(() => {
