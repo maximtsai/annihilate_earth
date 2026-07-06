@@ -51,6 +51,11 @@ html {
     overscroll-behavior: none;
 }
 
+canvas:focus {
+    outline: none;
+}
+
+
 /* 100% Full-bleed container to let host style and scale */
 #game-world {
     position: relative;
@@ -89,11 +94,18 @@ html {
     left: 50%;
     width: 1600px;
     height: 900px;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%) scale(var(--container-scale, 1));
     transform-origin: center center;
     overflow: hidden;
     z-index: 1;
     touch-action: none;
+}
+
+/* Scale game to fit viewport on smaller screens */
+@media (max-width: 1600px), (max-height: 900px) {
+    #game-container {
+        --container-scale: min(calc(100vw / 1600), calc(100vh / 900));
+    }
 }
 
 #game-canvas {
@@ -903,6 +915,7 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
+    touch-action: pan-y;
 }
 
 .weapon-scroll-wrapper::-webkit-scrollbar {

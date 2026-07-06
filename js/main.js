@@ -5786,7 +5786,7 @@ async function run(mode) {
             }
 
             // Clear saved progress
-            localStorage.removeItem('annihilate_earth_save');
+            window.safeLocalStorage.removeItem('annihilate_earth_save');
 
             // Reset state variables
             unlockedPlanets = ['earth'];
@@ -6167,13 +6167,25 @@ async function run(mode) {
 
 // Auto-run the game in local mode
 window.addEventListener('DOMContentLoaded', () => {
+    let booted = false;
+    const initializeGameSafely = () => {
+        if (booted) return;
+        booted = true;
+        run('play');
+    };
+    // Safety fallback: boot anyway after 1.5 seconds in case the Font API hangs
+    const safetyTimeout = setTimeout(initializeGameSafely, 1500);
+
     if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
         document.fonts.ready.then(() => {
-            run('play');
+            clearTimeout(safetyTimeout);
+            initializeGameSafely();
         }).catch(() => {
-            run('play'); // Fallback if font loading promise fails
+            clearTimeout(safetyTimeout);
+            initializeGameSafely();
         });
     } else {
-        run('play'); // Fallback for legacy browsers without document.fonts API
+        clearTimeout(safetyTimeout);
+        initializeGameSafely();
     }
 });

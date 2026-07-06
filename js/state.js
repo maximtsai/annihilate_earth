@@ -227,10 +227,10 @@ function saveUnlockedWeapons() {
         state.unlockedWeapons = unlockedWeapons;
     });
     try {
-        const saved = localStorage.getItem('annihilate_earth_save');
+        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
         const state = saved ? JSON.parse(saved) : {};
         state.unlockedWeapons = unlockedWeapons;
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
     } catch (e) {
         console.warn('Failed to save unlocked weapons immediately:', e);
     }
@@ -241,10 +241,10 @@ function saveUnlockedTooltipShown() {
         state.unlockedTooltipShown = unlockedTooltipShown;
     });
     try {
-        const saved = localStorage.getItem('annihilate_earth_save');
+        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
         const state = saved ? JSON.parse(saved) : {};
         state.unlockedTooltipShown = unlockedTooltipShown;
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
     } catch (e) {
         console.warn('Failed to save unlocked tooltip state:', e);
     }

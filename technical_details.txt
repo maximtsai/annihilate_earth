@@ -5,34 +5,41 @@ MOBILE & WEB GAME BEST PRACTICES IMPLEMENTATION DETAILS
 This document logs small, reusable web and mobile best practices implemented in this codebase, formatted for AI parsers to recreate similar implementations.
 
 --------------------------------------------------------------------------------
-1. VIEWPORT & PWA STANDALONE CAPABILITY
+1. VIEWPORT, PWA, AND SAFE-AREA NOTCH INTEGRATION
 --------------------------------------------------------------------------------
-Context: Prevent viewport shifting, zoom issues, and standard scrolling on mobile.
+Context: Prevent viewport shifting, zoom issues, and layout clipping behind notches/punch-holes on mobile devices.
 Replication:
-  Add the following meta tags inside <head>:
-  ```html
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="mobile-web-app-capable" content="yes">
-  ```
-  Note: viewport-fit=cover allows utilization of notch/safe-areas on modern devices.
-  Warning: `user-scalable=no` disables browser pinch-to-zoom, which can impair accessibility for visually impaired players. Use only when rapid double-taps/gestures are core to gameplay and conflict with browser default zooms.
-
---------------------------------------------------------------------------------
-2. PREVENTING MOBILE PAGE BOUNCE & SCROLL
---------------------------------------------------------------------------------
-Context: HTML canvases in mobile web wrappers suffer from elastic scroll bouncing when dragged.
-Replication:
-  A) CSS touch-action configuration:
-     Apply `touch-action: none` to the html/body, wrapper containers, and <canvas> tags to instruct the browser not to handle scrolling and zoom gestures:
+  A) Add the following meta tags inside <head> to enable full-bleed display:
+     ```html
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+     <meta name="apple-mobile-web-app-capable" content="yes">
+     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+     <meta name="mobile-web-app-capable" content="yes">
+     ```
+     Warning: `user-scalable=no` disables browser pinch-to-zoom. Use only when rapid double-taps/gestures are core to gameplay and conflict with browser default zooms.
+  B) Incorporate `env(safe-area-inset-...)` variables inside CSS paddings/margins to align HUD elements away from notches:
      ```css
-     body, html, #canvas-container, canvas {
-         touch-action: none;
+     .bottom-bar {
+         padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+     }
+     .top-hud {
+         padding-top: max(16px, env(safe-area-inset-top, 0px));
      }
      ```
-  B) JavaScript event prevention:
-     Register touch event listeners with `{ passive: false }` to override the default browser behavior, allowing `event.preventDefault()` to run:
+
+--------------------------------------------------------------------------------
+2. PREVENTING MOBILE PAGE SCROLL, BOUNCE, AND OVER-SCROLL
+--------------------------------------------------------------------------------
+Context: HTML5 canvases suffer from pull-to-refresh reload actions, elastic scroll bouncing, and drag offsets when users interact near boundaries.
+Replication:
+  A) Apply CSS touch-action and overscroll rules to `body`/`html` and canvas containers:
+     ```css
+     html, body, canvas {
+         touch-action: none;
+         overscroll-behavior: none;
+     }
+     ```
+  B) Register touch event listeners with `{ passive: false }` to override native dragging/scrolling:
      ```javascript
      element.addEventListener('touchstart', (e) => {
          e.preventDefault();
@@ -42,32 +49,46 @@ Replication:
          e.preventDefault(); // Prevents bounce and pan on mobile Safari/Chrome
      }, { passive: false });
      ```
-  Warning: Applying global scroll/bounce prevention blocks native scrolling on overlay components (like privacy policies, leaderboards, or terms text blocks). To avoid this, selectively ignore preventions on elements with scrollable content:
-  ```javascript
-  element.addEventListener('touchmove', (e) => {
-      if (e.target.closest('.scrollable-overlay-class')) return; // Allow scroll
-      e.preventDefault();
-  }, { passive: false });
-  ```
+     Warning: To preserve native vertical scrolling inside overlays (like terms or settings panels), selectively bypass touch listener preventions and restore touch actions:
+     ```javascript
+     element.addEventListener('touchmove', (e) => {
+         if (e.target.closest('.scrollable-overlay')) return;
+         e.preventDefault();
+     }, { passive: false });
+     ```
+     ```css
+     .scrollable-overlay {
+         touch-action: pan-y;
+     }
+     ```
 
 --------------------------------------------------------------------------------
-3. LIFE-CYCLE AUTO-SAVE AND AUDIO SAFETY
+3. WEB AUDIO API CONTEXT LIFECYCLE MANAGEMENT AND STATE AUTO-SAVE
 --------------------------------------------------------------------------------
-Context: Save progress and prevent stuck loops before the tab is killed or suspended.
+Context: Mobile browsers restrict audio initialization to direct gestures and suspend active Web Audio instances in the background. The game must wake contexts on input and save progress before the tab is suspended.
 Replication:
-  Bind to `beforeunload` and `pagehide` to suspend AudioContext contexts and save game state synchronously to localStorage:
-  ```javascript
-  const handleLifecycleTeardown = () => {
-      // Sync save option or final progress states
-      saveGameStateSync();
-      // Safely suspend audio context to prevent clipping/noise
-      if (soundManager && soundManager.context) {
-          soundManager.context.suspend().catch(() => {});
-      }
-  };
-  window.addEventListener('beforeunload', handleLifecycleTeardown);
-  window.addEventListener('pagehide', handleLifecycleTeardown);
-  ```
+  A) Auto-save and suspend context on tab suspension:
+     ```javascript
+     const handleLifecycleTeardown = () => {
+         saveGameStateSync();
+         if (audioContext) {
+             audioContext.suspend().catch(() => {});
+         }
+     };
+     window.addEventListener('beforeunload', handleLifecycleTeardown);
+     window.addEventListener('pagehide', handleLifecycleTeardown);
+     ```
+  B) Resume suspended audio contexts synchronously inside user interaction callbacks:
+     ```javascript
+     function resumeAudioContext(context) {
+         if (context && context.state === 'suspended') {
+             context.resume().catch(e => {});
+         }
+     }
+     window.addEventListener('pointerdown', () => {
+         resumeAudioContext(myAudioContext);
+     });
+     ```
 
 --------------------------------------------------------------------------------
 4. PHYSICS ENGINE DELTA-TIME CLAMPING
@@ -111,6 +132,7 @@ Replication:
          }
      }
      ```
+
 --------------------------------------------------------------------------------
 6. GARBAGE COLLECTION (GC) OPTIMIZATION VIA OBJECT POOLING
 --------------------------------------------------------------------------------
@@ -222,10 +244,28 @@ Replication:
 --------------------------------------------------------------------------------
 Context: Block loopholes where ads could be closed early but still trigger a successful reward callback.
 Replication:
-  Check resolved boolean feedback vectors inside the reward listener and block button spamming:
+  Check resolved boolean feedback vectors inside the reward listener, block button spamming, and implement a defensive request timeout fallback (e.g., 10 seconds) to prevent permanent interface locks if the SDK hangs before launching:
   ```javascript
   button.classList.add('requesting'); // Lock user interaction
-  SDK.requestRewardedAd().then(completed => {
+  
+  let adResolved = false;
+  // Safety timeout fallback: unlock user interaction if ad takes too long to start/respond
+  const adTimeout = setTimeout(() => {
+      if (!adResolved) {
+          adResolved = true;
+          button.classList.remove('requesting');
+          showError('ad_timeout');
+      }
+  }, 10000);
+
+  SDK.requestRewardedAd({
+      onStarted: () => {
+          clearTimeout(adTimeout); // Ad started successfully, clear initial request timeout
+      }
+  }).then(completed => {
+      if (adResolved) return;
+      adResolved = true;
+      clearTimeout(adTimeout);
       if (completed) {
           triggerReward();
       } else {
@@ -293,35 +333,35 @@ Replication:
 --------------------------------------------------------------------------------
 Context: Avoid fallback font "unstyled text pop-in" flashes when rendering text on HTML5 Canvas layers immediately during initial layout cycles.
 Replication:
-  Defer the main game boot initialization execution block (`run()`) until the browser confirms the custom font resources are active via the CSS Font Loading API:
+  Defer the main game boot initialization execution block (`run()`) until the browser confirms the custom font resources are active via the CSS Font Loading API, wrapping it with a safety fallback timeout (e.g. 1.5 seconds) to ensure the game still boots if the Font API hangs:
   ```javascript
   window.addEventListener('DOMContentLoaded', () => {
+      let booted = false;
+      const initializeGameSafely = () => {
+          if (booted) return;
+          booted = true;
+          initializeGame();
+      };
+      // Safety fallback: boot anyway after 1.5 seconds in case the Font API hangs
+      const safetyTimeout = setTimeout(initializeGameSafely, 1500);
+
       if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
           document.fonts.ready.then(() => {
-              initializeGame();
+              clearTimeout(safetyTimeout);
+              initializeGameSafely();
           }).catch(() => {
-              initializeGame(); // Fallback if loading promise fails
+              clearTimeout(safetyTimeout);
+              initializeGameSafely();
           });
       } else {
-          initializeGame(); // Fallback for browsers lacking document.fonts
+          clearTimeout(safetyTimeout);
+          initializeGameSafely();
       }
   });
   ```
 
 --------------------------------------------------------------------------------
-18. OVERSCROLL BEHAVIOR CONTROL (PREVENTING MOBILE RELOAD/BOUNCE)
---------------------------------------------------------------------------------
-Context: Prevent browser pull-to-refresh gestures and page wrapper bouncy elastic scrolls when dragging touch targets on the boundary edges of mobile screens.
-Replication:
-  Apply `overscroll-behavior: none` directly to the `body` and `html` tags in stylesheets:
-  ```css
-  html, body {
-      overscroll-behavior: none;
-  }
-  ```
-
---------------------------------------------------------------------------------
-19. DEFERRED / LAZY BACKGROUND ASSET LOADING
+18. DEFERRED / LAZY BACKGROUND ASSET LOADING
 --------------------------------------------------------------------------------
 Context: Accelerate boot speed and reduce network loading time by preloading only critical assets on startup and downloading remaining heavier resources in the background.
 Replication:
@@ -344,18 +384,74 @@ Replication:
      ```
 
 --------------------------------------------------------------------------------
-20. NOTCH & safe-area COMPATIBILITY USING CSS ENV()
+19. RESIZEOBSERVER COMPATIBILITY FALLBACK
 --------------------------------------------------------------------------------
-Context: Protect critical HUD controls and UI panels from overlapping physical hardware notches or Android/iOS bottom indicators on modern screen shapes.
+Context: Prevent ReferenceError crashes on older mobile/desktop browsers (e.g. iOS < 13.4, Safari < 13.1) that do not support the ResizeObserver API.
 Replication:
-  Incorporate `env(safe-area-inset-...)` variables inside CSS paddings/margins with a standard pixel fallback:
-  ```css
-  .bottom-bar {
-      padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  Check for ResizeObserver availability. If missing, fall back to a window resize listener, and clean up accordingly:
+  ```javascript
+  // Initialization
+  if (window.ResizeObserver) {
+      this._ro = new ResizeObserver(resize);
+      this._ro.observe(container);
+  } else {
+      this._onResize = resize;
+      window.addEventListener('resize', this._onResize);
   }
-  .top-hud {
-      padding-top: max(16px, env(safe-area-inset-top, 0px));
+
+  // Teardown
+  if (this._ro) {
+      this._ro.disconnect();
+  } else if (this._onResize) {
+      window.removeEventListener('resize', this._onResize);
   }
   ```
 
+--------------------------------------------------------------------------------
+20. SAFE LOCALSTORAGE ACCESS FOR INCOGNITO & IFRAME ACCESSIBILITY
+--------------------------------------------------------------------------------
+Context: Prevent security exception crashes (DOMException: SecurityError) when accessing localStorage in browsers running in private/incognito mode, or sandboxed within third-party game portal iframes.
+Replication:
+  Wrap all storage calls in try-catch blocks and fall back to in-memory state objects:
+  ```javascript
+  const storageFallback = {};
 
+  function safeGetItem(key) {
+      try {
+          return localStorage.getItem(key);
+      } catch (e) {
+          return storageFallback[key] || null;
+      }
+  }
+
+  function safeSetItem(key, value) {
+      try {
+          localStorage.setItem(key, value);
+      } catch (e) {
+          storageFallback[key] = value;
+      }
+  }
+  ```
+
+--------------------------------------------------------------------------------
+21. HTML5 AUDIO GESTURE UNLOCKING FOR GAME LOOPS
+--------------------------------------------------------------------------------
+Context: Mobile browsers reject `.play()` calls on HTML5 Audio elements inside asynchronous requestAnimationFrame game loops. They must be pre-unlocked during a synchronous user gesture callback.
+Replication:
+  Trigger play and immediate pause actions during the first user interaction event:
+  ```javascript
+  function unlockHTML5Audio(audioElement) {
+      const playPromise = audioElement.play();
+      if (playPromise !== undefined) {
+          playPromise.then(() => {
+              // Pause immediately if it should not play yet
+              audioElement.pause();
+          }).catch(e => { /* catch browser rejection */ });
+      }
+  }
+
+  // Triggered on user interaction (e.g. initial tap):
+  window.addEventListener('pointerdown', () => {
+      unlockHTML5Audio(bgMusicElement);
+  });
+  ```

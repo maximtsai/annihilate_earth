@@ -71,10 +71,37 @@ function toggleFullscreen(enable) {
     }
 }
 
+// Safe LocalStorage fallback wrapper
+const storageFallback = {};
+
+window.safeLocalStorage = {
+    getItem: function(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            return storageFallback[key] !== undefined ? storageFallback[key] : null;
+        }
+    },
+    setItem: function(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            storageFallback[key] = String(value);
+        }
+    },
+    removeItem: function(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            delete storageFallback[key];
+        }
+    }
+};
+
 // 4. Configuration & State Persistence Helpers
 const saveGameState = async (state) => {
     try {
-        localStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
         return { success: true };
     } catch (e) {
         console.error('Failed to save to local storage', e);
@@ -84,7 +111,7 @@ const saveGameState = async (state) => {
 
 const getGameState = async () => {
     try {
-        const saved = localStorage.getItem('annihilate_earth_save');
+        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
         return { state: saved ? JSON.parse(saved) : null, success: true };
     } catch (e) {
         console.error('Failed to load from local storage', e);
