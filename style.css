@@ -1862,8 +1862,8 @@ canvas:focus {
     }
 
     #weapon-unlock-notification {
-        bottom: calc(108px * var(--ui-scale) + 12vh);
-        font-size: calc(32px * var(--ui-scale));
+        bottom: calc(108px * var(--ui-scale) + 12vh + 10px);
+        font-size: calc(44px * var(--ui-scale));
     }
 }
 
