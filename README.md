@@ -1,6 +1,8 @@
 # Annihilate Earth — SDK Platform Integration Guide
 
-This project uses a polymorphic **Platform Bridge** to decouple core gameplay logic from portal-specific SDK libraries (such as Poki or CrazyGames). This ensures that only the target platform's SDK code is bundled in your builds, completely preventing cross-platform script conflicts or portal review rejections.
+This project uses a polymorphic **Platform Bridge** to decouple core gameplay logic from platform-specific SDK libraries (such as Steam, Poki, or CrazyGames). This ensures that only the target platform's SDK code is bundled in your builds, completely preventing cross-platform script conflicts or portal review rejections.
+
+The **current build target is Steam**, packaged as a native desktop executable via a Rust host. The Steam bridge ships with **no ads**: ad-break hooks resolve immediately and rewarded-ad hooks grant their reward instantly, so the exact same gameplay code runs unchanged on the desktop build.
 
 ---
 
@@ -12,11 +14,13 @@ This project uses a polymorphic **Platform Bridge** to decouple core gameplay lo
     ├── platform-bridge.js      # ACTIVE SDK bridge loaded by the game
     └── platforms/
         ├── local.js            # Offline development mock (default)
+        ├── steam.js            # Steam desktop build (no ads) — CURRENT TARGET
         └── poki.js             # Poki SDK integration
 ```
 
 * **`js/platform-bridge.js`**: This is the file imported by `index.html`. It should never be edited directly. Instead, it is replaced with one of the platform-specific scripts in the `js/platforms/` directory during export.
 * **`js/platforms/local.js`**: Emulates ad breaks (pausing game loops and muting sound for 1 second) and mocks gameplay start/stop lifecycles for offline/development work.
+* **`js/platforms/steam.js`**: The desktop/Steam build. Contains no ad networks or SDK network calls — ad hooks resolve immediately — and routes lifecycle events to the Rust host over IPC, where Steamworks features (achievements, rich presence) are wired.
 * **`js/platforms/poki.js`**: Dynamically loads and initializes the official Poki SDK on demand and routes gameplay and ad events.
 
 ---
@@ -26,14 +30,14 @@ This project uses a polymorphic **Platform Bridge** to decouple core gameplay lo
 To swap platform integrations, copy the desired platform file from `js/platforms/` and overwrite `js/platform-bridge.js`.
 
 ### 1. Manual Swapping
-Copy the contents of the file you want (e.g., `js/platforms/poki.js`) and paste them directly into `js/platform-bridge.js`.
+Copy the contents of the file you want (e.g., `js/platforms/steam.js`) and paste them directly into `js/platform-bridge.js`.
 
 ### 2. Command Line Swapping
 
 #### Windows (PowerShell)
-To switch to **Poki**:
+To switch to **Steam**:
 ```powershell
-Copy-Item -Path "js/platforms/poki.js" -Destination "js/platform-bridge.js" -Force
+Copy-Item -Path "js/platforms/steam.js" -Destination "js/platform-bridge.js" -Force
 ```
 To switch back to **Local Development**:
 ```powershell
@@ -41,9 +45,9 @@ Copy-Item -Path "js/platforms/local.js" -Destination "js/platform-bridge.js" -Fo
 ```
 
 #### macOS / Linux (Bash)
-To switch to **Poki**:
+To switch to **Steam**:
 ```bash
-cp js/platforms/poki.js js/platform-bridge.js
+cp js/platforms/steam.js js/platform-bridge.js
 ```
 To switch back to **Local Development**:
 ```bash
