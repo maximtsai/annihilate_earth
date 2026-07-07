@@ -5624,6 +5624,33 @@ async function run(mode) {
         return lang[key] || translations['en'][key] || key;
     }
 
+    // Map a Steam client language (Steamworks API name, e.g. "schinese", or a
+    // BCP-47 locale like "en-US") onto one of this game's translation keys.
+    // Returns null when there's no supported match so the caller keeps its default.
+    function mapSteamLanguageToKey(raw) {
+        if (!raw || typeof raw !== 'string') return null;
+        const lang = raw.toLowerCase().trim();
+        const steamNames = {
+            english: 'en',
+            schinese: 'zh-CN',
+            tchinese: 'zh-TW',
+            spanish: 'es',
+            latam: 'es',
+            french: 'fr',
+            russian: 'ru',
+            japanese: 'ja',
+            arabic: 'ar'
+        };
+        if (steamNames[lang]) return steamNames[lang];
+        // Fallback: BCP-47 / prefix matching (e.g. "zh-Hant", "es-419", "fr-CA").
+        if (lang.startsWith('zh')) {
+            return (lang.includes('tw') || lang.includes('hant') || lang.includes('hk')) ? 'zh-TW' : 'zh-CN';
+        }
+        const prefixes = { en: 'en', es: 'es', fr: 'fr', ru: 'ru', ja: 'ja', ar: 'ar' };
+        const two = lang.slice(0, 2);
+        return prefixes[two] || null;
+    }
+
     function applyLanguage() {
         const t = translations[currentLanguage] || translations['en'];
 
@@ -5633,6 +5660,8 @@ async function run(mode) {
         const optMusic = document.getElementById('options-music-label');
         const optLang = document.getElementById('options-lang-label');
         const optReset = document.getElementById('options-reset-btn');
+        const optQuit = document.getElementById('options-quit-btn');
+        if (optQuit) optQuit.textContent = '🚪 ' + (t.quitGame || 'QUIT GAME');
         if (optTitle) optTitle.textContent = t.options;
         if (optSound) optSound.textContent = '🔊 ' + t.soundEffects;
         if (optMusic) optMusic.textContent = '🎵 ' + t.music;
@@ -5897,6 +5926,21 @@ async function run(mode) {
                 soundManager.stopLoop('sfx_laser_hum');
             }
         });
+    }
+
+    // Quit Game (desktop/Steam builds only). Only revealed when the active
+    // platform bridge supports quitting; web bridges have no quitGame method.
+    const optionsQuitBtn = document.getElementById('options-quit-btn');
+    if (optionsQuitBtn) {
+        if (window.PlatformBridge && typeof window.PlatformBridge.quitGame === 'function') {
+            optionsQuitBtn.style.display = '';
+            optionsQuitBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                soundManager.play('sfx_ui_switch');
+                // Progress autosaves continuously, so quitting is non-destructive.
+                window.PlatformBridge.quitGame();
+            });
+        }
     }
 
     // Level Select Popup Logic
@@ -6434,6 +6478,26 @@ async function run(mode) {
                     opt.classList.add('selected');
                 }
                 applyLanguage();
+            } else if (window.PlatformBridge && typeof window.PlatformBridge.getSteamLanguage === 'function') {
+                // First launch with no saved preference: follow the Steam client
+                // language. Not persisted, so it keeps tracking Steam until the
+                // player makes an explicit in-game choice (which saves).
+                try {
+                    const steamLang = await window.PlatformBridge.getSteamLanguage();
+                    const mapped = mapSteamLanguageToKey(steamLang);
+                    if (mapped && mapped !== currentLanguage) {
+                        currentLanguage = mapped;
+                        const opt = customLangDropdown.querySelector(`.custom-select-option[data-value="${currentLanguage}"]`);
+                        if (opt) {
+                            customLangLabelText.textContent = opt.textContent;
+                            customLangDropdown.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+                            opt.classList.add('selected');
+                        }
+                        applyLanguage();
+                    }
+                } catch (e) {
+                    console.warn('Steam language sync failed:', e);
+                }
             }
             if (state.sfxVolume !== undefined) {
                 sfxSlider.value = state.sfxVolume;
