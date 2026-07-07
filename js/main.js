@@ -6167,8 +6167,19 @@ async function run(mode) {
             deltaTime = 0.1;
         }
 
-        update(deltaTime);
-        render();
+        // Guard a single frame's work so one bad frame reports the error but
+        // does not break the requestAnimationFrame chain (which would freeze
+        // the game permanently with no way to recover on a portal).
+        try {
+            update(deltaTime);
+            render();
+        } catch (err) {
+            if (window.reportGameError) {
+                window.reportGameError('gameLoop', err);
+            } else {
+                console.error('[GameError] (gameLoop)', err);
+            }
+        }
 
         requestAnimationFrame(gameLoop);
     }
