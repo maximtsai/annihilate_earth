@@ -1,3 +1,49 @@
+// 0. Global error reporting
+// On a portal (Poki/CrazyGames) there is no devtools access, and a single
+// uncaught exception in the game loop otherwise freezes the game silently.
+// Record the most recent errors so they can be inspected, and throttle logging
+// so a per-frame failure can't flood the console.
+(function () {
+    var errorLog = [];
+    var lastLoggedAt = 0;
+    var suppressed = 0;
+
+    function reportGameError(source, error) {
+        var now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        var entry = {
+            source: source,
+            message: (error && error.message) ? error.message : String(error),
+            stack: (error && error.stack) ? error.stack : null,
+            time: Date.now()
+        };
+        errorLog.push(entry);
+        if (errorLog.length > 20) errorLog.shift();
+
+        // Throttle console output to at most once every 2s to avoid flooding.
+        if (now - lastLoggedAt > 2000) {
+            if (suppressed > 0) {
+                console.warn('[GameError] ' + suppressed + ' additional error(s) suppressed.');
+                suppressed = 0;
+            }
+            console.error('[GameError] (' + source + ')', error);
+            lastLoggedAt = now;
+        } else {
+            suppressed++;
+        }
+    }
+
+    window.reportGameError = reportGameError;
+    // Exposed for manual inspection, e.g. `copy(__gameErrors)` in a console.
+    window.__gameErrors = errorLog;
+
+    window.addEventListener('error', function (e) {
+        reportGameError('window.error', e.error || e.message);
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+        reportGameError('unhandledrejection', e.reason);
+    });
+})();
+
 // 3. Device & API Capability Detections
 var isMobile = (function () {
     var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
@@ -99,42 +145,51 @@ window.safeLocalStorage = {
 };
 
 // 4. Configuration & State Persistence Helpers
-const localStorageMock = {};
-window.safeLocalStorage = {
-    getItem: (key) => {
-        try {
-            return window.localStorage ? window.localStorage.getItem(key) : localStorageMock[key];
-        } catch (e) {
-            return localStorageMock[key];
-        }
-    },
-    setItem: (key, value) => {
-        try {
-            if (window.localStorage) {
-                window.localStorage.setItem(key, value);
-            } else {
-                localStorageMock[key] = value;
-            }
-        } catch (e) {
-            localStorageMock[key] = value;
-        }
-    },
-    removeItem: (key) => {
-        try {
-            if (window.localStorage) {
-                window.localStorage.removeItem(key);
-            } else {
-                delete localStorageMock[key];
-            }
-        } catch (e) {
-            delete localStorageMock[key];
-        }
-    }
+
+// Current save schema version. Bump this whenever the shape of the saved state
+// changes, and add a corresponding step to SAVE_MIGRATIONS so returning players'
+// saves are upgraded on load instead of crashing or silently losing progress.
+const SAVE_VERSION = 1;
+
+// Stepwise migrations. Each key N is a function that migrates a save from
+// version N to version N+1, mutating and returning the state object.
+// Legacy saves (written before versioning existed) have no `_version` field and
+// are treated as version 0.
+const SAVE_MIGRATIONS = {
+    // 0 -> 1: original un-versioned save. Shape is already current, so this only
+    // stamps the version. Future example:
+    //   1: (s) => { s.newField = s.newField ?? []; return s; },
+    0: (state) => state
 };
+
+// Apply migrations in sequence from the save's version up to SAVE_VERSION.
+// Returns the (possibly mutated) state, or null if it can't be migrated safely.
+function migrateSaveState(state) {
+    if (!state || typeof state !== 'object') return null;
+
+    let version = typeof state._version === 'number' ? state._version : 0;
+    while (version < SAVE_VERSION) {
+        const migrate = SAVE_MIGRATIONS[version];
+        if (typeof migrate !== 'function') {
+            console.warn('No save migration from version ' + version + '; keeping state as-is.');
+            break;
+        }
+        try {
+            state = migrate(state) || state;
+        } catch (e) {
+            console.error('Save migration from version ' + version + ' failed', e);
+            break;
+        }
+        version++;
+    }
+    state._version = version;
+    return state;
+}
 
 const saveGameState = async (state) => {
     try {
-        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        const toSave = Object.assign({}, state, { _version: SAVE_VERSION });
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(toSave));
         return { success: true };
     } catch (e) {
         console.error('Failed to save to local storage', e);
@@ -145,7 +200,8 @@ const saveGameState = async (state) => {
 const getGameState = async () => {
     try {
         const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
-        return { state: saved ? JSON.parse(saved) : null, success: true };
+        const parsed = saved ? JSON.parse(saved) : null;
+        return { state: parsed ? migrateSaveState(parsed) : null, success: true };
     } catch (e) {
         console.error('Failed to load from local storage', e);
         return { state: null, success: false };

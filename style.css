@@ -1989,7 +1989,7 @@ canvas:focus {
     }
 }
 
-@media (max-width: 660px) {
+@media (max-width: 406px) {
     .game-title {
         font-size: calc((28px + var(--title-font-adjust)) * var(--ui-scale));
     }
