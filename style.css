@@ -1710,6 +1710,11 @@ canvas:focus {
     color: #ffffff;
 }
 
+#options-menu-btn:hover {
+    margin: -4px;
+    padding: 8px;
+}
+
 #weapon-unlock-notification {
     position: absolute;
     bottom: calc(118px * var(--ui-scale));
@@ -2719,7 +2724,15 @@ html.no-glows *::after {
     letter-spacing: 2px;
     transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+}
+
+/* Invisible padding that enlarges the clickable/hoverable area without altering the visual size */
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
 }
 
 .menu-btn:hover:not(.disabled):not(:disabled) {
@@ -2728,6 +2741,11 @@ html.no-glows *::after {
     box-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
     color: #ffffff;
     transform: translateY(-2px);
+}
+
+/* Counteract the parent's hover lift so the invisible hit zone stays fixed in place, preventing flicker when the cursor rests near its bottom edge */
+.menu-btn:hover:not(.disabled):not(:disabled)::before {
+    transform: translateY(2px);
 }
 
 .menu-btn:active:not(.disabled):not(:disabled) {
