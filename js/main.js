@@ -419,6 +419,31 @@ async function run(mode) {
 
     const gameContainer = document.getElementById('game-container');
     const uiContainer = document.getElementById('ui-container');
+
+    // Render the main canvas at the display's true device-pixel resolution instead of a
+    // fixed 1600x900 that CSS then stretches (the cause of blur on high-DPI / scaled Windows
+    // displays). The canvas layout box stays 1600x900 (CSS width/height:100% of the container),
+    // so only the backing store grows; a matching base transform keeps every draw call in the
+    // original 1600x900 logical space, so no gameplay/coordinate code needs to change.
+    const MAX_RENDER_SCALE = 2; // Cap backing store at 3200x1800 to bound GPU fill-rate
+    function updateCanvasResolution() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        // How large the 1600-wide canvas is actually drawn on screen (after the container's
+        // CSS transform scale); falls back to 1 before layout is ready.
+        const displayScale = rect.width > 0 ? rect.width / SCREEN_W : 1;
+        const renderScale = Math.min(MAX_RENDER_SCALE, Math.max(1, displayScale * dpr));
+        const newW = Math.round(SCREEN_W * renderScale);
+        const newH = Math.round(SCREEN_H * renderScale);
+        if (canvas.width !== newW || canvas.height !== newH) {
+            canvas.width = newW;
+            canvas.height = newH;
+        }
+        // Setting canvas.width/height (above) resets the context, so (re)establish the base
+        // transform every call. All rendering draws in logical 1600x900 units from here.
+        ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    }
+
     function resizeBackground() {
         // Render at 50% resolution to drastically reduce GPU pixel fill-rate on high-DPI/mobile screens
         bgCanvas.width = Math.ceil(window.innerWidth * 0.5);
@@ -461,6 +486,9 @@ async function run(mode) {
         const adScaleW = (window.innerWidth * 0.94) / 693;
         const adSpinScale = Math.min(1.0, Math.min(adScaleW, adScaleH));
         document.documentElement.style.setProperty('--ad-spin-scale', adSpinScale);
+
+        // Match the canvas backing-store resolution to the new on-screen size / DPI.
+        updateCanvasResolution();
     }
     window.addEventListener('resize', resizeBackground);
     resizeBackground();
@@ -5061,11 +5089,9 @@ async function run(mode) {
                 window.PlatformBridge.gameplayStart();
             }
         }
-        window.removeEventListener('mousedown', triggerFirstClickGameplayStart, true);
-        window.removeEventListener('touchstart', triggerFirstClickGameplayStart, true);
+        window.removeEventListener('pointerdown', triggerFirstClickGameplayStart, true);
     };
-    window.addEventListener('mousedown', triggerFirstClickGameplayStart, true);
-    window.addEventListener('touchstart', triggerFirstClickGameplayStart, true);
+    window.addEventListener('pointerdown', triggerFirstClickGameplayStart, true);
 
     // Prevent context menu from popping up on the page (CrazyGames common fixes)
     document.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -5093,9 +5119,14 @@ async function run(mode) {
         }
     }, { passive: false });
 
-    // Scale-aware input handler directly on gameWorld to allow clicks on black bars
-    gameWorld.addEventListener('mousedown', (e) => {
+    // Unified Pointer input on gameWorld (covers mouse, touch, and pen with one code path).
+    // Pointer Events are what make the desktop/Steam build work: a mouse drives the exact
+    // same gameplay logic as touch, without relying on synthetic touch events that don't
+    // fire from a mouse in a desktop WebView. isPrimary keeps single-pointer semantics
+    // (matches the old "first touch only" behavior and avoids multi-finger double-spawns).
+    gameWorld.addEventListener('pointerdown', (e) => {
         if (window.gamePausedForAd) return;
+        if (!e.isPrimary) return;
         if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper') || e.target.closest('.level-select-toggle-wrapper')) {
             return;
         }
@@ -5110,6 +5141,7 @@ async function run(mode) {
                 window.PlatformBridge.gameplayStart();
             }
         }
+        if (e.pointerType === 'touch') e.preventDefault(); // Prevent scroll/long-press callout on touch
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -5134,9 +5166,12 @@ async function run(mode) {
             missileLaunchTimer = 0;
             spawnWeapon(x, y);
         }
-    });
-    gameWorld.addEventListener('mousemove', (e) => {
+    }, { passive: false });
+
+    gameWorld.addEventListener('pointermove', (e) => {
         if (window.gamePausedForAd) return;
+        if (!e.isPrimary) return;
+        if (e.pointerType === 'touch') e.preventDefault(); // Prevent screen dragging/scrolling on touch
         const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / SCREEN_W;
         const scaleY = rect.height / SCREEN_H;
@@ -5147,80 +5182,12 @@ async function run(mode) {
         if (gameMode === 'builder') {
             handlePlanetBuilderInput(pointerX, pointerY, 'move');
         }
-    });
+    }, { passive: false });
 
-    gameWorld.addEventListener('mouseleave', () => {
+    gameWorld.addEventListener('pointerleave', (e) => {
+        if (!e.isPrimary) return;
         showPointer = false;
     });
-
-    gameWorld.addEventListener('touchstart', (e) => {
-        if (window.gamePausedForAd) return;
-        if (e.target.closest('button') || e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen') || e.target.closest('.tools-bar-wrapper') || e.target.closest('.level-select-toggle-wrapper')) {
-            return;
-        }
-        if (gameMode === 'menu') {
-            gameMode = 'gameplay';
-        }
-        if (canvas) canvas.focus(); // Focus canvas on touch gesture
-        startBGM();
-        if (!gameplayStarted) {
-            gameplayStarted = true;
-            if (window.PlatformBridge) {
-                window.PlatformBridge.gameplayStart();
-            }
-        }
-        e.preventDefault(); // Prevents duplicate mouse trigger on mobile
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / SCREEN_W;
-        const scaleY = rect.height / SCREEN_H;
-
-        // Defensive coordinate check for mock touch profiles
-        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
-        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
-        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
-
-        const x = (clientX - rect.left) / scaleX;
-        const y = (clientY - rect.top) / scaleY;
-        pointerX = x;
-        pointerY = y;
-        showPointer = true;
-
-        if (gameMode === 'builder') {
-            handlePlanetBuilderInput(x, y, 'down');
-            return;
-        }
-
-        // Check shooting star click
-        if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
-            return;
-        }
-
-        if (mode === 'play') {
-            isHolding = true;
-            missileLaunchTimer = 0;
-            spawnWeapon(x, y);
-        }
-    }, { passive: false });
-
-    gameWorld.addEventListener('touchmove', (e) => {
-        if (window.gamePausedForAd) return;
-        e.preventDefault(); // Prevents screen dragging/scrolling on mobile devices
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / SCREEN_W;
-        const scaleY = rect.height / SCREEN_H;
-
-        // Defensive coordinate check for mock touch profiles
-        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
-        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
-        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
-
-        pointerX = (clientX - rect.left) / scaleX;
-        pointerY = (clientY - rect.top) / scaleY;
-        showPointer = true;
-        if (gameMode === 'builder') {
-            handlePlanetBuilderInput(pointerX, pointerY, 'move');
-        }
-    }, { passive: false });
 
     function handleLightningRelease() {
         if (selectedWeapon === 'lightning') {
@@ -5246,7 +5213,8 @@ async function run(mode) {
         }
     }
 
-    window.addEventListener('mouseup', () => {
+    // Pointer release (mouse up, touch end, pen lift) and cancellation, unified.
+    const releasePointer = () => {
         if (window.gamePausedForAd) return;
         if (gameMode === 'builder') {
             handlePlanetBuilderInput(null, null, 'up');
@@ -5256,28 +5224,16 @@ async function run(mode) {
         soundManager.stopLoop('sfx_laser_fire');
         soundManager.stopLoop('sfx_laser_hum');
         handleLightningRelease();
+    };
+
+    window.addEventListener('pointerup', (e) => {
+        if (!e.isPrimary) return;
+        releasePointer();
     });
 
-    window.addEventListener('touchend', () => {
-        if (window.gamePausedForAd) return;
-        if (gameMode === 'builder') {
-            handlePlanetBuilderInput(null, null, 'up');
-            return;
-        }
-        isHolding = false;
-        soundManager.stopLoop('sfx_laser_fire');
-        soundManager.stopLoop('sfx_laser_hum');
-        handleLightningRelease();
-    });
-
-    window.addEventListener('touchcancel', () => {
-        if (window.gamePausedForAd) return;
-        if (gameMode === 'builder') {
-            handlePlanetBuilderInput(null, null, 'up');
-            return;
-        }
-        isHolding = false;
-        handleLightningRelease();
+    window.addEventListener('pointercancel', (e) => {
+        if (!e.isPrimary) return;
+        releasePointer();
     });
 
     function handleVisibilityChange() {

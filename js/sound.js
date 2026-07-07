@@ -16,12 +16,12 @@ class SoundManager {
                     if (this.context && this.context.state === 'suspended') {
                         this.context.resume().then(() => {
                             document.removeEventListener('click', resumeAudio);
-                            document.removeEventListener('touchstart', resumeAudio);
+                            document.removeEventListener('pointerdown', resumeAudio);
                         });
                     }
                 };
                 document.addEventListener('click', resumeAudio);
-                document.addEventListener('touchstart', resumeAudio);
+                document.addEventListener('pointerdown', resumeAudio);
             }
 
             setSfxVolume(v) {

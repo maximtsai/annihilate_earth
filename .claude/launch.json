@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "annihilate-earth",
+      "runtimeExecutable": "runServer8124.exe",
+      "runtimeArgs": [],
+      "port": 8124
+    }
+  ]
+}
