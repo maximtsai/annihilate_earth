@@ -98,6 +98,10 @@ let totalCratersMade = 0; // (User feature 4: Stats tracking)
 let planetTimeSpent = 0;
 let bestTimes = {};
 let gameMode = 'menu'; // 'menu', 'builder', 'gameplay'
+// True while the main menu overlay is shown. gameMode can flip to 'gameplay'
+// on the menu (clicks on the background fire missiles at the planet behind it),
+// so gameplay-only extras like shooting stars must check this flag too.
+let inMainMenu = true;
 let planetRotation = 0;
 let planetScale = 1.0;
 let isPlanetSwitching = false;

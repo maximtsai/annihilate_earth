@@ -33,7 +33,7 @@
 
         update: function (deltaTime) {
             // Only update/spawn if planetTimeSpent is defined and gameplay has started
-            if (typeof planetTimeSpent === 'undefined' || typeof victoryTriggered === 'undefined' || victoryTriggered || (typeof gameMode !== 'undefined' && gameMode !== 'gameplay') || (typeof currentPlanet !== 'undefined' && currentPlanet === 'custom')) {
+            if (typeof planetTimeSpent === 'undefined' || typeof victoryTriggered === 'undefined' || victoryTriggered || (typeof gameMode !== 'undefined' && gameMode !== 'gameplay') || (typeof inMainMenu !== 'undefined' && inMainMenu) || (typeof currentPlanet !== 'undefined' && currentPlanet === 'custom')) {
                 return;
             }
 

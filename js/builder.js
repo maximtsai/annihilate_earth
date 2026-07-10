@@ -181,6 +181,7 @@ function startPlanetBuilderMode() {
     gameMode = 'builder';
     CENTER_Y = 450 + PLANET_OFFSET_Y - 100; // Shift planet up by 100px
 
+    inMainMenu = false;
     const mainMenu = document.getElementById('main-menu');
     if (mainMenu) mainMenu.classList.add('hidden');
 
@@ -567,7 +568,7 @@ function loadCustomPlanet(savedData) {
         if (levelSelectOverlay) levelSelectOverlay.classList.remove('show');
         
         // Close main menu
-        isMainMenuActive = false;
+        inMainMenu = false;
         const mainMenu = document.getElementById('main-menu');
         if (mainMenu) mainMenu.classList.add('hidden');
         

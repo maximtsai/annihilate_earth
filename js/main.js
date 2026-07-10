@@ -5048,7 +5048,7 @@ async function run(mode) {
             ctx.restore();
         });
 
-        if (window.ShootingStarManager) {
+        if (window.ShootingStarManager && gameMode === 'gameplay' && !inMainMenu) {
             window.ShootingStarManager.draw(ctx);
         }
 
@@ -5157,7 +5157,7 @@ async function run(mode) {
         }
 
         // Check shooting star click
-        if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
+        if (window.ShootingStarManager && gameMode === 'gameplay' && !inMainMenu && window.ShootingStarManager.checkClick(x, y)) {
             return;
         }
 
@@ -6039,6 +6039,7 @@ async function run(mode) {
 
                     // If we were on the Main Menu, transition to gameplay!
                     if (mainMenu && !mainMenu.classList.contains('hidden')) {
+                        inMainMenu = false;
                         if (mainMenu) mainMenu.classList.add('hidden');
                         
                         const optBtnWrapper = document.getElementById('options-btn-wrapper');
@@ -6095,6 +6096,7 @@ async function run(mode) {
             startBGM();
             
             gameMode = 'gameplay';
+            inMainMenu = false;
             if (mainMenu) mainMenu.classList.add('hidden');
 
             const optBtnWrapper = document.getElementById('options-btn-wrapper');
@@ -6175,6 +6177,7 @@ async function run(mode) {
     // Helper to initialize/refresh Main Menu state
     function showMainMenu() {
         gameMode = 'menu';
+        inMainMenu = true;
         resetGame(true);
         if (mainMenu) mainMenu.classList.remove('hidden');
 
