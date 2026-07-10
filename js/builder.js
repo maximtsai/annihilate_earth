@@ -168,6 +168,8 @@ function handlePlanetBuilderInput(x, y, eventType) {
 
 // Transitions the game into Planet Builder Mode
 function startPlanetBuilderMode() {
+    const currentSize = Math.round(getPlanetSize() / 5) * 5;
+
     currentPlanet = 'custom';
     gameMode = 'builder';
     CENTER_Y = 450 + PLANET_OFFSET_Y - 100; // Shift planet up by 100px
@@ -194,7 +196,7 @@ function startPlanetBuilderMode() {
     const sizeDisplay = document.getElementById('size-val-display');
     const rotationDisplay = document.getElementById('rotation-val-display');
 
-    const currentSize = Math.round(getPlanetSize() / 5) * 5;
+
     customPlanetSize = currentSize;
     customPlanetDurability = 0;
     customPlanetHasCore = true;
