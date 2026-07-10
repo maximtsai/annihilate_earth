@@ -2819,6 +2819,16 @@ html.no-glows *::after {
     transform: translateY(1px);
 }
 
+/* Compress level select popup */
+#level-select-popup-overlay .options-popup {
+    padding: 12px 24px;
+    gap: 8px;
+}
+
+#level-select-popup-overlay .level-select-grid {
+    margin-top: 12px;
+}
+
 .level-select-btn.selected {
     background: rgba(0, 217, 255, 0.15);
     border-color: #00d9ff;
@@ -3333,4 +3343,29 @@ html.no-glows *::after {
     right: -20px;
     cursor: pointer;
     z-index: 10;
+}
+
+/* Save spinner */
+.save-spinner {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0, 217, 255, 0.2);
+    border-top-color: #00d9ff;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.2s ease;
+}
+
+.save-spinner.active {
+    opacity: 1;
+    animation: saveSpin 0.7s linear infinite;
+}
+
+@keyframes saveSpin {
+    to { transform: rotate(360deg); }
 }

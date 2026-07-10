@@ -167,6 +167,8 @@ async function queueSaveState(updater) {
     if (isSavingState) return;
 
     isSavingState = true;
+    const spinner = document.getElementById('save-spinner');
+    if (spinner) spinner.classList.add('active');
     while (stateSaveQueue.length > 0) {
         const currentUpdater = stateSaveQueue.shift();
         try {
@@ -179,6 +181,7 @@ async function queueSaveState(updater) {
         }
     }
     isSavingState = false;
+    if (spinner) spinner.classList.remove('active');
 }
 
 // Persistence functions for saving/loading unlocked planets

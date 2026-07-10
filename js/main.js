@@ -5994,6 +5994,13 @@ async function run(mode) {
                 levelSelectOverlay.classList.remove('show');
             }
         });
+        levelSelectOverlay.addEventListener('wheel', (e) => {
+            const list = document.getElementById('custom-planets-list');
+            if (list && list.scrollHeight > list.clientHeight) {
+                e.preventDefault();
+                list.scrollTop += e.deltaY * 0.5;
+            }
+        }, { passive: false });
     }
 
     document.querySelectorAll('.level-select-btn').forEach(btn => {

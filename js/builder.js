@@ -105,6 +105,8 @@ function floodFill(startX, startY, fillColorHex) {
     data[startIdx + 3] = 255;
     queue.push(x0, y0);
 
+    const FLOOD_TOLERANCE = 18;
+
     while (queue.length > 0) {
         const currY = queue.pop();
         const currX = queue.pop();
@@ -119,12 +121,17 @@ function floodFill(startX, startY, fillColorHex) {
         for (const n of neighbors) {
             if (n.x >= 0 && n.x < width && n.y >= 0 && n.y < height) {
                 const nIdx = (n.y * width + n.x) * 4;
-                if (data[nIdx + 3] > 0 && data[nIdx] === startR && data[nIdx + 1] === startG && data[nIdx + 2] === startB) {
-                    data[nIdx] = fillRgb.r;
-                    data[nIdx + 1] = fillRgb.g;
-                    data[nIdx + 2] = fillRgb.b;
-                    data[nIdx + 3] = 255;
-                    queue.push(n.x, n.y);
+                if (data[nIdx + 3] > 0) {
+                    const dr = data[nIdx] - startR;
+                    const dg = data[nIdx + 1] - startG;
+                    const db = data[nIdx + 2] - startB;
+                    if (dr * dr + dg * dg + db * db <= FLOOD_TOLERANCE * FLOOD_TOLERANCE) {
+                        data[nIdx] = fillRgb.r;
+                        data[nIdx + 1] = fillRgb.g;
+                        data[nIdx + 2] = fillRgb.b;
+                        data[nIdx + 3] = 255;
+                        queue.push(n.x, n.y);
+                    }
                 }
             }
         }
