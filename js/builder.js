@@ -194,18 +194,19 @@ function startPlanetBuilderMode() {
     const sizeDisplay = document.getElementById('size-val-display');
     const rotationDisplay = document.getElementById('rotation-val-display');
 
-    customPlanetSize = 240;
+    const currentSize = Math.round(getPlanetSize() / 5) * 5;
+    customPlanetSize = currentSize;
     customPlanetDurability = 0;
     customPlanetHasCore = true;
     customPlanetRotationSpeed = 1.0;
     customPlanetEnforceCircle = true;
 
-    if (sizeSlider) sizeSlider.value = 240;
+    if (sizeSlider) sizeSlider.value = currentSize;
     if (rotationSlider) rotationSlider.value = 25;
     if (coreCheckbox) coreCheckbox.checked = true;
     const circleCheckbox = document.getElementById('tool-circle-checkbox');
     if (circleCheckbox) circleCheckbox.checked = true;
-    if (sizeDisplay) sizeDisplay.textContent = '240km';
+    if (sizeDisplay) sizeDisplay.textContent = currentSize + 'km';
     if (rotationDisplay) rotationDisplay.textContent = '1.0x';
 
     // Reset color picker button background
@@ -313,6 +314,12 @@ function setupPlanetBuilderEvents() {
             brushColor = e.target.value;
             if (colorWrapper) {
                 colorWrapper.style.backgroundColor = brushColor;
+            }
+            if (activeTool === 'eraser') {
+                activeTool = 'brush';
+                document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('selected'));
+                const brushBtn = document.getElementById('tool-brush');
+                if (brushBtn) brushBtn.classList.add('selected');
             }
         });
     }

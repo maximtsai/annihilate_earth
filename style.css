@@ -1711,8 +1711,8 @@ canvas:focus {
 }
 
 #options-menu-btn:hover {
-    margin: -4px;
-    padding: 8px;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.35);
 }
 
 #weapon-unlock-notification {
@@ -3211,28 +3211,51 @@ html.no-glows *::after {
 .slider-group input[type="range"] {
     -webkit-appearance: none;
     width: 100%;
-    height: calc(5px * var(--ui-scale));
-    background: rgba(0, 217, 255, 0.2);
-    border-radius: 2px;
+    height: 24px;
+    background: none;
     outline: none;
     cursor: pointer;
+    padding: 0;
+    margin: 0;
+}
+
+.slider-group input[type="range"]::-webkit-slider-runnable-track {
+    height: 5px;
+    background: rgba(0, 217, 255, 0.2);
+    border-radius: 2px;
 }
 
 .slider-group input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: calc(14px * var(--ui-scale));
-    height: calc(14px * var(--ui-scale));
+    width: 28px;
+    height: 28px;
+    margin-top: -11.5px;
     background: #00d9ff;
-    border: 1.5px solid #ffffff;
+    border: 2px solid #ffffff;
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 0 8px #00d9ff;
+    box-shadow: 0 0 12px #00d9ff;
     transition: background-color 200ms ease, transform 150ms ease;
 }
 
 .slider-group input[type="range"]::-webkit-slider-thumb:hover {
     background: #00ffaa;
     transform: scale(1.15);
+}
+
+.slider-group input[type="range"]::-moz-range-track {
+    height: 5px;
+    background: rgba(0, 217, 255, 0.2);
+    border-radius: 2px;
+}
+
+.slider-group input[type="range"]::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    background: #00d9ff;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    cursor: pointer;
 }
 
 /* Align toggle switches vertically */
