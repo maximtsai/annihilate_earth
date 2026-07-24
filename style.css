@@ -621,7 +621,7 @@ canvas:focus {
     padding: 20px 24px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
     box-shadow: 0 0 40px rgba(0, 217, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5);
     position: relative;
     transform: scale(var(--options-scale, 1));
@@ -859,9 +859,10 @@ canvas:focus {
     letter-spacing: 2px;
     text-transform: uppercase;
     user-select: none;
-    padding-left: 36px;
-    height: 28px;
-    margin-top: 6px;
+    padding-left: 42px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    height: auto;
 }
 
 .checkbox-container input {
@@ -874,13 +875,14 @@ canvas:focus {
 
 .checkbox-custom {
     position: absolute;
-    top: 2px;
+    top: 50%;
+    transform: translateY(-50%);
     left: 0;
-    height: 22px;
-    width: 22px;
+    height: 26px;
+    width: 26px;
     background: rgba(0, 217, 255, 0.08);
     border: 1px solid rgba(0, 217, 255, 0.4);
-    border-radius: 4px;
+    border-radius: 5px;
     transition: all 200ms ease;
 }
 
@@ -900,10 +902,10 @@ canvas:focus {
     content: "";
     position: absolute;
     display: none;
-    left: 7px;
-    top: 3px;
-    width: 5px;
-    height: 10px;
+    left: 9px;
+    top: 4px;
+    width: 6px;
+    height: 12px;
     border: solid #00d9ff;
     border-width: 0 2.5px 2.5px 0;
     transform: rotate(45deg);
