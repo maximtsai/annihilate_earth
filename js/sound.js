@@ -2,6 +2,7 @@ class SoundManager {
             constructor() {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
                 this.buffers = {};
+                this.loadingPromises = {};
                 this.activeLoops = {};
                 this.masterGain = this.context.createGain();
                 this.masterGain.connect(this.context.destination);
@@ -47,24 +48,35 @@ class SoundManager {
             }
 
             async load(id) {
+                if (this.buffers[id] || this.loadingPromises[id]) return this.loadingPromises[id];
                 const asset = getAsset(id);
                 if (!asset) return;
-                try {
-                    const response = await fetch(asset.url);
-                    const arrayBuffer = await response.arrayBuffer();
-                    const audioBuffer = await new Promise((resolve, reject) => {
-                        try {
-                            const res = this.context.decodeAudioData(arrayBuffer, resolve, reject);
-                            if (res && typeof res.then === 'function') {
-                                res.then(resolve, reject);
+                const promise = (async () => {
+                    try {
+                        const response = await fetch(asset.url);
+                        const arrayBuffer = await response.arrayBuffer();
+                        const audioBuffer = await new Promise((resolve, reject) => {
+                            try {
+                                const res = this.context.decodeAudioData(arrayBuffer, resolve, reject);
+                                if (res && typeof res.then === 'function') {
+                                    res.then(resolve, reject);
+                                }
+                            } catch (e) {
+                                reject(e);
                             }
-                        } catch (e) {
-                            reject(e);
-                        }
-                    });
-                    this.buffers[id] = audioBuffer;
-                } catch (e) {
-                    console.error(`Failed to load sound: ${id}`, e);
+                        });
+                        this.buffers[id] = audioBuffer;
+                    } catch (e) {
+                        console.error(`Failed to load sound: ${id}`, e);
+                    }
+                })();
+                this.loadingPromises[id] = promise;
+                return promise;
+            }
+
+            loadMany(ids) {
+                if (Array.isArray(ids)) {
+                    ids.forEach(id => this.load(id));
                 }
             }
 

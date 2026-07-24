@@ -189,31 +189,40 @@ function setLoadingProgress(pct, status) {
 
 setLoadingProgress(10, (translations[currentLanguage] || translations['en']).loadingAudio || 'Initializing audio system...');
 soundManager = new SoundManager();
-const criticalSoundIds = [
+const essentialSoundIds = [
     'bgm_gentle_space',
     'sfx_ui_switch', 'sfx_ui_scroll',
     'sfx_launch_heavy',
-    'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large'
-];
-criticalSoundIds.forEach(id => soundManager.load(id));
-
-window.deferredSoundIds = [
-    'sfx_laser_fire', 'sfx_laser_hum', 'sfx_laser_crack',
-    'sfx_gamma_charge', 'sfx_gamma_beam', 'sfx_gamma_warning',
-    'sfx_sword_fly', 'sfx_sword_stab', 'sfx_sword_pullout', 'sfx_sword_rumble_loop', 'sfx_holy_shine',
-    'sfx_bowling_pins',
-    'sfx_black_hole_spawn', 'sfx_black_hole_disappear',
-    'sfx_nom_short',
-    'sfx_fist_impact',
-    'sfx_mystical_moon_explosion',
-    'sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade',
-    'sfx_freeze', 'sfx_shatter',
-    'sfx_lightning',
-    'sfx_void_body',
-    'sfx_quack',
-    'sfx_error',
+    'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large',
     'sfx_victory'
 ];
+essentialSoundIds.forEach(id => soundManager.load(id));
+
+const WEAPON_SOUNDS = {
+    missile: ['sfx_explosion_small'],
+    nuke: ['sfx_explosion_medium', 'sfx_out_of_ammo'],
+    laser: ['sfx_laser_fire', 'sfx_laser_crack', 'sfx_laser_hum'],
+    asteroid: ['sfx_launch_heavy', 'sfx_explosion_large'],
+    gamma: ['sfx_gamma_charge', 'sfx_gamma_warning', 'sfx_gamma_beam'],
+    sword: ['sfx_sword_fly', 'sfx_sword_stab', 'sfx_sword_rumble_loop', 'sfx_sword_pullout', 'sfx_explosion_medium'],
+    moon: ['sfx_launch_heavy', 'sfx_mystical_moon_explosion', 'sfx_holy_shine'],
+    blackhole: ['sfx_black_hole_spawn', 'sfx_black_hole_disappear'],
+    kraken: ['sfx_gamma_charge', 'sfx_void_body'],
+    bowling: ['sfx_launch_heavy', 'sfx_bowling_pins', 'sfx_out_of_ammo'],
+    fist: ['sfx_launch_heavy', 'sfx_fist_impact', 'sfx_nom_short'],
+    worm: ['sfx_launch_heavy', 'sfx_explosion_medium'],
+    star: ['sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade'],
+    comet: ['sfx_launch_heavy', 'sfx_holy_shine', 'sfx_explosion_medium'],
+    lightning: ['sfx_lightning', 'sfx_explosion_small'],
+    drill: ['sfx_out_of_ammo'],
+    mysterybox: ['sfx_out_of_ammo']
+};
+
+function ensureWeaponSoundsLoaded(weaponType) {
+    const ids = WEAPON_SOUNDS[weaponType];
+    if (ids && window.soundManager) soundManager.loadMany(ids);
+}
+ensureWeaponSoundsLoaded(typeof selectedWeapon !== 'undefined' ? selectedWeapon : 'missile');
 
 // Spritesheet Atlas Loading & Extraction Logic
 const atlasImage = new Image();
@@ -5272,6 +5281,7 @@ async function run(mode) {
             soundManager.play('sfx_ui_switch');
             soundManager.stopLoop('sfx_laser_fire');
             selectedWeapon = button.dataset.weapon;
+            ensureWeaponSoundsLoaded(selectedWeapon);
             // Dismiss switch-weapon tooltip when player switches away from missile
             if (selectedWeapon !== 'missile' && _switchTooltip.el && _switchTooltip.shown) {
                 _switchTooltip.dismissed = true;
@@ -6607,27 +6617,18 @@ async function run(mode) {
         window.PlatformBridge.gameLoadingFinished();
     }
 
+    setLoadingProgress(100, getTranslation('ready'));
+    if (loadingAnimId) cancelAnimationFrame(loadingAnimId);
+    window.removeEventListener('resize', resizeLoadingCanvas);
+    if (missileDiv.parentNode) missileDiv.parentNode.removeChild(missileDiv);
+    loadingScreen.classList.add('fade-out');
     setTimeout(() => {
-        setLoadingProgress(100, getTranslation('ready'));
-        setTimeout(() => {
-            if (loadingAnimId) cancelAnimationFrame(loadingAnimId);
-            window.removeEventListener('resize', resizeLoadingCanvas);
-            if (missileDiv.parentNode) missileDiv.parentNode.removeChild(missileDiv);
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-            }, 600);
+        loadingScreen.style.display = 'none';
+    }, 400);
 
-            // Show Main Menu on load finish
-            showMainMenu();
-            setupPlanetBuilderEvents();
-        }, 400);
-
-        // Start loading deferred sounds the moment the main loading phase is finished
-        if (window.deferredSoundIds) {
-            window.deferredSoundIds.forEach(id => soundManager.load(id));
-        }
-    }, 600);
+    // Show Main Menu on load finish
+    showMainMenu();
+    setupPlanetBuilderEvents();
 
     // Setup Loop
     let lastTime = performance.now();
