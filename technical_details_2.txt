@@ -1,0 +1,1203 @@
+================================================================================
+MOBILE & WEB GAME BEST PRACTICES IMPLEMENTATION DETAILS
+================================================================================
+
+This document logs small, reusable web and mobile best practices implemented in this codebase, formatted for AI parsers to recreate similar implementations.
+
+--------------------------------------------------------------------------------
+1. VIEWPORT, PWA, AND SAFE-AREA NOTCH INTEGRATION
+--------------------------------------------------------------------------------
+Context: Prevent viewport shifting, zoom issues, and layout clipping behind notches/punch-holes on mobile devices.
+Replication:
+  A) Add the following meta tags inside <head> to enable full-bleed display:
+     ```html
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+     <meta name="apple-mobile-web-app-capable" content="yes">
+     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+     <meta name="mobile-web-app-capable" content="yes">
+     ```
+     Warning: `user-scalable=no` disables pinch-to-zoom — use only when rapid gestures conflict with browser defaults. Safari iOS 10+ ignores this property; prefer CSS `touch-action: manipulation` or `touch-action: none` to control double-tap zooming.
+  B) Incorporate `env(safe-area-inset-...)` variables inside CSS paddings/margins to align HUD elements away from notches:
+     ```css
+     .bottom-bar {
+         padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+     }
+     .top-hud {
+         padding-top: max(16px, env(safe-area-inset-top, 0px));
+     }
+     ```
+
+--------------------------------------------------------------------------------
+2. PREVENTING MOBILE PAGE SCROLL, BOUNCE, AND OVER-SCROLL
+--------------------------------------------------------------------------------
+Context: HTML5 canvases suffer from pull-to-refresh reload actions, elastic scroll bouncing, and drag offsets when users interact near boundaries.
+Replication:
+  A) Apply CSS touch-action and overscroll rules to `body`/`html` and canvas containers:
+     ```css
+     html, body, canvas {
+         touch-action: none;
+         overscroll-behavior: none;
+     }
+     ```
+  B) Register touch event listeners with `{ passive: false }` to override native dragging/scrolling:
+     ```javascript
+     element.addEventListener('touchstart', (e) => {
+         e.preventDefault();
+     }, { passive: false });
+
+     element.addEventListener('touchmove', (e) => {
+         e.preventDefault(); // Prevents bounce and pan on mobile Safari/Chrome
+     }, { passive: false });
+     ```
+     Warning: To preserve native vertical scrolling inside overlays (like terms or settings panels), selectively bypass touch listener preventions and restore touch actions:
+     ```javascript
+     element.addEventListener('touchmove', (e) => {
+         if (e.target.closest('.scrollable-overlay')) return;
+         e.preventDefault();
+     }, { passive: false });
+     ```
+     ```css
+     .scrollable-overlay {
+         touch-action: pan-y;
+     }
+     ```
+
+--------------------------------------------------------------------------------
+3. WEB AUDIO API CONTEXT LIFECYCLE MANAGEMENT AND STATE AUTO-SAVE
+--------------------------------------------------------------------------------
+Context: Mobile browsers restrict audio initialization to direct gestures and suspend active Web Audio instances in the background. The game must wake contexts on input and save progress before the tab is suspended.
+Replication:
+  A) Auto-save and suspend context on tab suspension:
+     ```javascript
+     const handleLifecycleTeardown = () => {
+         saveGameStateSync();
+         if (audioContext) {
+             audioContext.suspend().catch(() => {});
+         }
+     };
+     window.addEventListener('beforeunload', handleLifecycleTeardown);
+     window.addEventListener('pagehide', handleLifecycleTeardown);
+     ```
+  B) Resume suspended audio contexts synchronously inside user interaction callbacks:
+     ```javascript
+     function resumeAudioContext(context) {
+         if (context && context.state === 'suspended') {
+             context.resume().catch(e => {});
+         }
+     }
+     window.addEventListener('pointerdown', () => {
+         resumeAudioContext(myAudioContext);
+     });
+     ```
+
+--------------------------------------------------------------------------------
+4. PHYSICS ENGINE DELTA-TIME CLAMPING
+--------------------------------------------------------------------------------
+Context: When browser tabs are backgrounded, requestAnimationFrame stops. Upon resumption, deltaTime can jump to seconds or minutes, exploding position calculations.
+Replication:
+  Inside the main game loop, measure elapsed time but clamp the step at a maximum safe update threshold (e.g., 0.1 seconds):
+  ```javascript
+  let lastTime = performance.now();
+  function gameLoop(timestamp) {
+      let deltaTime = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Clamp step to avoid wall clipping or physics collision failures
+      if (deltaTime > 0.1) {
+          deltaTime = 0.1;
+      }
+      updatePhysics(deltaTime);
+      renderScene();
+      requestAnimationFrame(gameLoop);
+  }
+  ```
+
+--------------------------------------------------------------------------------
+5. CONDITIONAL HAPTIC VIBRATION FILTERS
+--------------------------------------------------------------------------------
+Context: Mobile device vibration (vibrate API) should not overwhelm the user. Filter by impact size/magnitude and enforce maximum vibration boundaries.
+Replication:
+  A) Read vibration settings preferences from stored configuration.
+  B) Evaluate impact size constraints (e.g., radius of explosion >= 20) and scale vibration durations relative to the shake intensity:
+     ```javascript
+     if (vibrationEnabled && explosionRadius >= 20 && navigator.vibrate) {
+         // Scale duration to impact intensity, but limit max vibration length
+         let vibrationDuration = Math.min(100, Math.floor(shakeIntensity * 8));
+         if (vibrationDuration > 10) {
+             try {
+                 navigator.vibrate(vibrationDuration);
+             } catch (e) {
+                 // Suppress issues when API is blocked (e.g., iframe bounds)
+             }
+         }
+     }
+     ```
+
+--------------------------------------------------------------------------------
+6. GARBAGE COLLECTION (GC) OPTIMIZATION VIA OBJECT POOLING
+--------------------------------------------------------------------------------
+Context: Prevent frames stuttering caused by memory allocation and Garbage Collection (GC) sweeps during tick-based object allocation.
+Replication:
+  A) Implement an Object Pool array to pre-allocate and reuse instances:
+     ```javascript
+     const objectPool = [];
+     const freeList = [];
+
+     function spawnObject(x, y) {
+         let obj = freeList.pop();
+         if (!obj) {
+             obj = { active: true, x: 0, y: 0 };
+             objectPool.push(obj);
+         }
+         obj.active = true;
+         obj.x = x;
+         obj.y = y;
+         return obj;
+     }
+
+     function freeObject(obj) {
+         obj.active = false;
+         freeList.push(obj);
+     }
+     ```
+  B) Clean resets using `.length = 0` to clear active collections without allocating a new array:
+     ```javascript
+     activeObjects.length = 0; // Reuses the existing array instance
+     ```
+
+--------------------------------------------------------------------------------
+7. TELEMETRY BOOT SEQUENCING (FIRST FRAME PAINT)
+--------------------------------------------------------------------------------
+Context: Ensure the browser completes a paint iteration before sending telemetries/Game Ready hooks to avoid timing validation errors in standard embed-test frameworks.
+Replication:
+  Wait one layout frame using `requestAnimationFrame` before dispatching ready and initialization stop signals:
+  ```javascript
+  requestAnimationFrame(() => {
+      // First paint completed
+      SDK.firstFrameReady();
+      preloadAssets().then(() => {
+          SDK.gameReady();
+      });
+  });
+  ```
+
+--------------------------------------------------------------------------------
+8. ASSET FILENAME SANITIZATION
+--------------------------------------------------------------------------------
+Context: Avoid using white spaces in filenames to prevent HTTP 404 errors on server implementations that fail to decode url-encoded spaces correctly.
+Replication:
+  A) Replace all asset filename spaces with underscores (e.g., `Asset Name.mp3` -> `Asset_Name.mp3`).
+  B) Keep asset mapping references in configuration files aligned with the sanitized filesystem names.
+
+--------------------------------------------------------------------------------
+9. SCORE INVERSION FOR DESCENDING LEADERBOARDS
+--------------------------------------------------------------------------------
+Context: When tracking speedrun metrics (completion time in seconds, where smaller is better) in SDK systems that only support descending sorting configurations.
+Replication:
+  Invert the completion time relative to a maximum value before dispatching leaderboard metrics:
+  ```javascript
+  const score = Math.max(0, LEADERBOARD_MAX_LIMIT_SECS - completionSecs);
+  SDK.submitScore(score); // Faster times yield higher score ranks
+  ```
+
+--------------------------------------------------------------------------------
+10. HITBOX ENLARGEMENT FOR TOUCH TARGET ACCESSIBILITY
+--------------------------------------------------------------------------------
+Context: Expand button hitboxes on small mobile screens without modifying visual padding/layout flow.
+Replication:
+  Append absolute pseudo-elements with negative offsets around interactive elements:
+  ```css
+  .button-target {
+      position: relative;
+  }
+  .button-target::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      bottom: -20px;
+      left: -20px;
+      right: -20px;
+      cursor: pointer;
+  }
+  ```
+
+--------------------------------------------------------------------------------
+11. CASE-SENSITIVE PATH ALIGNMENT
+--------------------------------------------------------------------------------
+Context: Unix/Linux environments are case-sensitive, causing asset loads to crash if file capitalization on disk does not perfectly match CSS/JS requests.
+Replication:
+  Audit all stylesheet declarations (`url(...)`) and script loader paths to ensure exact casing match (e.g. `assets/fonts/Fredoka-VariableFont.ttf`).
+
+--------------------------------------------------------------------------------
+12. DEFENSIVE COORDINATE EXTRACTION FOR MOCK TOUCH EVENTS
+--------------------------------------------------------------------------------
+Context: Automated testing scripts, browser emulators, and SDK frames sometimes send fake touch profiles lacking standard event coordinate vectors.
+Replication:
+  A) Ensure fallback protections are active when retrieving pointer metrics:
+  ```javascript
+  function getPointerPos(e) {
+      if (e.touches && e.touches.length > 0) {
+          return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+          return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+      }
+      return { x: e.clientX || 0, y: e.clientY || 0 };
+  }
+  ```
+  B) Wrap `setPointerCapture` calls in try-catch blocks to prevent unhandled `InvalidPointerId` DOMExceptions across mobile browser turns:
+  ```javascript
+  try { (e.target || element).setPointerCapture(e.pointerId); } catch (err) {}
+  ```
+
+--------------------------------------------------------------------------------
+13. REWARDED AD INTEGRITY VERIFICATION
+--------------------------------------------------------------------------------
+Context: Block loopholes where ads could be closed early but still trigger a successful reward callback.
+Replication:
+  Check resolved boolean feedback vectors inside the reward listener, block button spamming, and implement a defensive request timeout fallback (e.g., 10 seconds) to prevent permanent interface locks if the SDK hangs before launching:
+  ```javascript
+  button.classList.add('requesting'); // Lock user interaction
+  
+  let adResolved = false;
+  // Safety timeout fallback: unlock user interaction if ad takes too long to launch/respond
+  const adTimeout = setTimeout(() => {
+      if (!adResolved) {
+          adResolved = true;
+          button.classList.remove('requesting');
+          showError('ad_timeout');
+      }
+  }, 10000);
+
+  SDK.requestRewardedAd({
+      onStarted: () => {
+          clearTimeout(adTimeout); // Ad started successfully, clear initial request timeout
+      }
+  }).then(completed => {
+      clearTimeout(adTimeout); // Guard in case onStarted was omitted by SDK
+      if (adResolved) return;
+      adResolved = true;
+      if (completed) {
+          triggerReward();
+      } else {
+          showEarlyCloseWarning();
+      }
+  }).catch(err => {
+      clearTimeout(adTimeout);
+      if (adResolved) return;
+      adResolved = true;
+      button.classList.remove('requesting');
+      showError('ad_failed');
+  });
+  ```
+
+--------------------------------------------------------------------------------
+14. CANVAS FOCUS OUTLINE & KEYBOARD ACCESSIBILITY
+--------------------------------------------------------------------------------
+Context: Canvases do not receive focus by default, causing standard keyboard listeners to ignore clicks on the canvas.
+Replication:
+  A) Add `tabindex="0"` to the canvas tag to make it focusable:
+     ```html
+     <canvas id="game-canvas" tabindex="0"></canvas>
+     ```
+  B) Suppress outline rings in CSS:
+     ```css
+     canvas:focus {
+         outline: none;
+     }
+     ```
+  C) Focus the canvas programmatically inside click/pointer listeners to capture key events:
+     ```javascript
+     canvas.addEventListener('pointerdown', () => {
+         canvas.focus();
+     });
+     ```
+
+--------------------------------------------------------------------------------
+15. COMBINATION SILENT AND DECOY SITELOCK PROTECTION
+--------------------------------------------------------------------------------
+Context: Defensive sitelock logic designed to detect mirrors without alerting unauthorized publishers/crackers.
+Replication:
+  A) Deploy a visible whitelisting check as "decoy bait" that throws noisy errors (e.g., in main script). Crackers will remove this decoy error, assume they successfully unlocked the game, and stop.
+  B) Inject a second, silent blacklist check (e.g., in utility scripts) that targets mirror patterns. If detected, silently limit maximum upgrade tiers or decrease coin drops instead of crashing.
+  C) Combine during bundling so that sitelock loaders are processed prior to main game logic.
+  Suggestion: Silent sitelock checks carry a risk of false-positives (e.g. localized testing, offline plays in web archives, or sandboxed frames with blocked referrers). To prevent players from reporting legitimate play options as "buggy" or "poorly balanced", always ensure safe-listing parameters are fully validated, or fallback to standard, informative error blocks rather than silent gameplay nerfing if the portal environment is highly ambiguous.
+
+--------------------------------------------------------------------------------
+16. HYBRID DECODEAUDIODATA COMPATIBILITY (LEGACY SAFARI SUPPORT)
+--------------------------------------------------------------------------------
+Context: Prevent AudioContext.decodeAudioData failures on legacy iOS Safari / webview builds that lack standard Promise support and only resolve via callback functions.
+Replication:
+  Wrap the `decodeAudioData` invocation inside a custom Promise wrapper that handles both Promise resolutions and standard callback parameters:
+      ```javascript
+      async function loadAudioBuffer(context, arrayBuffer) {
+          return new Promise((resolve, reject) => {
+              let isResolved = false;
+              const safeResolve = (buf) => { if (!isResolved) { isResolved = true; resolve(buf); } };
+              const safeReject = (err) => { if (!isResolved) { isResolved = true; reject(err); } };
+
+              try {
+                  const res = context.decodeAudioData(arrayBuffer, safeResolve, safeReject);
+                  if (res && typeof res.then === 'function') {
+                      res.then(safeResolve, safeReject);
+                  }
+              } catch (e) {
+                  safeReject(e);
+              }
+          });
+      }
+      ```
+
+
+--------------------------------------------------------------------------------
+17. FONTS PRE-LOADING IN CANVAS GAME LOOPS
+--------------------------------------------------------------------------------
+Context: Avoid fallback font "unstyled text pop-in" flashes when rendering text on HTML5 Canvas layers immediately during initial layout cycles.
+Replication:
+  Defer the main game boot initialization execution block (`run()`) until the browser confirms the custom font resources are active via the CSS Font Loading API, wrapping it with a safety fallback timeout (e.g. 1.5 seconds) to ensure the game still boots if the Font API hangs:
+  ```javascript
+  window.addEventListener('DOMContentLoaded', () => {
+      let booted = false;
+      const initializeGameSafely = () => {
+          if (booted) return;
+          booted = true;
+          initializeGame();
+      };
+      // Safety fallback: boot anyway after 1.5 seconds in case the Font API hangs
+      const safetyTimeout = setTimeout(initializeGameSafely, 1500);
+
+      if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
+          document.fonts.ready.then(() => {
+              clearTimeout(safetyTimeout);
+              initializeGameSafely();
+          }).catch(() => {
+              clearTimeout(safetyTimeout);
+              initializeGameSafely();
+          });
+      } else {
+          clearTimeout(safetyTimeout);
+          initializeGameSafely();
+      }
+  });
+  ```
+
+--------------------------------------------------------------------------------
+18. DEFERRED / LAZY BACKGROUND ASSET LOADING
+--------------------------------------------------------------------------------
+Context: Accelerate boot speed and reduce network loading time by preloading only critical assets on startup and downloading remaining heavier resources in the background.
+Replication:
+  A) Identify and load critical startup assets (e.g. main BGM, loader graphic) to satisfy the initial loading bar block.
+  B) Once the initial loader completes, fire background promises to fetch/decode the remaining assets asynchronously:
+     ```javascript
+     // 1. Initial boot phase
+     const criticalAssets = [loadImage('spark_particle'), loadAudio('ambient_music')];
+     await Promise.all(criticalAssets);
+     dismissLoadingScreen();
+
+     // 2. Background phase (doesn't block starting the gameplay)
+     Promise.all([
+         loadAudio('collision_sfx'),
+         loadAudio('victory_sfx'),
+         loadImage('confetti_asset')
+     ]).then(() => {
+         console.log("Deferred background assets loaded.");
+     });
+     ```
+  C) PHASER 3 SPECIFIC — deferred audio and the sound cache:
+     Context: In Phaser 3 (verified on v3.90), `scene.sound.add("key")` THROWS
+     `Uncaught Error: Audio key "<key>" not found in cache` if the key has not
+     finished loading. A common mistake when retrofitting deferred loading is to
+     split the `load.audio(...)` calls into early/deferred batches but leave a
+     single `initializeSounds()` that calls `sound.add()` for EVERY key — it runs
+     right after the first load batch and crashes on the first deferred key.
+     Rules to replicate correctly:
+     1. Split the SOUND REGISTRATION the same way as the loading. At startup,
+        `sound.add()` only the keys from the early batch. Registration of
+        deferred keys must be event-driven off the deferred batch's completion,
+        never done eagerly at setup time:
+        ```javascript
+        function loadDeferredAudio(scene) {
+            if (deferredAudioStarted) return;
+            deferredAudioStarted = true;
+            for (const [key, url] of deferredAudio) scene.load.audio(key, url);
+            scene.load.once("complete", () => {
+                for (const [key] of deferredAudio) {
+                    if (scene.cache.audio.exists(key)) {      // guard partial failures
+                        gameObjects.sounds[key] = scene.sound.add(key);
+                    }
+                }
+            });
+            scene.load.start(); // required: loader does not auto-start outside preload()
+        }
+        ```
+     2. The Phaser loader's "complete" event fires ONCE PER BATCH. Any handler
+        registered with `load.on("complete", ...)` for the initial load screen
+        will fire AGAIN when the deferred batch finishes — guard it with a flag
+        (or use `load.once`) so post-load boot logic doesn't run twice.
+     3. Guard every playback helper (`playSound`, `tweenVolume`, etc.) with a
+        registration check (`if (!gameObjects.sounds[key]) { warn; return; }`) so
+        gameplay code that fires before the deferred batch lands degrades to a
+        skipped sound instead of a TypeError.
+     4. Trigger `loadDeferredAudio()` from a gameplay milestone that occurs well
+        before the deferred sounds are needed (e.g. when actual gameplay begins,
+        while the intro plays), not lazily at first playback — Web Audio still
+        needs download + decode time.
+
+--------------------------------------------------------------------------------
+19. RESIZEOBSERVER COMPATIBILITY FALLBACK
+--------------------------------------------------------------------------------
+Context: Prevent ReferenceError crashes on older mobile/desktop browsers (e.g. iOS < 13.4, Safari < 13.1) that do not support the ResizeObserver API.
+Replication:
+  Check for ResizeObserver availability. If missing, fall back to a window resize listener, and clean up accordingly:
+  ```javascript
+  // Initialization
+  if (window.ResizeObserver) {
+      this._ro = new ResizeObserver(resize);
+      this._ro.observe(container);
+  } else {
+      this._onResize = resize;
+      window.addEventListener('resize', this._onResize);
+  }
+
+  // Teardown
+  if (this._ro) {
+      this._ro.disconnect();
+  } else if (this._onResize) {
+      window.removeEventListener('resize', this._onResize);
+  }
+  ```
+
+--------------------------------------------------------------------------------
+20. SAFE LOCALSTORAGE ACCESS FOR INCOGNITO & IFRAME ACCESSIBILITY
+--------------------------------------------------------------------------------
+Context: Prevent security exception crashes (DOMException: SecurityError) when accessing localStorage in browsers running in private/incognito mode, or sandboxed within third-party game portal iframes.
+Replication:
+  Wrap all storage calls in try-catch blocks and fall back to in-memory state objects:
+  ```javascript
+  const storageFallback = {};
+
+  function safeGetItem(key) {
+      try {
+          return localStorage.getItem(key);
+      } catch (e) {
+          return storageFallback[key] || null;
+      }
+  }
+
+  function safeSetItem(key, value) {
+      try {
+          localStorage.setItem(key, value);
+      } catch (e) {
+          storageFallback[key] = value;
+      }
+  }
+
+  function safeRemoveItem(key) {
+      try {
+          localStorage.removeItem(key);
+      } catch (e) {
+          delete storageFallback[key];
+      }
+  }
+  ```
+
+--------------------------------------------------------------------------------
+21. HTML5 AUDIO GESTURE UNLOCKING FOR GAME LOOPS
+--------------------------------------------------------------------------------
+Context: Mobile browsers reject `.play()` calls on HTML5 Audio elements inside asynchronous requestAnimationFrame game loops. They must be pre-unlocked during a synchronous user gesture callback.
+Replication:
+  Trigger play and immediate pause actions during the first user interaction event:
+      ```javascript
+      let isUnlocked = false;
+
+      function unlockHTML5Audio(audioElement) {
+          if (isUnlocked) return;
+          const playPromise = audioElement.play();
+          if (playPromise !== undefined) {
+              playPromise.then(() => {
+                  audioElement.pause();
+                  audioElement.currentTime = 0;
+                  isUnlocked = true;
+              }).catch(() => {});
+          }
+      }
+
+      // Triggered on user interaction (e.g. initial tap):
+      window.addEventListener('pointerdown', () => {
+          unlockHTML5Audio(bgMusicElement);
+      });
+      ```
+
+-------------------------------------------------------------------------------
+22. FULL GAME I18N / L10N TRANSLATION SYSTEM
+-------------------------------------------------------------------------------
+Context: Implement a complete internationalization system for all user-facing text (dialog, UI, announcements, garage, etc.) that is easily extensible for new languages.
+
+Replication:
+
+A) Create `translations.js` loaded early in index.html (after three.min.js, before game modules):
+
+```javascript
+// Core structure
+const LOCALES = {
+  en: {
+    'dialog.planet.sprout': "Welcome to Sprout! The grass is soft...",
+    'dialog.tip.geodia': "No trees here, drill the geodes! Each one bursts into crystals...",
+    'announce.motherlode': 'MOTHERLODE STRUCK!',
+    'button.nextPlanet': 'NEXT PLANET →',
+    'options.soundVolume': 'Sound Volume',
+    'vehicle.sprout_classic': 'Classic',
+    'combo.sprout_classic.geodia': "Classic wheels on Geodia — nothing fancy, just solid rock and roll.",
+    'planet.sprout': 'Sprout',
+    // ... 200+ keys total
+  },
+  es: {},  // empty stubs for each target language
+  'zh-CN': {},
+  // ...
+};
+
+let currentLocale = 'en';
+
+window.Translations = {
+  get(key, params) {
+    const table = LOCALES[currentLocale] || LOCALES.en;
+    let str = table[key];
+    if (str === undefined) {
+      str = LOCALES.en[key];
+      if (typeof console !== 'undefined') console.warn('[Translations] Missing in', currentLocale, 'falling back to en:', key);
+    }
+    if (str === undefined) {
+      if (typeof console !== 'undefined') console.warn('[Translations] Missing entirely:', key);
+      str = key;
+    }
+    if (!params) return str;
+    return str.replace(/\{(\w+)\}/g, (_, k) => params[k] !== undefined ? params[k] : '{' + k + '}');
+  },
+  has(key) {
+    return (LOCALES[currentLocale] && LOCALES[currentLocale][key] !== undefined) ||
+           LOCALES.en[key] !== undefined;
+  },
+  setLocale(locale) {
+    if (LOCALES[locale]) { currentLocale = locale; return true; }
+    return false;
+  },
+  getLocale() { return currentLocale; },
+  keys(locale) { return LOCALES[locale || currentLocale] || LOCALES.en; }
+};
+```
+
+B) Key naming convention (flat dot-path):
+
+| Prefix | Category | Examples |
+|--------|----------|----------|
+| `dialog.planet.*` | Planet flavor text | `dialog.planet.sprout` |
+| `dialog.tip.*` | Planet tips | `dialog.tip.geodia` |
+| `dialog.fox.*` | Fox astronaut lines | `dialog.fox.revive1` |
+| `dialog.grave.*` | Stillhollow ghost/keeper | `dialog.grave.firstTouch` |
+| `announce.*` | Center-screen announcements | `announce.motherlode` |
+| `victory.*` | End-of-planet screens | `victory.liftoff` |
+| `button.*` | Button labels | `button.nextPlanet` |
+| `options.*` | Settings popup | `options.soundVolume` |
+| `hud.*` | HUD text | `hud.hint` |
+| `goal.*` | Goal label | `goal.cabin` |
+| `garage.*` | Garage UI | `garage.adTitle` |
+| `fox.dock.*` | Fox passenger buttons | `fox.dock.ride` |
+| `vehicle.*` | Skin display names | `vehicle.sprout_classic` |
+| `combo.skin.planet` | Vehicle×planet reactions | `combo.sprout_classic.geodia` |
+| `planet.*` | Planet display names | `planet.sprout` |
+
+C) Usage in game modules (game.js, ui.js, grave.js):
+
+```javascript
+// Simple
+announce(Translations.get('announce.motherlode'));
+
+// With parameters
+Translations.get('victory.builtCabin', { planet: Translations.get('planet.' + pal.name.toLowerCase()) });
+
+// Conditional fallback for planet-specific keys
+const flavorKey = 'dialog.planet.' + planetKey;
+const firstLine = Translations.has(flavorKey)
+  ? Translations.get(flavorKey)
+  : Translations.get('dialog.planet.fallback', { planet: pal.name });
+```
+
+D) UI text population (ui.js `applyTranslations()`):
+```javascript
+applyTranslations() {
+  const T = window.Translations;
+  if (!T) return;
+  this.hud.querySelector('#lpjOptionsTitle').textContent = T.get('options.title');
+  this.hud.querySelector('#lpjSoundVolLabel').textContent = T.get('options.soundVolume');
+  // ... all other options labels
+  this.elements.elTalk.textContent = T.get('button.talk');
+  this.elements.elCloseTalk.textContent = T.get('button.close');
+  // garage
+  this.hud.querySelector('#lpjGarageTitle').textContent = T.get('button.chooseVehicle');
+  this.hud.querySelector('#lpjGhostPickupText').textContent = T.get('fox.dock.pickUp');
+  this.hud.querySelector('#lpjFoxRideText').textContent = T.get('fox.dock.ride');
+  // ad overlay
+  this.hud.querySelector('#lpjAdTitle').textContent = T.get('garage.adTitle');
+  subtitleEl.textContent = T.get('garage.adSubtitle', { skin: skinName });
+  // skin names
+  label.textContent = T.get('vehicle.' + v.id) || v.name;
+}
+```
+
+E) Vehicle dialog combos:
+```javascript
+getVehicleReaction(skinId, planet) {
+  const key = 'combo.' + skinId + '.' + planet.toLowerCase();
+  const T = window.Translations;
+  return T.has(key) ? T.get(key) : T.get('garage.reaction.fallback');
+}
+```
+
+F) Grave.js DIALOG changed to functions:
+```javascript
+DIALOG: {
+  firstTouch: () => window.Translations.get('dialog.grave.firstTouch'),
+  returned: () => window.Translations.get('dialog.grave.returned'),
+  leavingAlone: () => window.Translations.get('dialog.grave.leavingAlone'),
+  keeperShout: () => window.Translations.get('dialog.grave.keeperShout'),
+}
+```
+Call sites: `showGraveTalk(window.GameGrave.DIALOG.firstTouch())`
+
+G) Language stubs added: `es`, `zh-CN`, `zh-TW`, `fr`, `ru`, `de`, `ja`, `ko` (empty objects ready for translators).
+
+Files modified: `translations.js` (new), `index.html`, `game.js`, `ui.js`, `grave.js`
+
+--------------------------------------------------------------------------------
+23. WEB AUDIO API GAPLESS LOOPING WRAPPER WITH LAZY LOADING & HTML5 FALLBACK
+--------------------------------------------------------------------------------
+Context: Avoid audio loops having audible cutoffs, latency, or dropouts when resetting `currentTime` on standard HTML5 `<audio>` tags.
+Replication:
+  A) Wrap background tracks using a custom Web Audio wrapper class (`WebAudioMusic`) that loads compressed MP3 files into an `AudioBuffer` and loops them natively.
+  B) Configure the buffer source node's `loopStart` and `loopEnd` properties to mathematically clip silent MP3 padding (e.g. 50ms start/end encoder delays).
+  C) Implement lazy loading to avoid memory bloating (pcm audio data) at game boot, only fetching and decoding when the track is first played.
+  D) Include a try-catch fail trap (e.g. for CORS blocking on direct local file access `file://`) that automatically falls back to native HTML5 `<audio>` elements with default loop attributes:
+     ```javascript
+     class WebAudioMusic {
+       constructor(url, actx, loop) {
+         this.url = url;
+         this.actx = actx;
+         this.loop = loop !== false;
+         this.buffer = null;
+         this.source = null;
+         this.gainNode = actx.createGain();
+         this.gainNode.connect(actx.destination);
+         this._volume = 1.0;
+         this._muted = false;
+         this._paused = true;
+         this._startTime = 0;
+         this._playOffset = 0.05; // Skip MP3 encoder padding
+         this._shouldPlay = false;
+          this._loading = false;
+          this._loadPromise = null;
+          this.fallbackAudio = null;
+       }
+
+       play() {
+         this._shouldPlay = true;
+         this._paused = false;
+         if (this.fallbackAudio) return this.fallbackAudio.play();
+
+          if (!this.buffer) {
+            if (!this._loading) {
+              this._loading = true;
+              const self = this;
+              this._loadPromise = fetch(this.url)
+                .then(res => res.arrayBuffer())
+                .then(ab => loadAudioBuffer(this.actx, ab)) // Uses hybrid Promise/callback wrapper for legacy Safari
+                .then(b => {
+                  self.buffer = b;
+                  self._loading = false;
+                  if (self._shouldPlay) return self.play();
+                })
+                .catch(e => {
+                  // CORS/Local-file fail trap: fallback to standard HTML5 Audio
+                  console.warn("Fallback to HTML5 Audio:", self.url, e);
+                  self.fallbackAudio = new Audio(self.url);
+                  self.fallbackAudio.loop = self.loop;
+                  self.fallbackAudio.muted = self._muted;
+                  self.fallbackAudio.currentTime = self._playOffset;
+                  self._loading = false;
+                  if (self._shouldPlay) return self.fallbackAudio.play().catch(() => {});
+                });
+            }
+            return this._loadPromise || Promise.resolve();
+          }
+
+         if (this.source) { 
+             try { 
+                 this.source.stop(); 
+                 this.source.disconnect();
+             } catch(e) {} 
+             this.source = null;
+         }
+         this.source = this.actx.createBufferSource();
+         this.source.buffer = this.buffer;
+         this.source.loop = this.loop;
+         if (this.loop) {
+           this.source.loopStart = 0.01;
+           this.source.loopEnd = this.buffer.duration - 0.01;
+         }
+         this.source.connect(this.gainNode);
+         this.source.start(0, this._playOffset);
+         this._startTime = this.actx.currentTime - this._playOffset;
+         return Promise.resolve();
+       }
+       // (Other boilerplate: pause, volume/muted/currentTime getters and setters)
+     }
+     ```
+  E) Implement delayed background pre-fetching (e.g. 5 seconds after gameplay start) to populate the browser's HTTP disk cache, eliminating network latency when lazy-loading new tracks.
+
+--------------------------------------------------------------------------------
+24. DYNAMIC FLOATING VIRTUAL JOYSTICK WITH PERSPECTIVE CORRECTION
+--------------------------------------------------------------------------------
+Context: Fixed joystick nodes cause hand fatigue and muscle memory drift on mobile. A dynamic/floating joystick improves ergonomics, but when projecting camera axes onto a sphere, perspective squash and raw cross-products can warp steer alignment.
+Replication:
+  A) Position the joystick base dynamically under the user's initial touch coordinate on pointerdown:
+     ```javascript
+      let startX = 0, startY = 0;
+      let jTouchId = null;
+
+      window.addEventListener('pointerdown', (e) => {
+          if (jTouchId !== null) return;
+          if (e.target.closest('.ui-buttons')) return; // Ignore clicks on UI elements
+
+          jTouchId = e.pointerId;
+          startX = e.clientX;
+          startY = e.clientY;
+
+          // Center joystick base at (startX, startY)
+          joystickBase.style.display = 'block';
+          joystickBase.style.left = (startX - joystickBase.offsetWidth / 2) + 'px';
+          joystickBase.style.top = (startY - joystickBase.offsetHeight / 2) + 'px';
+
+          // Set pointer capture on target or window synchronously during pointerdown turn
+          try { (e.target || joystickBase).setPointerCapture(e.pointerId); } catch (err) {}
+      });
+     ```
+     Note: Calling `setPointerCapture(e.pointerId)` should be done synchronously during the active `pointerdown` event turn (or captured directly on `e.target` / `window`) to prevent `InvalidPointerId` DOMExceptions across mobile browsers.
+   B) Eliminate visual offsets by preserving CSS center transform properties when applying dynamic inline translations to the knob:
+     ```javascript
+     // Correct: translate(-50%, -50%) keeps the knob centered relative to its parent
+     joystickKnob.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+     ```
+  C) Map screen coordinates accurately onto the sphere using the camera's true quaternion basis to eliminate perspective squash/flip alignment issues:
+     ```javascript
+     // 1. Derive the surface unit normal vector at the vehicle position (norm)
+     const norm = pos.clone().normalize();
+
+     // 2. Get the camera's local screen-right and screen-up axes in world coordinates
+     const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+     const camUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+
+     // 3. Project these axes onto the sphere's tangent plane using the unit normal
+     const tRight = camRight.clone().addScaledVector(norm, -camRight.dot(norm)).normalize();
+     const tFwd = camUp.clone().addScaledVector(norm, -camUp.dot(norm)).normalize();
+
+     // 4. Combine with normalized joystick inputs (nx, ny) to derive the target tangent heading vector
+     const desired = tFwd.clone().multiplyScalar(-ny).addScaledVector(tRight, nx).normalize();
+     ```
+  D) Enforce zero-input safety triggers: track touch events globally, resetting joystick inputs the moment the screen touches drop to zero (`e.touches.length === 0`), avoiding stuck inputs.
+
+--------------------------------------------------------------------------------
+25. HOST-CONTAINER MUTE ENFORCEMENT (EMBEDDED PLATFORM SDK AUDIO)
+--------------------------------------------------------------------------------
+Context: Embedded game platforms (YouTube Playables, CrazyGames, Poki) own a mute control outside the game and require the game to honour it — certification fails if any audio is audible while the host reports audio disabled. Suspending the AudioContext alone is NOT sufficient: every `resume()` call site (tap-to-unlock handlers, unpause, per-gesture resumes) silently un-mutes already-playing loops, and relying on the host's change event alone breaks when the mute is toggled during the load screen, before listeners are registered. This section supersedes the unconditional resume pattern shown in section 3B.
+Replication:
+  A) Route every sound through a single master GainNode instead of connecting sources straight to `destination`. A zeroed master gain cannot be undone by a stray `resume()`; a suspended context can:
+     ```javascript
+     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+     const masterGain = audioCtx.createGain();
+     masterGain.gain.value = 1;
+     masterGain.connect(audioCtx.destination);
+
+     function playSound(buffer, volume, loop) {
+         applyHostAudioState();           // self-correct before every sound
+         if (!hostAudioEnabled) return null;
+         const source = audioCtx.createBufferSource();
+         const gain = audioCtx.createGain();
+         source.buffer = buffer;
+         source.loop = !!loop;
+         gain.gain.value = volume;
+         source.connect(gain);
+         gain.connect(masterGain);        // never audioCtx.destination
+         source.start(0);
+         return { source, gain };
+     }
+     ```
+  B) Collapse the host check into ONE reconciliation function and call it from every site that previously called `resume()` directly (pointerdown, button handlers, unpause). Duplicating the check inline at each call site is leak-by-default — one missed site restores all playing loops:
+     ```javascript
+     let hostAudioEnabled = true;
+     let audioUnlocked = false;          // set true on first user gesture
+
+     function isHostAudioEnabled() {
+         if (!window.GameSDK || typeof window.GameSDK.isAudioEnabled !== 'function') return true;
+         try { return window.GameSDK.isAudioEnabled() !== false; } catch (e) { return true; }
+     }
+
+     function applyHostAudioState(forced) {
+         const enabled = typeof forced === 'boolean' ? forced : isHostAudioEnabled();
+         const wasEnabled = hostAudioEnabled;
+         hostAudioEnabled = enabled;
+
+         const target = enabled ? 1 : 0;
+         if (Math.abs(masterGain.gain.value - target) > 0.001) {
+             const now = audioCtx.currentTime;
+             masterGain.gain.cancelScheduledValues(now);
+             masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+             masterGain.gain.linearRampToValueAtTime(target, now + 0.03);
+         }
+
+         if (!enabled) {
+             if (audioCtx.state === 'running') {
+                 // Deferred — see the warning below.
+                 setTimeout(() => {
+                     if (!hostAudioEnabled && audioCtx.state === 'running') {
+                         audioCtx.suspend().catch(() => {});
+                     }
+                 }, 60);
+             }
+             return;
+         }
+         if (audioUnlocked && audioCtx.state === 'suspended') {
+             audioCtx.resume().catch(() => {});
+         }
+         if (!wasEnabled && musicPendingHostUnmute) {   // see (D)
+             musicPendingHostUnmute = false;
+             startMusic();
+         }
+     }
+     ```
+     Warning: A short (~30ms) `linearRampToValueAtTime` avoids an audible click when muting mid-playback, but `suspend()` freezes `currentTime`, so calling it immediately after scheduling the ramp can strand the gain part-way (e.g. 0.5) with no clock left to finish the ramp. That silently reduces the design back to suspend-only enforcement — the exact single point of failure the master gain removes. Always let the fade land (defer the suspend past the ramp duration) before freezing the context.
+  C) Register the host's change event AND enforce the current state immediately — the mute may already have been toggled while assets were loading. Add a low-frequency poll as a safety net so the graph self-corrects even if the event never fires:
+     ```javascript
+     window.GameSDK.onAudioEnabledChange((enabled) => applyHostAudioState(enabled !== false));
+     applyHostAudioState();                                     // enforce state at startup
+     if (typeof window.GameSDK.isAudioEnabled === 'function') {
+         setInterval(() => applyHostAudioState(), 1000);        // fallback reconciliation
+     }
+     ```
+     Note: 1000ms is only the worst-case latency for an idle game — the change event handles the common case instantly, and `playSound` (A) re-checks before every discrete sound.
+  D) Do not silently drop background music that was requested while muted. Record the intent and start it on the unmute edge, otherwise fixing the mute trades one failure for "no music after unmute":
+     ```javascript
+     function startMusic() {
+         audioUnlocked = true;
+         if (!isHostAudioEnabled()) {
+             if (!bgMusic) musicPendingHostUnmute = true;
+             applyHostAudioState(false);
+             return;
+         }
+         if (!bgMusic) bgMusic = playSound(musicBuffer, 0.2, true);
+     }
+     ```
+  E) Never enforce the host mute by zeroing the player's stored volume preferences. Those are typically persisted to a cloud save and would permanently mute the player after the host re-enables audio. Mute at the graph level (master gain + context) and leave the preference values untouched.
+  F) Make the local/dev SDK adapter stateful so the mute path is reproducible without the real platform. A mock whose `isAudioEnabled()` hardcodes `true` and whose change hook only invokes the callback makes the host-mute bug invisible in development:
+     ```javascript
+     isAudioEnabled() { return this._audioEnabled !== false; }   // no console.log — this is polled
+     onAudioEnabledChange(cb) {
+         window.__mockAudioEnabledChange = (enabled) => {
+             this._audioEnabled = enabled !== false;   // getter flips FIRST, mirroring the real host
+             cb(this._audioEnabled);
+         };
+     }
+     ```
+     Verification matrix (all must hold): mute then tap → context `suspended`, master gain `0`, no music; mute via the getter without firing the event → poll silences within its interval; muted + repeated taps + pause/resume cycle → stays silenced; unmute → context `running`, gain `1`, music resumes.
+
+--------------------------------------------------------------------------------
+26. SPRITESHEET FRAME EXTRACTION: CACHE CANVASES, NOT IMAGES
+--------------------------------------------------------------------------------
+Context: When slicing a packed spritesheet into individual frames at load time, the common pattern is to draw each frame onto a scratch canvas and then convert it into an `Image` via `toDataURL()`. This costs one full PNG encode plus one asynchronous decode per frame (~100+ for a typical atlas) and introduces a race: `img.src = dataURL` decodes asynchronously, so frames can draw blank for the first frames after "loading complete".
+Replication:
+  A) Cache the canvas element itself. `drawImage` accepts `HTMLCanvasElement` as a source directly, so the encode/decode round-trip is pure overhead:
+     ```javascript
+     const canvas = document.createElement('canvas');
+     canvas.width = frameData.frame.w;
+     canvas.height = frameData.frame.h;
+     canvas.getContext('2d').drawImage(sheetImg, sx, sy, sw, sh, 0, 0, sw, sh);
+
+     imageCache[spriteId] = canvas;              // ready synchronously
+     // NOT: const img = new Image(); img.src = canvas.toDataURL(); imageCache[id] = img;
+     ```
+  B) Warning: this changes the cache's element type, and any consumer that feeds a cached entry into a DOM `<img>` reads `.src` — which is `undefined` on a canvas. The failure is quiet: `src="undefined"` yields a broken image plus a spurious 404 request, with no thrown error. Audit every `.src` read against the cache and route them through an accessor that handles both element types:
+     ```javascript
+     function getImageSrc(id) {
+         const img = imageCache[id];
+         if (!img) return '';
+         return typeof img.toDataURL === 'function' ? img.toDataURL() : (img.src || '');
+     }
+     ```
+     This keeps the encode lazy — paid only when a DOM element actually needs a URL (icons, modal artwork), not for every frame at load. Verify with `el.complete && el.naturalWidth === 0`, which detects a broken `<img>` that no console error reports.
+
+
+--------------------------------------------------------------------------------
+27. POINTER EVENTS FALLBACK FOR IOS < 13 (TOUCH EVENT COMPATIBILITY)
+--------------------------------------------------------------------------------
+Context: iOS Safari added PointerEvent support in iOS 13 (Sept 2019). Games that exclusively listen for `pointerdown`/`pointermove`/`pointerup` receive zero input on older iOS devices. The game appears to load but is completely unplayable.
+Replication:
+  A) Register pointer event listeners as normal for modern browsers.
+  B) Additionally register touch event listeners only when `window.PointerEvent` is absent (i.e. the browser only understands touch events):
+     ```javascript
+     // Primary: Pointer Events (modern browsers, including iOS 13+)
+     canvas.addEventListener('pointerdown', this._onPointerDown);
+     canvas.addEventListener('pointermove', this._onPointerMove);
+     canvas.addEventListener('pointerup', this._onPointerUp);
+     canvas.addEventListener('pointercancel', this._onPointerCancel);
+
+     // Fallback: Touch Events (only for browsers without PointerEvent, e.g. iOS < 13)
+     if (!window.PointerEvent) {
+         canvas.addEventListener('touchstart', (e) => {
+             this.pointerDown = true;
+             this.setNDC(e.changedTouches[0], true);
+             // init audio, hide hints, etc.
+         }, { passive: true });
+         canvas.addEventListener('touchmove', (e) => {
+             if (this.pointerDown) this.setNDC(e.changedTouches[0], true);
+         }, { passive: true });
+         canvas.addEventListener('touchend', () => { this.pointerDown = false; }, { passive: true });
+         canvas.addEventListener('touchcancel', () => { this.pointerDown = false; }, { passive: true });
+     }
+     ```
+  C) Adapt the `setNDC` method to accept an optional `isTouch` parameter, since touch events store coordinates in `e.changedTouches[i]` rather than directly on `e.clientX`/`e.clientY`:
+     ```javascript
+     function setNDC(e, isTouch) {
+         if (!canvas) return;
+         const r = canvas.getBoundingClientRect();
+         const x = isTouch ? e.clientX || e.pageX : e.clientX;
+         const y = isTouch ? e.clientY || e.pageY : e.clientY;
+         pointerNDC.x = ((x - r.left) / r.width) * 2 - 1;
+         pointerNDC.y = -((y - r.top) / r.height) * 2 + 1;
+     }
+     ```
+  D) Clean up touch listeners in the destroy/teardown method with a guard for the `_onTouchStart` reference:
+     ```javascript
+     function destroy() {
+         canvas.removeEventListener('pointerdown', onPointerDown);
+         canvas.removeEventListener('pointermove', onPointerMove);
+         canvas.removeEventListener('pointerup', onPointerUp);
+         canvas.removeEventListener('pointercancel', onPointerCancel);
+         if (onTouchStart) {
+             canvas.removeEventListener('touchstart', onTouchStart);
+             canvas.removeEventListener('touchmove', onTouchMove);
+             canvas.removeEventListener('touchend', onTouchEnd);
+             canvas.removeEventListener('touchcancel', onTouchCancel);
+         }
+     }
+     ```
+  E) Mark touch event listeners as `{ passive: true }` to avoid blocking the scroll thread — the canvas should already have `touch-action: none` in CSS, but passive:true prevents warnings in Chrome and avoids potential scroll jank on mobile.
+
+--------------------------------------------------------------------------------
+28. HIGH-DPI (RETINA) CANVAS RENDERING VIA DEVICEPIXELRATIO + CTX TRANSFORM
+--------------------------------------------------------------------------------
+Context: A 2D canvas whose backing store is sized in CSS pixels (canvas.width =
+element.clientWidth) renders a low-resolution bitmap that the browser then
+upscales to the physical pixels of the display. On any high-DPI device
+(devicePixelRatio 2-3: most phones, Retina laptops, scaled 4K monitors) this
+looks blurry/soft even when the source art is far higher resolution than needed,
+because the art is first downsampled into the small backing store and then blown
+back up. The fix is to render at the device's real pixel resolution.
+
+This note documents the "canonical" approach (Option 1): keep the backing store
+at device resolution, but keep ALL game/draw/input math in LOGICAL (CSS) pixels
+by applying a base ctx transform of devicePixelRatio each frame. Prefer this when
+starting a new project. (The lower-diff alternative — letting the whole
+coordinate system run in device pixels — is easier to retrofit into a codebase
+that already uses canvas.width as its universal coordinate unit, but it forces
+you to divide by dpr anywhere canvas coordinates are used to position DOM
+elements, e.g. HTML tutorial hands, floating buttons, tooltips.)
+
+Key principle: separate the three distinct pixel spaces and never mix them.
+  - Backing store size   = canvas.width / canvas.height        (device pixels)
+  - CSS/layout size      = canvas.style.width / .height        (logical pixels)
+  - Drawing/input coords = everything you compute in game code (logical pixels)
+
+Replication:
+  A) On resize, size the backing store by dpr but keep the CSS box logical.
+     Round to whole device pixels to avoid sub-pixel seams. Cache logical W/H
+     and dpr on a shared object so every other module reads logical dimensions
+     instead of canvas.width/height:
+     ```javascript
+     function resizeCanvas() {
+         const dpr = window.devicePixelRatio || 1;
+         const logicalW = gameWorld.clientWidth;
+         const logicalH = gameWorld.clientHeight;
+
+         // CSS box stays in logical pixels (what layout/UI overlays align to)
+         canvas.style.width  = logicalW + 'px';
+         canvas.style.height = logicalH + 'px';
+
+         // Backing store is the real device-pixel resolution
+         canvas.width  = Math.round(logicalW * dpr);
+         canvas.height = Math.round(logicalH * dpr);
+
+         // Publish LOGICAL dimensions for all other modules to consume.
+         // IMPORTANT: after this change, no module should read canvas.width /
+         // canvas.height for coordinate math — use these instead.
+         Game.viewW = logicalW;
+         Game.viewH = logicalH;
+         Game.dpr   = dpr;
+     }
+     ```
+  B) At the very start of each frame, reset the transform to the dpr scale BEFORE
+     any drawing. Setting it absolutely (setTransform, not scale) avoids the
+     accumulation bug where repeated ctx.scale(dpr) compounds every frame. Clear
+     in device space, then draw in logical space:
+     ```javascript
+     function render() {
+         // Clear the full device-pixel buffer (identity transform)
+         ctx.setTransform(1, 0, 0, 1, 0, 0);
+         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+         // From here on, 1 unit = 1 logical (CSS) pixel; the dpr scale makes it
+         // land on real device pixels. All game draw code below is unchanged.
+         ctx.setTransform(Game.dpr, 0, 0, Game.dpr, 0, 0);
+
+         // ... existing draw calls, all in logical coordinates ...
+     }
+     ```
+  C) Replace every logical-size read of canvas.width / canvas.height with the
+     cached logical dimensions. Anything that used canvas.width as "how wide is
+     the play area" was implicitly assuming backing-store == CSS size; that
+     assumption is now false. Typical sites:
+     ```javascript
+     // Centering the world / camera:
+     const cx = Game.viewW / 2 + camOffsetX;   // was canvas.width  / 2
+     const cy = Game.viewH / 2 + camOffsetY;   // was canvas.height / 2
+
+     // Any content-scale derived from viewport height:
+     heightScale = Game.viewH / BASE_HEIGHT;   // was canvas.height / BASE_HEIGHT
+
+     // Zoom/breathe pivots that translate to center, scale, translate back:
+     ctx.translate(Game.viewW / 2, Game.viewH / 2);
+     ctx.scale(zoom, zoom);
+     ctx.translate(-Game.viewW / 2, -Game.viewH / 2);
+     ```
+  D) Fix pointer/touch hit-testing so it maps into LOGICAL space (matching the
+     transformed draw space), NOT device space. getBoundingClientRect() already
+     returns CSS pixels, so divide by the rect size and multiply by the logical
+     dimension — the dpr cancels out and never appears here:
+     ```javascript
+     function toWorld(e) {
+         const rect = canvas.getBoundingClientRect();
+         // Map CSS-pixel pointer position to logical canvas coordinates.
+         const x = (e.clientX - rect.left) / rect.width  * Game.viewW;
+         const y = (e.clientY - rect.top)  / rect.height * Game.viewH;
+         // x,y are now in the same logical space as everything drawn under the
+         // dpr transform, so existing screenToGrid()/hit tests work unchanged.
+         return { x, y };
+     }
+     ```
+     NOTE: Do NOT use scaleX = canvas.width / rect.width for this (a common
+     pattern). Under this model canvas.width is device pixels, so that factor is
+     dpr and would push input into device space, misaligning taps by the dpr
+     factor on every high-DPI device.
+  E) DOM overlays positioned from canvas coordinates need NO change under this
+     model: draw coords are logical == CSS pixels, so element.style.left/top set
+     from a world->screen result already align. (This is the main advantage over
+     the device-pixel alternative, where every such site must be divided by dpr.)
+  F) Optional quality tuning, unrelated to resolution but often conflated with
+     "blur":
+     - Ensure the canvas CSS does NOT set `image-rendering: pixelated` /
+       `crisp-edges` unless you specifically want nearest-neighbor (that hardens
+       any remaining scaling into blockiness — the opposite of what you want for
+       smooth art).
+     - For art that is still drawn scaled down at runtime, set
+       `ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';`
+       (default quality is 'low'). Set it once after each getContext and re-set
+       after any context state reset.
+  G) Watch devicePixelRatio changes at runtime: dragging a window between a
+     Retina and non-Retina monitor, or OS zoom changes, mutate
+     window.devicePixelRatio without firing a normal 'resize' in all browsers.
+     Re-run resizeCanvas on such changes:
+     ```javascript
+     let dprMediaQuery;
+     function watchDpr() {
+         if (dprMediaQuery) dprMediaQuery.removeEventListener('change', watchDpr);
+         dprMediaQuery = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+         dprMediaQuery.addEventListener('change', watchDpr, { once: true });
+         resizeCanvas();
+     }
+     watchDpr();
+     ```
+  H) Performance guard: on a dpr=3 phone the backing store is 9x the pixel count
+     of the naive version, which can hurt fill-rate-bound games. If you see frame
+     drops, clamp the multiplier (e.g. `const dpr = Math.min(window.devicePixelRatio || 1, 2);`)
+     — 2x is visually near-indistinguishable from 3x for most art while cutting
+     pixel work by ~55%.
+
+--------------------------------------------------------------------------------
+29. CANCELLING A UI SCALE TRANSFORM ON A SINGLE AXIS
+--------------------------------------------------------------------------------
+Context: Games commonly scale their whole HTML overlay with one variable — `transform: scale(var(--ui-scale))` on each panel — so text, padding and controls grow and shrink together with the viewport. The catch is that `transform` does NOT participate in layout: it scales the box AFTER layout has been computed. So a panel declared `width: 90%` renders at `90% x ui-scale`, not 90%. On a narrow portrait phone where `ui-scale` is well below 1, a modal that should span 90% of the screen visually occupies ~60% and looks lost in the middle of the viewport. Removing the transform fixes the width but de-scales the panel's own contents (fonts, padding, sliders), which is the wrong trade.
+Replication:
+  A) Keep the transform. Pre-divide the dimension you want fixed by the same scale factor, so the transform exactly cancels on that ONE axis while everything else still scales:
+     ```css
+     .modal-box {
+         /* Renders at 90% of the container, not 90% x ui-scale. */
+         width: calc(90% / var(--ui-scale, 1));
+         transform: scale(var(--ui-scale, 1));
+     }
+     ```
+     The layout box is deliberately oversized (at ui-scale 0.66 a 90% target lays out at ~137%); the transform shrinks it back to the intended rendered size. Height, padding, font-size and border-radius are untouched and keep scaling normally.
+  B) Divide EVERY competing constraint on that axis, especially `max-width`. A raw `max-width` is applied during layout, so it clamps the deliberately-oversized box before the transform ever runs and silently caps the rendered result far below target:
+     ```css
+     /* WRONG — the 440px cap binds first: a 90% target needing 535px of layout
+        width is clamped to 440px, rendering at 440 x 0.66 = 290px. */
+     width: calc(90% / var(--ui-scale, 1));
+     max-width: 440px;
+
+     /* RIGHT — the cap is expressed in rendered pixels too. */
+     width: calc(90% / var(--ui-scale, 1));
+     max-width: calc(440px / var(--ui-scale, 1));
+     ```
+     Note the behavioural consequence: the cap is now a constant rendered size rather than one that grows with the UI scale. That is usually what you want for a modal, and the difference is small wherever `ui-scale` is near 1, but it IS a change — scope the whole rule inside a `@media (orientation: portrait)` block if the large-screen cap should keep scaling.
+  C) Warning: if the element is a FLEX ITEM, add `flex-shrink: 0`. Flex items default to `flex-shrink: 1`, so flexbox will shrink the intentionally-oversized layout box back down to the container width and silently undo the division — the symptom is that the rule "does nothing" with no error anywhere:
+     ```css
+     .modal-overlay { display: flex; align-items: center; justify-content: center; }
+     .modal-box {
+         width: calc(90% / var(--ui-scale, 1));
+         max-width: calc(440px / var(--ui-scale, 1));
+         flex-shrink: 0;   /* REQUIRED — otherwise the width above is shrunk away */
+         transform: scale(var(--ui-scale, 1));
+     }
+     ```
+     Absolutely positioned panels are immune to this and need only (A) and (B).
+  D) The oversized layout box overflows its centering container by design. This is safe with the default `transform-origin: 50% 50%`: flex/absolute centring places the box symmetrically, and scaling about the centre pulls it back to the intended rendered width, still centred. Do not change `transform-origin` on such an element without recomputing the offsets.
+  E) Prefer `%` over `vw` for the numerator when the game may be embedded in an iframe (portals such as CrazyGames and YouTube Playables always are). `vw` measures the viewport, `%` measures the game container — inside an iframe narrower than the viewport, `vw` silently overshoots.
+  F) Diagnosing this class of bug: compute the expected rendered size by hand and compare against the measured one. If `rendered ≈ intended x ui-scale`, the transform is being applied on top of an unadjusted layout value:
+     ```javascript
+     const el = document.querySelector('.modal-box');
+     const scale = getComputedStyle(document.documentElement).getPropertyValue('--ui-scale');
+     // getBoundingClientRect() reports the POST-transform (rendered) box;
+     // offsetWidth reports the PRE-transform (layout) box. The ratio is the scale.
+     console.log(el.getBoundingClientRect().width, el.offsetWidth, scale);
+     ```
+     That `getBoundingClientRect()` vs `offsetWidth` divergence is the definitive tell that a transform sits between layout and render.
+
+--------------------------------------------------------------------------------
+30. CAPPING UI SCALE ASPECT RATIO ON EXTREMELY TALL NARROW SCREENS
+--------------------------------------------------------------------------------
+Context: Games that base their UI scaling formula on height (e.g., `(height * dpr) / baseHeight`) work well on standard aspect ratios, but fail on modern ultra-tall narrow devices (e.g. 20:9 or 21:9 phones, or high-aspect-ratio browser windows where `h / w > 1.8`). On these screens, height keeps growing while width remains narrow, causing `ui-scale` to continuously inflate and make UI elements (HUD, panels, buttons) excessively large for the available width.
+Replication:
+  A) In your `applyUiScale` calculation, clamp the effective height used for scaling when portrait aspect ratio exceeds 1.8 (`h / w > 1.8`):
+     ```javascript
+     window.Game.applyUiScale = function () {
+         var dpr = Math.min(window.devicePixelRatio || 1, 2);
+         var world = document.getElementById('game-world');
+         var h = (world && world.clientHeight) || window.innerHeight || 0;
+         var w = (world && world.clientWidth) || window.innerWidth || 0;
+         var isPortrait = h > w;
+         // Cap effective calculation height at 1.8 * width on tall narrow portrait screens
+         var calcH = (isPortrait && w > 0 && (h / w) > 1.8) ? (w * 1.8) : h;
+         var baseHeight = (window.Game && window.Game.BASE_HEIGHT) || 1280;
+         var heightScale = (calcH * dpr) / baseHeight;
+         var uiScale = (heightScale + 0.14) / dpr;
+         document.documentElement.style.setProperty('--ui-scale', isPortrait ? uiScale * 0.9 : uiScale * 1.12);
+     };
+     ```
+  B) Why this works:
+     - On standard screens (h/w <= 1.8), `calcH = h`, so scaling behavior is completely unchanged.
+     - On extra-tall narrow screens (h/w > 1.8), `calcH` locks at `1.8 * w`. Increasing screen height further without increasing width will no longer inflate the UI scale, keeping HUD elements proportionally sized relative to screen width.

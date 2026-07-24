@@ -545,7 +545,8 @@ canvas:focus {
 
 .options-popup,
 .ad-spin-popup {
-    max-width: 420px;
+    max-width: calc(420px / var(--options-scale, 1));
+    flex-shrink: 0;
     background: rgba(12, 12, 32, 0.97);
     border: 1.5px solid rgba(0, 217, 255, 0.6);
     border-radius: 8px;
@@ -560,7 +561,7 @@ canvas:focus {
 }
 
 .options-popup {
-    width: 85%;
+    width: calc(85% / var(--options-scale, 1));
 }
 
 .options-popup-title {
@@ -1854,7 +1855,7 @@ canvas:focus {
     }
 
     .options-popup {
-        width: 95%;
+        width: calc(95% / var(--options-scale, 1));
     }
 
     .options-popup-title {
@@ -2085,7 +2086,9 @@ canvas:focus {
 
 /* Ad Spin Popup Width Override for Large Spinner */
 #ad-spin-popup-overlay .ad-spin-popup {
-    max-width: 693px;
+    width: calc(90% / var(--ad-spin-scale, 1));
+    max-width: calc(693px / var(--ad-spin-scale, 1));
+    flex-shrink: 0;
     transform: scale(var(--ad-spin-scale, 1));
 }
 
