@@ -199,7 +199,7 @@ essentialSoundIds.forEach(id => soundManager.load(id));
 
 const WEAPON_SOUNDS = {
     missile: ['sfx_explosion_small'],
-    nuke: ['sfx_explosion_medium'],
+    nuke: ['sfx_explosion_medium', 'sfx_out_of_ammo'],
     laser: ['sfx_laser_fire', 'sfx_laser_crack', 'sfx_laser_hum'],
     asteroid: ['sfx_launch_heavy', 'sfx_explosion_large'],
     gamma: ['sfx_gamma_charge', 'sfx_gamma_warning', 'sfx_gamma_beam'],
@@ -207,12 +207,14 @@ const WEAPON_SOUNDS = {
     moon: ['sfx_launch_heavy', 'sfx_mystical_moon_explosion', 'sfx_holy_shine'],
     blackhole: ['sfx_black_hole_spawn', 'sfx_black_hole_disappear'],
     kraken: ['sfx_gamma_charge', 'sfx_void_body'],
-    bowling: ['sfx_launch_heavy', 'sfx_bowling_pins'],
+    bowling: ['sfx_launch_heavy', 'sfx_bowling_pins', 'sfx_out_of_ammo'],
     fist: ['sfx_launch_heavy', 'sfx_fist_impact', 'sfx_nom_short'],
     worm: ['sfx_launch_heavy', 'sfx_explosion_medium'],
     star: ['sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade'],
     comet: ['sfx_launch_heavy', 'sfx_holy_shine', 'sfx_explosion_medium'],
-    lightning: ['sfx_lightning', 'sfx_explosion_small']
+    lightning: ['sfx_lightning', 'sfx_explosion_small'],
+    drill: ['sfx_out_of_ammo'],
+    mysterybox: ['sfx_out_of_ammo']
 };
 
 function ensureWeaponSoundsLoaded(weaponType) {

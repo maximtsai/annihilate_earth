@@ -267,6 +267,10 @@ const assets = {
     "sfx_quack": {
         "url": "./assets/quack.mp3",
         "type": "audio"
+    },
+    "sfx_out_of_ammo": {
+        "url": "./assets/sfx_out_of_ammo.mp3",
+        "type": "audio"
     }
 };
 
