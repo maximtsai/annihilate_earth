@@ -22,10 +22,13 @@ function initializePlanet() {
 
     const d = getPlanetSize();
     const radius = d / 2;
+    const radiusSq = radius * radius;
     const cx = hiddenCanvas.width / 2;
     const cy = hiddenCanvas.height / 2;
+    const canvasWidth = hiddenCanvas.width;
+    const canvasHeight = hiddenCanvas.height;
 
-    const imgData = hiddenCtx.createImageData(hiddenCanvas.width, hiddenCanvas.height);
+    const imgData = hiddenCtx.createImageData(canvasWidth, canvasHeight);
     const data = imgData.data;
 
     seedX = Math.random() * 1000;
@@ -33,295 +36,318 @@ function initializePlanet() {
     const cloudSeedX = Math.random() * 1000;
     const cloudSeedY = Math.random() * 1000;
 
-    for (let y = 0; y < hiddenCanvas.height; y++) {
-        for (let x = 0; x < hiddenCanvas.width; x++) {
-            const dx = x - cx;
-            const dy = y - cy;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+    const ROWS_PER_CHUNK = 40;
+    let chunkStartY = 0;
 
-            if (dist <= radius) {
-                const idx = (y * hiddenCanvas.width + x) * 4;
+    return new Promise((resolve) => {
+        function processChunk() {
+            const chunkEndY = Math.min(chunkStartY + ROWS_PER_CHUNK, canvasHeight);
 
-                // 3D Spherical Coordinate Projection (maps flat circle to 3D sphere)
-                const nx = dx / radius;
-                const ny = dy / radius;
+            for (let y = chunkStartY; y < chunkEndY; y++) {
+                for (let x = 0; x < canvasWidth; x++) {
+                    const dx = x - cx;
+                    const dy = y - cy;
+                    const distSq = dx * dx + dy * dy;
 
-                const noiseX = nx * 3.6 + seedX;
-                const noiseY = ny * 3.6 + seedY;
-                const noiseVal = fbm(noiseX, noiseY, 5);
+                    if (distSq <= radiusSq) {
+                        const dist = Math.sqrt(distSq);
+                        const idx = (y * canvasWidth + x) * 4;
 
-                let r = 0, g = 0, b = 0;
+                        // 3D Spherical Coordinate Projection (maps flat circle to 3D sphere)
+                        const nx = dx / radius;
+                        const ny = dy / radius;
 
-                if (currentPlanet === 'earth') {
-                    if (noiseVal < 0.49) {
-                        // Deep Ocean (lightened to a vibrant royal blue)
-                        r = 30; g = 70; b = 145;
-                    } else if (noiseVal < 0.53) {
-                        // Shallow Waters / Coastlines (lightened to a gorgeous tropical cyan)
-                        const t = (noiseVal - 0.49) / 0.04;
-                        r = Math.floor(30 + t * 40);
-                        g = Math.floor(70 + t * 112);
-                        b = Math.floor(145 + t * 98);
-                    } else if (noiseVal < 0.55) {
-                        // Sandy Beach
-                        r = 220; g = 195; b = 145;
-                    } else if (noiseVal < 0.67) {
-                        // Lush Land / Forest
-                        const t = (noiseVal - 0.55) / 0.12;
-                        r = Math.floor(35 + t * 23);
-                        g = Math.floor(126 + t * -24);
-                        b = Math.floor(51 + t * -12);
-                    } else if (noiseVal < 0.77) {
-                        // Mountain Ridges
-                        const t = (noiseVal - 0.67) / 0.10;
-                        r = Math.floor(97 - t * 16);
-                        g = Math.floor(82 - t * 16);
-                        b = Math.floor(71 - t * 16);
-                    } else {
-                        // Polar Ice / Snow Peaks
-                        r = 250; g = 250; b = 252;
-                    }
+                        const noiseX = nx * 3.6 + seedX;
+                        const noiseY = ny * 3.6 + seedY;
+                        const noiseVal = fbm(noiseX, noiseY, 5);
 
-                    // Cloud Layer fBm overlay
-                    const cloudX = nx * 6.0 + cloudSeedX;
-                    const cloudY = ny * 6.0 + cloudSeedY;
-                    const cloudVal = fbm(cloudX, cloudY, 4);
-                    if (cloudVal > 0.55) {
-                        const cloudOpacity = Math.min((cloudVal - 0.55) / 0.18, 0.85);
-                        r = Math.floor(r * (1 - cloudOpacity) + 255 * cloudOpacity);
-                        g = Math.floor(g * (1 - cloudOpacity) + 255 * cloudOpacity);
-                        b = Math.floor(b * (1 - cloudOpacity) + 255 * cloudOpacity);
-                    }
-                } else if (currentPlanet === 'mars') {
-                    // Mars target procedural generation
-                    if (Math.abs(ny) > 0.8 + (noiseVal * 0.08)) {
-                        // Carbon Dioxide Polar Ice Cap (cool off-white pinkish)
-                        r = 245; g = 230; b = 235;
-                    } else {
-                        // Martian geological layers
-                        if (noiseVal < 0.44) {
-                            // Dark volcanic basalt plains
-                            r = 85; g = 38; b = 27;
-                        } else if (noiseVal < 0.52) {
-                            // Medium iron oxide plains
-                            const t = (noiseVal - 0.44) / 0.08;
-                            r = Math.floor(85 + t * 45);
-                            g = Math.floor(38 + t * 20);
-                            b = Math.floor(27 + t * 8);
-                        } else if (noiseVal < 0.72) {
-                            // Classic iron oxide highlands
-                            const t = (noiseVal - 0.52) / 0.20;
-                            r = Math.floor(130 + t * 75);
-                            g = Math.floor(58 + t * 32);
-                            b = Math.floor(35 + t * 13);
-                        } else {
-                            // Bright light orange desert dunes
-                            const t = (noiseVal - 0.72) / 0.28;
-                            r = Math.floor(205 + t * 25);
-                            g = Math.floor(90 + t * 30);
-                            b = Math.floor(48 + t * 12);
+                        let r = 0, g = 0, b = 0;
+
+                        if (currentPlanet === 'earth') {
+                            if (noiseVal < 0.49) {
+                                // Deep Ocean (lightened to a vibrant royal blue)
+                                r = 30; g = 70; b = 145;
+                            } else if (noiseVal < 0.53) {
+                                // Shallow Waters / Coastlines (lightened to a gorgeous tropical cyan)
+                                const t = (noiseVal - 0.49) / 0.04;
+                                r = Math.floor(30 + t * 40);
+                                g = Math.floor(70 + t * 112);
+                                b = Math.floor(145 + t * 98);
+                            } else if (noiseVal < 0.55) {
+                                // Sandy Beach
+                                r = 220; g = 195; b = 145;
+                            } else if (noiseVal < 0.67) {
+                                // Lush Land / Forest
+                                const t = (noiseVal - 0.55) / 0.12;
+                                r = Math.floor(35 + t * 23);
+                                g = Math.floor(126 + t * -24);
+                                b = Math.floor(51 + t * -12);
+                            } else if (noiseVal < 0.77) {
+                                // Mountain Ridges
+                                const t = (noiseVal - 0.67) / 0.10;
+                                r = Math.floor(97 - t * 16);
+                                g = Math.floor(82 - t * 16);
+                                b = Math.floor(71 - t * 16);
+                            } else {
+                                // Polar Ice / Snow Peaks
+                                r = 250; g = 250; b = 252;
+                            }
+
+                            // Cloud Layer fBm overlay
+                            const cloudX = nx * 6.0 + cloudSeedX;
+                            const cloudY = ny * 6.0 + cloudSeedY;
+                            const cloudVal = fbm(cloudX, cloudY, 4);
+                            if (cloudVal > 0.55) {
+                                const cloudOpacity = Math.min((cloudVal - 0.55) / 0.18, 0.85);
+                                r = Math.floor(r * (1 - cloudOpacity) + 255 * cloudOpacity);
+                                g = Math.floor(g * (1 - cloudOpacity) + 255 * cloudOpacity);
+                                b = Math.floor(b * (1 - cloudOpacity) + 255 * cloudOpacity);
+                            }
+                        } else if (currentPlanet === 'mars') {
+                            // Mars target procedural generation
+                            if (Math.abs(ny) > 0.8 + (noiseVal * 0.08)) {
+                                // Carbon Dioxide Polar Ice Cap (cool off-white pinkish)
+                                r = 245; g = 230; b = 235;
+                            } else {
+                                // Martian geological layers
+                                if (noiseVal < 0.44) {
+                                    // Dark volcanic basalt plains
+                                    r = 85; g = 38; b = 27;
+                                } else if (noiseVal < 0.52) {
+                                    // Medium iron oxide plains
+                                    const t = (noiseVal - 0.44) / 0.08;
+                                    r = Math.floor(85 + t * 45);
+                                    g = Math.floor(38 + t * 20);
+                                    b = Math.floor(27 + t * 8);
+                                } else if (noiseVal < 0.72) {
+                                    // Classic iron oxide highlands
+                                    const t = (noiseVal - 0.52) / 0.20;
+                                    r = Math.floor(130 + t * 75);
+                                    g = Math.floor(58 + t * 32);
+                                    b = Math.floor(35 + t * 13);
+                                } else {
+                                    // Bright light orange desert dunes
+                                    const t = (noiseVal - 0.72) / 0.28;
+                                    r = Math.floor(205 + t * 25);
+                                    g = Math.floor(90 + t * 30);
+                                    b = Math.floor(48 + t * 12);
+                                }
+                            }
+
+                            // Secondary fBm dust storm haze overlay
+                            const hazeX = nx * 3.5 + cloudSeedX;
+                            const hazeY = ny * 3.5 + cloudSeedY;
+                            const hazeVal = fbm(hazeX, hazeY, 4);
+                            if (hazeVal > 0.55) {
+                                const hazeOpacity = Math.min((hazeVal - 0.55) / 0.22, 0.4);
+                                r = Math.floor(r * (1 - hazeOpacity) + 240 * hazeOpacity);
+                                g = Math.floor(g * (1 - hazeOpacity) + 160 * hazeOpacity);
+                                b = Math.floor(b * (1 - hazeOpacity) + 110 * hazeOpacity);
+                            }
+                        } else if (currentPlanet === 'neptune') {
+                            // Neptune (Ice Giant) - Deep cobalt, royal blue, ice white currents (brightened!)
+                            if (noiseVal < 0.4) {
+                                // Deep cobalt storm bands
+                                r = 25; g = 55; b = 150;
+                            } else if (noiseVal < 0.65) {
+                                // Main royal blue winds
+                                const t = (noiseVal - 0.4) / 0.25;
+                                r = Math.floor(25 + t * 25);
+                                g = Math.floor(55 + t * 65);
+                                b = Math.floor(150 + t * 75);
+                            } else if (noiseVal < 0.8) {
+                                // High-velocity electric cyan currents
+                                const t = (noiseVal - 0.65) / 0.15;
+                                r = Math.floor(50 + t * 30);
+                                g = Math.floor(120 + t * 90);
+                                b = Math.floor(225 + t * 30);
+                            } else {
+                                // Frosty methane clouds
+                                const t = (noiseVal - 0.8) / 0.2;
+                                r = Math.floor(80 + t * 145);
+                                g = Math.floor(210 + t * 45);
+                                b = 255;
+                            }
+
+                            // Ice haze mist overlay
+                            const cloudX = nx * 3.8 + cloudSeedX;
+                            const cloudY = ny * 3.8 + cloudSeedY;
+                            const cloudVal = fbm(cloudX, cloudY, 4);
+                            if (cloudVal > 0.54) {
+                                const cloudOpacity = Math.min((cloudVal - 0.54) / 0.2, 0.45);
+                                r = Math.floor(r * (1 - cloudOpacity) + 180 * cloudOpacity);
+                                g = Math.floor(g * (1 - cloudOpacity) + 225 * cloudOpacity);
+                                b = Math.floor(b * (1 - cloudOpacity) + 255 * cloudOpacity);
+                            }
+                        } else if (currentPlanet === 'jupiter') {
+                            // Jupiter (Gas Giant) - Alternating creamy/rusty bands & Great Red Spot
+                            const lat = Math.sin(ny * 12 + noiseVal * 1.5);
+                            if (lat < -0.4) {
+                                // Dark chocolate brown belts
+                                r = 105; g = 65; b = 45;
+                            } else if (lat < 0.1) {
+                                // Warm copper rust belts
+                                const t = (lat - (-0.4)) / 0.5;
+                                r = Math.floor(105 + t * 70);
+                                g = Math.floor(65 + t * 40);
+                                b = Math.floor(45 + t * 20);
+                            } else if (lat < 0.6) {
+                                // Cream tan zones
+                                const t = (lat - 0.1) / 0.5;
+                                r = Math.floor(175 + t * 50);
+                                g = Math.floor(105 + t * 90);
+                                b = Math.floor(65 + t * 95);
+                            } else {
+                                // Polar grey/brown bands
+                                const t = (lat - 0.6) / 0.4;
+                                r = Math.floor(225 - t * 80);
+                                g = Math.floor(195 - t * 75);
+                                b = Math.floor(160 - t * 65);
+                            }
+
+                            // Blend Jupiter's Great Red Spot storm (Southern hemisphere)
+                            const spotDistX = (nx - 0.2) / 0.18;
+                            const spotDistY = (ny - 0.35) / 0.12;
+                            const spotDist = Math.sqrt(spotDistX * spotDistX + spotDistY * spotDistY);
+                            if (spotDist < 1.0) {
+                                const blend = Math.max(0, 1.0 - spotDist);
+                                r = Math.floor(r * (1 - blend) + 185 * blend);
+                                g = Math.floor(g * (1 - blend) + 40 * blend);
+                                b = Math.floor(b * (1 - blend) + 30 * blend);
+                            }
+                            // Secondary atmospheric wind storm swirls
+                            const swirlX = nx * 4.5 + cloudSeedX;
+                            const swirlY = ny * 4.5 + cloudSeedY;
+                            const swirlVal = fbm(swirlX, swirlY, 4);
+                            if (swirlVal > 0.55) {
+                                const swirlOpacity = Math.min((swirlVal - 0.55) / 0.22, 0.35);
+                                r = Math.floor(r * (1 - swirlOpacity) + 245 * swirlOpacity);
+                                g = Math.floor(g * (1 - swirlOpacity) + 200 * swirlOpacity);
+                                b = Math.floor(b * (1 - swirlOpacity) + 175 * swirlOpacity);
+                            }
+                        } else if (currentPlanet === 'sun') {
+                            // Boiling convective granules & sunspots
+                            // Shrunk dark sunspots (threshold lowered from 0.38 to 0.26 and base brightness increased)
+                            if (noiseVal < 0.26) {
+                                // Cool solar spots (deep dark brown-red)
+                                r = 90; g = 15; b = 0;
+                            } else if (noiseVal < 0.38) {
+                                // Cooler churning churning convection regions
+                                const t = (noiseVal - 0.26) / 0.12;
+                                r = Math.floor(90 + t * 130);
+                                g = Math.floor(15 + t * 45);
+                                b = 0;
+                            } else if (noiseVal < 0.68) {
+                                // Active solar plasma (bright fiery orange)
+                                const t = (noiseVal - 0.38) / 0.30;
+                                r = Math.floor(220 + t * 35);
+                                g = Math.floor(60 + t * 90);
+                                b = 0;
+                            } else if (noiseVal < 0.86) {
+                                // Hot convection cell crests (intense yellow-gold)
+                                const t = (noiseVal - 0.68) / 0.18;
+                                r = 255;
+                                g = Math.floor(150 + t * 85);
+                                b = Math.floor(t * 30);
+                            } else {
+                                // Superheated prominence points (blinding yellow-white)
+                                const t = (noiseVal - 0.86) / 0.14;
+                                r = 255;
+                                g = 235 + Math.floor(t * 20);
+                                b = Math.floor(30 + t * 170);
+                            }
+
+                            // Dynamic magnetic solar flares / cloud prominence overlay
+                            const flareX = nx * 5.0 + cloudSeedX;
+                            const flareY = ny * 5.0 + cloudSeedY;
+                            const flareVal = fbm(flareX, flareY, 4);
+                            if (flareVal > 0.62) {
+                                const flareOpacity = Math.min((flareVal - 0.62) / 0.18, 0.75);
+                                r = Math.floor(r * (1 - flareOpacity) + 255 * flareOpacity);
+                                g = Math.floor(g * (1 - flareOpacity) + 245 * flareOpacity);
+                                b = Math.floor(b * (1 - flareOpacity) + 180 * flareOpacity);
+                            }
+                        } else if (currentPlanet === 'neutron_star') {
+                            // White surface with blue-tinted structure
+                            if (noiseVal < 0.38) {
+                                r = 230; g = 240; b = 255; // Light blue-white
+                            } else if (noiseVal < 0.65) {
+                                const t = (noiseVal - 0.38) / 0.27;
+                                r = Math.floor(230 + t * 25);
+                                g = Math.floor(240 + t * 15);
+                                b = 255;
+                            } else {
+                                r = 255; g = 255; b = 255; // Pure white
+                            }
+
+                            // Intense electromagnetic current swirl overlay (bright cyan/blue)
+                            const stormX = nx * 5.5 + cloudSeedX;
+                            const stormY = ny * 5.5 + cloudSeedY;
+                            const stormVal = fbm(stormX, stormY, 4);
+                            if (stormVal > 0.55) {
+                                const stormOpacity = Math.min((stormVal - 0.55) / 0.20, 0.65);
+                                r = Math.floor(r * (1 - stormOpacity) + 120 * stormOpacity);
+                                g = Math.floor(g * (1 - stormOpacity) + 190 * stormOpacity);
+                                b = 255;
+                            }
                         }
-                    }
 
-                    // Secondary fBm dust storm haze overlay
-                    const hazeX = nx * 3.5 + cloudSeedX;
-                    const hazeY = ny * 3.5 + cloudSeedY;
-                    const hazeVal = fbm(hazeX, hazeY, 4);
-                    if (hazeVal > 0.55) {
-                        const hazeOpacity = Math.min((hazeVal - 0.55) / 0.22, 0.4);
-                        r = Math.floor(r * (1 - hazeOpacity) + 240 * hazeOpacity);
-                        g = Math.floor(g * (1 - hazeOpacity) + 160 * hazeOpacity);
-                        b = Math.floor(b * (1 - hazeOpacity) + 110 * hazeOpacity);
-                    }
-                } else if (currentPlanet === 'neptune') {
-                    // Neptune (Ice Giant) - Deep cobalt, royal blue, ice white currents (brightened!)
-                    if (noiseVal < 0.4) {
-                        // Deep cobalt storm bands
-                        r = 25; g = 55; b = 150;
-                    } else if (noiseVal < 0.65) {
-                        // Main royal blue winds
-                        const t = (noiseVal - 0.4) / 0.25;
-                        r = Math.floor(25 + t * 25);
-                        g = Math.floor(55 + t * 65);
-                        b = Math.floor(150 + t * 75);
-                    } else if (noiseVal < 0.8) {
-                        // High-velocity electric cyan currents
-                        const t = (noiseVal - 0.65) / 0.15;
-                        r = Math.floor(50 + t * 30);
-                        g = Math.floor(120 + t * 90);
-                        b = Math.floor(225 + t * 30);
-                    } else {
-                        // Frosty methane clouds
-                        const t = (noiseVal - 0.8) / 0.2;
-                        r = Math.floor(80 + t * 145);
-                        g = Math.floor(210 + t * 45);
-                        b = 255;
-                    }
-
-                    // Ice haze mist overlay
-                    const cloudX = nx * 3.8 + cloudSeedX;
-                    const cloudY = ny * 3.8 + cloudSeedY;
-                    const cloudVal = fbm(cloudX, cloudY, 4);
-                    if (cloudVal > 0.54) {
-                        const cloudOpacity = Math.min((cloudVal - 0.54) / 0.2, 0.45);
-                        r = Math.floor(r * (1 - cloudOpacity) + 180 * cloudOpacity);
-                        g = Math.floor(g * (1 - cloudOpacity) + 225 * cloudOpacity);
-                        b = Math.floor(b * (1 - cloudOpacity) + 255 * cloudOpacity);
-                    }
-                } else if (currentPlanet === 'jupiter') {
-                    // Jupiter (Gas Giant) - Alternating creamy/rusty bands & Great Red Spot
-                    const lat = Math.sin(ny * 12 + noiseVal * 1.5);
-                    if (lat < -0.4) {
-                        // Dark chocolate brown belts
-                        r = 105; g = 65; b = 45;
-                    } else if (lat < 0.1) {
-                        // Warm copper rust belts
-                        const t = (lat - (-0.4)) / 0.5;
-                        r = Math.floor(105 + t * 70);
-                        g = Math.floor(65 + t * 40);
-                        b = Math.floor(45 + t * 20);
-                    } else if (lat < 0.6) {
-                        // Cream tan zones
-                        const t = (lat - 0.1) / 0.5;
-                        r = Math.floor(175 + t * 50);
-                        g = Math.floor(105 + t * 90);
-                        b = Math.floor(65 + t * 95);
-                    } else {
-                        // Polar grey/brown bands
-                        const t = (lat - 0.6) / 0.4;
-                        r = Math.floor(225 - t * 80);
-                        g = Math.floor(195 - t * 75);
-                        b = Math.floor(160 - t * 65);
-                    }
-
-                    // Blend Jupiter's Great Red Spot storm (Southern hemisphere)
-                    const spotDistX = (nx - 0.2) / 0.18;
-                    const spotDistY = (ny - 0.35) / 0.12;
-                    const spotDist = Math.sqrt(spotDistX * spotDistX + spotDistY * spotDistY);
-                    if (spotDist < 1.0) {
-                        const blend = Math.max(0, 1.0 - spotDist);
-                        r = Math.floor(r * (1 - blend) + 185 * blend);
-                        g = Math.floor(g * (1 - blend) + 40 * blend);
-                        b = Math.floor(b * (1 - blend) + 30 * blend);
-                    }
-                    // Secondary atmospheric wind storm swirls
-                    const swirlX = nx * 4.5 + cloudSeedX;
-                    const swirlY = ny * 4.5 + cloudSeedY;
-                    const swirlVal = fbm(swirlX, swirlY, 4);
-                    if (swirlVal > 0.55) {
-                        const swirlOpacity = Math.min((swirlVal - 0.55) / 0.22, 0.35);
-                        r = Math.floor(r * (1 - swirlOpacity) + 245 * swirlOpacity);
-                        g = Math.floor(g * (1 - swirlOpacity) + 200 * swirlOpacity);
-                        b = Math.floor(b * (1 - swirlOpacity) + 175 * swirlOpacity);
-                    }
-                } else if (currentPlanet === 'sun') {
-                    // Boiling convective granules & sunspots
-                    // Shrunk dark sunspots (threshold lowered from 0.38 to 0.26 and base brightness increased)
-                    if (noiseVal < 0.26) {
-                        // Cool solar spots (deep dark brown-red)
-                        r = 90; g = 15; b = 0;
-                    } else if (noiseVal < 0.38) {
-                        // Cooler churning churning convection regions
-                        const t = (noiseVal - 0.26) / 0.12;
-                        r = Math.floor(90 + t * 130);
-                        g = Math.floor(15 + t * 45);
-                        b = 0;
-                    } else if (noiseVal < 0.68) {
-                        // Active solar plasma (bright fiery orange)
-                        const t = (noiseVal - 0.38) / 0.30;
-                        r = Math.floor(220 + t * 35);
-                        g = Math.floor(60 + t * 90);
-                        b = 0;
-                    } else if (noiseVal < 0.86) {
-                        // Hot convection cell crests (intense yellow-gold)
-                        const t = (noiseVal - 0.68) / 0.18;
-                        r = 255;
-                        g = Math.floor(150 + t * 85);
-                        b = Math.floor(t * 30);
-                    } else {
-                        // Superheated prominence points (blinding yellow-white)
-                        const t = (noiseVal - 0.86) / 0.14;
-                        r = 255;
-                        g = 235 + Math.floor(t * 20);
-                        b = Math.floor(30 + t * 170);
-                    }
-
-                    // Dynamic magnetic solar flares / cloud prominence overlay
-                    const flareX = nx * 5.0 + cloudSeedX;
-                    const flareY = ny * 5.0 + cloudSeedY;
-                    const flareVal = fbm(flareX, flareY, 4);
-                    if (flareVal > 0.62) {
-                        const flareOpacity = Math.min((flareVal - 0.62) / 0.18, 0.75);
-                        r = Math.floor(r * (1 - flareOpacity) + 255 * flareOpacity);
-                        g = Math.floor(g * (1 - flareOpacity) + 245 * flareOpacity);
-                        b = Math.floor(b * (1 - flareOpacity) + 180 * flareOpacity);
-                    }
-                } else if (currentPlanet === 'neutron_star') {
-                    // White surface with blue-tinted structure
-                    if (noiseVal < 0.38) {
-                        r = 230; g = 240; b = 255; // Light blue-white
-                    } else if (noiseVal < 0.65) {
-                        const t = (noiseVal - 0.38) / 0.27;
-                        r = Math.floor(230 + t * 25);
-                        g = Math.floor(240 + t * 15);
-                        b = 255;
-                    } else {
-                        r = 255; g = 255; b = 255; // Pure white
-                    }
-
-                    // Intense electromagnetic current swirl overlay (bright cyan/blue)
-                    const stormX = nx * 5.5 + cloudSeedX;
-                    const stormY = ny * 5.5 + cloudSeedY;
-                    const stormVal = fbm(stormX, stormY, 4);
-                    if (stormVal > 0.55) {
-                        const stormOpacity = Math.min((stormVal - 0.55) / 0.20, 0.65);
-                        r = Math.floor(r * (1 - stormOpacity) + 120 * stormOpacity);
-                        g = Math.floor(g * (1 - stormOpacity) + 190 * stormOpacity);
-                        b = 255;
+                        data[idx] = r;
+                        data[idx + 1] = g;
+                        data[idx + 2] = b;
+                        data[idx + 3] = 255;
                     }
                 }
+            }
 
-                data[idx] = r;
-                data[idx + 1] = g;
-                data[idx + 2] = b;
-                data[idx + 3] = 255;
+            hiddenCtx.putImageData(imgData, 0, 0, 0, chunkStartY, canvasWidth, chunkEndY - chunkStartY);
+            chunkStartY = chunkEndY;
+
+            if (chunkStartY < canvasHeight) {
+                requestAnimationFrame(processChunk);
+            } else {
+                finish();
             }
         }
-    }
-    hiddenCtx.putImageData(imgData, 0, 0);
 
-    // Count starting pixels
-    initialPixelCount = 0;
-    initialCorePixelCount = 0;
-    const rawData = hiddenCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-    const planetCanvasCX = hiddenCanvas.width / 2;
-    const planetCanvasCY = hiddenCanvas.height / 2;
-    const planetSize = getPlanetSize();
-    const coreRadius = getCoreRadius(planetSize);
+        function finish() {
+            // Count starting pixels directly from typed array data
+            initialPixelCount = 0;
+            initialCorePixelCount = 0;
+            const planetCanvasCX = canvasWidth / 2;
+            const planetCanvasCY = canvasHeight / 2;
+            const planetSize = getPlanetSize();
+            const coreRadius = getCoreRadius(planetSize);
+            const coreRadiusSq = coreRadius * coreRadius;
 
-    let x = 0, y = 0;
-    for (let i = 3; i < rawData.data.length; i += 4) {
-        if (rawData.data[i] > 0) {
-            initialPixelCount++;
-            const dx = x - planetCanvasCX;
-            const dy = y - planetCanvasCY;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            if (d <= coreRadius) {
-                initialCorePixelCount++;
+            let x = 0, y = 0;
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] > 0) {
+                    initialPixelCount++;
+                    const dx = x - planetCanvasCX;
+                    const dy = y - planetCanvasCY;
+                    if (dx * dx + dy * dy <= coreRadiusSq) {
+                        initialCorePixelCount++;
+                    }
+                }
+                x++;
+                if (x >= canvasWidth) {
+                    x = 0;
+                    y++;
+                }
             }
-        }
-        x++;
-        if (x >= hiddenCanvas.width) {
-            x = 0;
-            y++;
-        }
-    }
-    currentPixelCount = initialPixelCount;
-    currentCorePixelCount = initialCorePixelCount;
+            currentPixelCount = initialPixelCount;
+            currentCorePixelCount = initialCorePixelCount;
 
-    // Reset dynamic center of mass
-    planetCenterX = hiddenCanvas.width / 2;
-    planetCenterY = hiddenCanvas.height / 2;
+            // Reset dynamic center of mass
+            planetCenterX = canvasWidth / 2;
+            planetCenterY = canvasHeight / 2;
+
+            resolve();
+        }
+
+        processChunk();
+    });
 }
 
 // Recalculates dynamic center of mass centroid (Optimized flat loop)
