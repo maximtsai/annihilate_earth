@@ -197,9 +197,26 @@ const essentialSoundIds = [
 ];
 essentialSoundIds.forEach(id => soundManager.load(id));
 
+window.deferredSoundIds = [
+    'sfx_laser_fire', 'sfx_laser_hum', 'sfx_laser_crack',
+    'sfx_gamma_charge', 'sfx_gamma_beam', 'sfx_gamma_warning',
+    'sfx_sword_fly', 'sfx_sword_stab', 'sfx_sword_pullout', 'sfx_sword_rumble_loop', 'sfx_holy_shine',
+    'sfx_bowling_pins',
+    'sfx_black_hole_spawn', 'sfx_black_hole_disappear',
+    'sfx_nom_short',
+    'sfx_fist_impact',
+    'sfx_mystical_moon_explosion',
+    'sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade',
+    'sfx_freeze', 'sfx_shatter',
+    'sfx_lightning',
+    'sfx_void_body',
+    'sfx_quack',
+    'sfx_error'
+];
+
 const WEAPON_SOUNDS = {
     missile: ['sfx_explosion_small'],
-    nuke: ['sfx_explosion_medium', 'sfx_out_of_ammo'],
+    nuke: ['sfx_explosion_medium'],
     laser: ['sfx_laser_fire', 'sfx_laser_crack', 'sfx_laser_hum'],
     asteroid: ['sfx_launch_heavy', 'sfx_explosion_large'],
     gamma: ['sfx_gamma_charge', 'sfx_gamma_warning', 'sfx_gamma_beam'],
@@ -207,14 +224,12 @@ const WEAPON_SOUNDS = {
     moon: ['sfx_launch_heavy', 'sfx_mystical_moon_explosion', 'sfx_holy_shine'],
     blackhole: ['sfx_black_hole_spawn', 'sfx_black_hole_disappear'],
     kraken: ['sfx_gamma_charge', 'sfx_void_body'],
-    bowling: ['sfx_launch_heavy', 'sfx_bowling_pins', 'sfx_out_of_ammo'],
+    bowling: ['sfx_launch_heavy', 'sfx_bowling_pins'],
     fist: ['sfx_launch_heavy', 'sfx_fist_impact', 'sfx_nom_short'],
     worm: ['sfx_launch_heavy', 'sfx_explosion_medium'],
     star: ['sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade'],
     comet: ['sfx_launch_heavy', 'sfx_holy_shine', 'sfx_explosion_medium'],
-    lightning: ['sfx_lightning', 'sfx_explosion_small'],
-    drill: ['sfx_out_of_ammo'],
-    mysterybox: ['sfx_out_of_ammo']
+    lightning: ['sfx_lightning', 'sfx_explosion_small']
 };
 
 function ensureWeaponSoundsLoaded(weaponType) {
@@ -6140,6 +6155,9 @@ async function run(mode) {
     window.removeEventListener('resize', resizeLoadingCanvas);
     if (missileDiv.parentNode) missileDiv.parentNode.removeChild(missileDiv);
     loadingScreen.classList.add('fade-out');
+    if (window.deferredSoundIds) {
+        window.deferredSoundIds.forEach(id => soundManager.load(id));
+    }
     setTimeout(() => {
         loadingScreen.style.display = 'none';
     }, 400);

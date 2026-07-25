@@ -17,10 +17,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
             if (now - lastCooldownTextTime >= 1100) {
                 const outOfAmmoText = (translations[currentLanguage] || translations['en']).outOfAmmo || "OUT OF AMMO";
                 addFloatingText(clickX, clickY, outOfAmmoText, 'rgba(255, 120, 180,', 1.3, 45, isMobile ? 36 : 30, 5.5);
-                soundManager.load('sfx_out_of_ammo');
-                if (!soundManager.play('sfx_out_of_ammo')) {
-                    soundManager.play('sfx_error');
-                }
+                soundManager.play('sfx_error');
                 lastCooldownTextTime = now;
             }
             const btn = document.getElementById('btn-' + type);
