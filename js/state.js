@@ -194,24 +194,36 @@ async function queueSaveState(updater) {
     if (isSavingState) return;
 
     isSavingState = true;
+    // Yield once so every updater queued in the same tick joins this batch.
+    // Boot queues several in a row; without this they'd each cost their own
+    // read/write round-trip against the storage backend.
+    await Promise.resolve();
+
     while (stateSaveQueue.length > 0) {
-        const currentUpdater = stateSaveQueue.shift();
+        const batch = stateSaveQueue.splice(0, stateSaveQueue.length);
         try {
             const epoch = saveEpoch;
             const current = await getGameState();
             if (epoch !== saveEpoch) {
-                // A flush ran while we were reading; it already persisted this
-                // updater along with everything else outstanding.
-                forgetUnflushed(currentUpdater);
+                // A flush ran while we were reading; it already persisted these
+                // updaters along with everything else outstanding.
+                batch.forEach(forgetUnflushed);
                 continue;
             }
             const state = (current && current.state) ? current.state : {};
-            currentUpdater(state);
+            for (const updater of batch) {
+                try {
+                    updater(state);
+                } catch (e) {
+                    console.warn('Save updater failed:', e && e.message);
+                }
+            }
+            // One write for the whole batch; skipped entirely if nothing changed.
             await saveGameState(state);
         } catch (error) {
             console.warn('Failed to save state:', error.message);
         }
-        forgetUnflushed(currentUpdater);
+        batch.forEach(forgetUnflushed);
     }
     isSavingState = false;
 }
@@ -228,9 +240,7 @@ function flushSaveStateSync() {
     saveEpoch++;
 
     try {
-        const raw = window.safeLocalStorage.getItem('annihilate_earth_save');
-        const parsed = raw ? JSON.parse(raw) : null;
-        let state = (parsed && typeof parsed === 'object') ? migrateSaveState(parsed) : null;
+        let state = window.readGameStateSync();
         if (!state || typeof state !== 'object') state = {};
 
         for (const updater of pending) {
@@ -241,9 +251,7 @@ function flushSaveStateSync() {
             }
         }
 
-        state._version = SAVE_VERSION;
-        state._savedAt = Date.now();
-        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+        window.saveGameStateSync(state);
     } catch (e) {
         console.warn('Failed to flush state on teardown:', e && e.message);
     }
@@ -316,28 +324,17 @@ function saveUnlockedWeapons() {
     queueSaveState(state => {
         state.unlockedWeapons = unlockedWeapons;
     });
-    try {
-        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
-        const state = saved ? JSON.parse(saved) : {};
-        state.unlockedWeapons = unlockedWeapons;
-        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
-    } catch (e) {
-        console.warn('Failed to save unlocked weapons immediately:', e);
-    }
+    // An unlock is high-value: persist it now rather than waiting for the async
+    // queue. The flush goes through the same versioned, cache-aware write path,
+    // so it can't desync the cache the way a raw storage write would.
+    flushSaveStateSync();
 }
 
 function saveUnlockedTooltipShown() {
     queueSaveState(state => {
         state.unlockedTooltipShown = unlockedTooltipShown;
     });
-    try {
-        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
-        const state = saved ? JSON.parse(saved) : {};
-        state.unlockedTooltipShown = unlockedTooltipShown;
-        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
-    } catch (e) {
-        console.warn('Failed to save unlocked tooltip state:', e);
-    }
+    flushSaveStateSync();
 }
 
 function unlockRandomWeapon() {

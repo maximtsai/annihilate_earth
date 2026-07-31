@@ -234,18 +234,14 @@ function migrateSaveState(state) {
 
 const SAVE_KEY = 'annihilate_earth_save';
 
-const saveGameState = async (state) => {
-    try {
-        // _savedAt lets a load reconcile the cloud copy against the local mirror
-        // when the SDK's debounce dropped the most recent write.
-        const toSave = Object.assign({}, state, { _version: SAVE_VERSION, _savedAt: Date.now() });
-        window.safeLocalStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
-        return { success: true };
-    } catch (e) {
-        console.error('Failed to save state', e);
-        return { success: false };
-    }
-};
+// The parsed save is held in memory and treated as authoritative for the
+// session. Without this, every read hit the storage backend again: on
+// CrazyGames that meant a stream of SDK.data Get calls during boot alone.
+let _saveCache = null;
+let _saveCacheLoaded = false;
+// Serialized form of what is already persisted (minus the timestamp), so a
+// save that changes nothing can be skipped instead of issuing a write.
+let _persistedJson = null;
 
 function parseSave(raw) {
     if (!raw) return null;
@@ -257,7 +253,17 @@ function parseSave(raw) {
     }
 }
 
-const getGameState = async () => {
+// _savedAt changes on every write by definition, so it must not participate in
+// the "did anything actually change?" comparison.
+function serializeForCompare(state) {
+    const copy = Object.assign({}, state);
+    delete copy._savedAt;
+    return JSON.stringify(copy);
+}
+
+function readGameStateSync() {
+    if (_saveCacheLoaded) return _saveCache;
+
     try {
         const primary = parseSave(window.safeLocalStorage.getItem(SAVE_KEY));
         const mirror = parseSave(window.safeLocalStorage.getLocalItem(SAVE_KEY));
@@ -273,12 +279,57 @@ const getGameState = async () => {
             chosen = mirror;
         }
 
-        return { state: chosen ? migrateSaveState(chosen) : null, success: true };
+        _saveCache = chosen ? migrateSaveState(chosen) : null;
+        _persistedJson = _saveCache ? serializeForCompare(_saveCache) : null;
     } catch (e) {
         console.error('Failed to load state', e);
-        return { state: null, success: false };
+        _saveCache = null;
+        _persistedJson = null;
     }
+    _saveCacheLoaded = true;
+    return _saveCache;
+}
+
+function saveGameStateSync(state) {
+    try {
+        const toSave = Object.assign({}, state, { _version: SAVE_VERSION });
+        delete toSave._savedAt;
+        const compare = JSON.stringify(toSave);
+
+        // The cache tracks the live object either way, so an unchanged save
+        // still "succeeds" — it just doesn't touch storage.
+        _saveCache = state;
+        _saveCacheLoaded = true;
+        if (compare === _persistedJson) return { success: true, skipped: true };
+
+        toSave._savedAt = Date.now();
+        window.safeLocalStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+        _persistedJson = compare;
+        return { success: true };
+    } catch (e) {
+        console.error('Failed to save state', e);
+        return { success: false };
+    }
+}
+
+// Drops the in-memory copy so the next read goes back to storage. Needed when
+// the backend can change underneath us — CrazyGames syncs cloud data on login.
+function invalidateGameStateCache() {
+    _saveCache = null;
+    _saveCacheLoaded = false;
+    _persistedJson = null;
+}
+
+const saveGameState = async (state) => saveGameStateSync(state);
+
+const getGameState = async () => {
+    const state = readGameStateSync();
+    return { state: state, success: true };
 };
+
+window.readGameStateSync = readGameStateSync;
+window.saveGameStateSync = saveGameStateSync;
+window.invalidateGameStateCache = invalidateGameStateCache;
 
 function getConfigValue(path, defaultValue) {
     if (!window.gameConfig) return defaultValue;

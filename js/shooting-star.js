@@ -342,6 +342,16 @@
                         const msg = document.getElementById('ad-spin-message');
                         const adSpinYes = document.getElementById('ad-spin-yes');
                         const adSpinNo = document.getElementById('ad-spin-no');
+                        const adblockNotice = document.getElementById('ad-spin-adblock-notice');
+                        const adblockOn = !!(window.hasAdblock || (window.PlatformBridge && window.PlatformBridge.hasAdblock));
+                        const tStar = translations[currentLanguage] || translations['en'];
+
+                        if (typeof window.setAdSpinAdblockNotice === 'function') {
+                            window.setAdSpinAdblockNotice(false);
+                        } else if (adblockNotice) {
+                            adblockNotice.hidden = true;
+                            adblockNotice.style.display = 'none';
+                        }
 
                         if (hasLocked) {
                             if (adSpinYes) {
@@ -349,23 +359,36 @@
                                 adSpinYes.classList.remove('glow-shine');
                             }
                             if (adSpinNo) adSpinNo.disabled = true;
-                            if (msg) msg.textContent = (translations[currentLanguage] || translations['en']).shootingStarMessage || 'SPIN THE WHEEL TO DISCOVER A WEAPON!';
+                            if (msg) msg.textContent = tStar.shootingStarMessage || 'SPIN THE WHEEL TO DISCOVER A WEAPON!';
                             window.starSelectedWeapon = null;
 
                              const spinner = new WeaponSpinner(container, {
                                  isStar: true,
                                  onStop: (weaponToUnlock) => {
                                      window.starSelectedWeapon = weaponToUnlock;
-                                     if (adSpinYes) {
-                                         adSpinYes.disabled = false;
-                                         adSpinYes.classList.add('glow-shine');
-                                     }
                                      if (adSpinNo) adSpinNo.disabled = false;
 
                                      const btn = document.getElementById(`btn-${weaponToUnlock}`);
                                      const name = btn ? btn.querySelector('.weapon-name').innerText.replace('\n', ' ') : weaponToUnlock.toUpperCase();
                                      const icon = btn ? btn.querySelector('.weapon-icon').innerText : '⚡';
-                                     if (msg) msg.textContent = (translations[currentLanguage] || translations['en']).watchAdToUnlock.replace('{name}', `${icon} ${name}`);
+                                     if (msg) msg.textContent = (tStar.watchAdToUnlock || 'WATCH AD TO UNLOCK {name}?').replace('{name}', `${icon} ${name}`);
+
+                                     if (adblockOn) {
+                                         if (adSpinYes) {
+                                             adSpinYes.disabled = true;
+                                             adSpinYes.classList.remove('glow-shine');
+                                         }
+                                         if (typeof window.setAdSpinAdblockNotice === 'function') {
+                                             window.setAdSpinAdblockNotice(true);
+                                         } else if (adblockNotice) {
+                                             adblockNotice.textContent = tStar.adblockWeaponLocked || 'AdBlock detected. New weapon locked.';
+                                             adblockNotice.hidden = false;
+                                             adblockNotice.style.display = 'block';
+                                         }
+                                     } else if (adSpinYes) {
+                                         adSpinYes.disabled = false;
+                                         adSpinYes.classList.add('glow-shine');
+                                     }
                                  }
                              });
                              spinner.start();
@@ -373,7 +396,7 @@
                             // Show disabled greyed out spinner, disable watch/cancel buttons
                             if (adSpinYes) adSpinYes.disabled = true;
                             if (adSpinNo) adSpinNo.disabled = true;
-                            if (msg) msg.innerHTML = ((translations[currentLanguage] || translations['en']).allWeaponsUnlocked || 'ALL WEAPONS\nUNLOCKED!').replace('\n', '<br>');
+                            if (msg) msg.innerHTML = (tStar.allWeaponsUnlocked || 'ALL WEAPONS\nUNLOCKED!').replace('\n', '<br>');
                             new WeaponSpinner(container);
                         }
                     }

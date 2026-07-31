@@ -5875,11 +5875,13 @@ async function run(mode) {
         const adSpinMsg = document.getElementById('ad-spin-message');
         const adSpinNo = document.getElementById('ad-spin-no');
         const adSpinYes = document.getElementById('ad-spin-yes');
+        const adSpinAdblock = document.getElementById('ad-spin-adblock-notice');
         if (adSpinTitle) adSpinTitle.textContent = t.specialSpin || 'SPECIAL SPIN!';
         if (adSpinClose) adSpinClose.textContent = t.close || 'X';
         if (adSpinMsg) adSpinMsg.textContent = t.spinToDiscover || 'SPIN TO DISCOVER A WEAPON!';
         if (adSpinNo) adSpinNo.textContent = t.nevermind || 'NEVERMIND';
         if (adSpinYes) adSpinYes.textContent = t.watch || 'WATCH!';
+        if (adSpinAdblock) adSpinAdblock.textContent = t.adblockWeaponLocked || 'AdBlock detected. New weapon locked.';
 
         // New best badge
         const bestBadge = document.getElementById('new-best-badge');
@@ -6005,6 +6007,11 @@ async function run(mode) {
             // Clear saved progress (SDK.data when available, else localStorage)
             window.safeLocalStorage.removeItem('annihilate_earth_save');
             try { localStorage.removeItem('annihilate_earth_save'); } catch (e) { }
+            // Drop the in-memory copy too, or the next save would write the
+            // old progress straight back over the wipe.
+            if (typeof window.invalidateGameStateCache === 'function') {
+                window.invalidateGameStateCache();
+            }
 
             // Reset state variables
             unlockedPlanets = ['earth'];
@@ -6051,6 +6058,16 @@ async function run(mode) {
     const adSpinYes = document.getElementById('ad-spin-yes');
     const adSpinNo = document.getElementById('ad-spin-no');
     const adSpinClose = document.getElementById('ad-spin-close');
+    const adSpinAdblockNotice = document.getElementById('ad-spin-adblock-notice');
+
+    function setAdSpinAdblockNotice(show) {
+        if (!adSpinAdblockNotice) return;
+        const t = translations[currentLanguage] || translations['en'];
+        adSpinAdblockNotice.textContent = t.adblockWeaponLocked || 'AdBlock detected. New weapon locked.';
+        adSpinAdblockNotice.hidden = !show;
+        adSpinAdblockNotice.style.display = show ? 'block' : 'none';
+    }
+    window.setAdSpinAdblockNotice = setAdSpinAdblockNotice;
 
     function resumeGameplayIfNeeded() {
         if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
@@ -6064,6 +6081,13 @@ async function run(mode) {
     if (adSpinYes) {
         adSpinYes.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (adSpinYes.disabled) return;
+            if (window.hasAdblock || (window.PlatformBridge && window.PlatformBridge.hasAdblock)) {
+                setAdSpinAdblockNotice(true);
+                adSpinYes.disabled = true;
+                adSpinYes.classList.remove('glow-shine');
+                return;
+            }
             soundManager.play('sfx_ui_switch');
             adSpinYes.classList.remove('glow-shine');
 
@@ -6105,6 +6129,7 @@ async function run(mode) {
             }
 
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+            setAdSpinAdblockNotice(false);
         });
     }
 
@@ -6117,6 +6142,7 @@ async function run(mode) {
                 window.activeWeaponSpinner.destroy();
             }
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+            setAdSpinAdblockNotice(false);
             resumeGameplayIfNeeded();
         });
     }
@@ -6130,6 +6156,7 @@ async function run(mode) {
                 window.activeWeaponSpinner.destroy();
             }
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+            setAdSpinAdblockNotice(false);
             resumeGameplayIfNeeded();
         });
     }
@@ -6208,27 +6235,7 @@ async function run(mode) {
         });
     });
 
-    // Fullscreen Option Logic
-
-    const fsCheckbox = document.getElementById('fullscreen-checkbox');
-    if (fsCheckbox) {
-        fsCheckbox.addEventListener('change', (e) => {
-            toggleFullscreen(fsCheckbox.checked);
-            soundManager.play('sfx_ui_switch');
-        });
-    }
-
-    function updateFullscreenCheckbox() {
-        const isCurrentlyFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-        if (fsCheckbox) {
-            fsCheckbox.checked = isCurrentlyFullscreen;
-        }
-    }
-
-    document.addEventListener('fullscreenchange', updateFullscreenCheckbox);
-    document.addEventListener('webkitfullscreenchange', updateFullscreenCheckbox);
-    document.addEventListener('mozfullscreenchange', updateFullscreenCheckbox);
-    document.addEventListener('MSFullscreenChange', updateFullscreenCheckbox);
+    // Fullscreen toggle is hidden: CrazyGames provides its own fullscreen control.
 
     // Vibration Option Logic
     const vibCheckbox = document.getElementById('vibration-checkbox');

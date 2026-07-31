@@ -50,6 +50,7 @@ window.PlatformBridge = {
                         console.log("[PlatformBridge] CrazyGames SDK successfully initialized.");
 
                         this._setupSettingsListener();
+                        this._setupAuthListener();
                         this._migrateLocalSaveToDataModule();
                         this._startLoadingIfNeeded();
                         // Any gameplayStart/Stop the game issued while the SDK
@@ -97,6 +98,24 @@ window.PlatformBridge = {
 
         if (game.settings) applyMute(game.settings);
         game.addSettingsChangeListener(applyMute);
+    },
+
+    // Signing in makes the SDK sync cloud data into the data module, so the
+    // save we have cached in memory may no longer match what's stored. Drop it
+    // and re-read rather than writing a stale copy back over the cloud save.
+    _setupAuthListener: function() {
+        try {
+            const user = window.CrazyGames.SDK.user;
+            if (!user || typeof user.addAuthListener !== 'function') return;
+            user.addAuthListener(() => {
+                console.log("[PlatformBridge] Auth changed; invalidating cached save.");
+                if (typeof window.invalidateGameStateCache === 'function') {
+                    window.invalidateGameStateCache();
+                }
+            });
+        } catch (e) {
+            console.warn("[PlatformBridge] Auth listener setup failed:", e);
+        }
     },
 
     _migrateLocalSaveToDataModule: function() {
