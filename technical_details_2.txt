@@ -947,7 +947,9 @@ Replication:
      canvas.addEventListener('pointerup', this._onPointerUp);
      canvas.addEventListener('pointercancel', this._onPointerCancel);
 
-     // Fallback: Touch Events (only for browsers without PointerEvent, e.g. iOS < 13)
+     // Fallback: Touch Events (strictly ONLY for legacy browsers without PointerEvent, e.g. iOS < 13)
+     // CRITICAL: Do NOT register touch listeners unconditionally alongside PointerEvents, or modern touch devices
+     // will fire both pointerdown and touchstart, causing duplicate actions/spawns per single tap.
      if (!window.PointerEvent) {
          canvas.addEventListener('touchstart', (e) => {
              this.pointerDown = true;
@@ -1129,75 +1131,213 @@ Replication:
      pixel work by ~55%.
 
 --------------------------------------------------------------------------------
-29. CANCELLING A UI SCALE TRANSFORM ON A SINGLE AXIS
+29. ASSET LOADER FAILURE HANDLING AND AUTOMATIC RETRY
 --------------------------------------------------------------------------------
-Context: Games commonly scale their whole HTML overlay with one variable — `transform: scale(var(--ui-scale))` on each panel — so text, padding and controls grow and shrink together with the viewport. The catch is that `transform` does NOT participate in layout: it scales the box AFTER layout has been computed. So a panel declared `width: 90%` renders at `90% x ui-scale`, not 90%. On a narrow portrait phone where `ui-scale` is well below 1, a modal that should span 90% of the screen visually occupies ~60% and looks lost in the middle of the viewport. Removing the transform fixes the width but de-scales the panel's own contents (fonts, padding, sliders), which is the wrong trade.
+Context: Flaky mobile connections, CDN hiccups and captive-portal proxies drop
+individual asset requests. Nearly every loader (Phaser 3's LoaderPlugin, PIXI
+Assets, three.js LoadingManager, bare Promise.all wrappers) still fires its
+"batch finished" event when files inside the batch failed. The game then boots
+with missing textures and crashes later at first use, far from the real cause.
+The goal is to retry transient failures automatically and, when they are not
+recoverable, halt boot and tell the player instead of continuing into a broken
+session. The rules below are engine-agnostic; the reference implementation is
+Phaser 3 (verified on v3.90).
+
 Replication:
-  A) Keep the transform. Pre-divide the dimension you want fixed by the same scale factor, so the transform exactly cancels on that ONE axis while everything else still scales:
-     ```css
-     .modal-box {
-         /* Renders at 90% of the container, not 90% x ui-scale. */
-         width: calc(90% / var(--ui-scale, 1));
-         transform: scale(var(--ui-scale, 1));
+  A) VERIFY THE FAILURE EVENT NAME AGAINST THE ACTUAL ENGINE BUILD.
+     Subscribing to an event name that does not exist fails silently: the
+     handler never runs, nothing throws, and the feature looks implemented. This
+     is the most common way retry logic ships dead. In Phaser 3 the per-file
+     failure event is `loaderror` - there is NO `filefailed` event. Enumerate
+     the real names rather than trusting memory or docs:
+     ```javascript
+     console.log(Object.values(Phaser.Loader.Events));
+     // ["addfile","complete","filecomplete","filecomplete-","loaderror",
+     //  "load","fileprogress","postprocess","progress","start"]
+     ```
+     Engine-agnostic verification: register the handler, request a URL that is
+     known to 404, and assert the handler actually ran. Make this a boot-time
+     smoke test if the loader is ever swapped or upgraded.
+
+  B) RETRY THE REQUEST YOU MADE, NOT THE FILE THE LOADER REPORTS.
+     Composite assets (multiatlas, atlas+json, spritesheet, bitmap font, audio
+     sprite) expand into several sub-files, and the failure event reports the
+     SUB-FILE. Re-adding that sub-file does not rebuild the parent asset, and
+     its key is often an internal one that is meaningless to the game. Observed
+     in Phaser 3 for `load.multiatlas('roomClown', 'clown.json')`:
+       - manifest 404 -> { key: "roomClown", type: "json" }
+       - texture page 404 -> { key: "MA13_sprites/clown/clown.png", type: "image" }
+     Neither reports type "multiatlas", so a `switch (file.type)` over the types
+     the game actually requested silently matches nothing. Resolve back to the
+     originating request first. Phaser exposes a `multiFile` back-pointer:
+     ```javascript
+     function getAssetRequest(file) {
+         let owner = file.multiFile || file,          // parent request, or the file itself
+             url = owner.url;
+         // MultiFile keeps its parts in files[]; files[0] is the manifest.
+         if (url === undefined && owner.files && owner.files.length) {
+             url = owner.files[0].url;
+         }
+         return { key: owner.key, type: owner.type, url: url === undefined ? file.url : url };
      }
      ```
-     The layout box is deliberately oversized (at ui-scale 0.66 a 90% target lays out at ~137%); the transform shrinks it back to the intended rendered size. Height, padding, font-size and border-radius are untouched and keep scaling normally.
-  B) Divide EVERY competing constraint on that axis, especially `max-width`. A raw `max-width` is applied during layout, so it clamps the deliberately-oversized box before the transform ever runs and silently caps the rendered result far below target:
-     ```css
-     /* WRONG — the 440px cap binds first: a 90% target needing 535px of layout
-        width is clamped to 440px, rendering at 440 x 0.66 = 290px. */
-     width: calc(90% / var(--ui-scale, 1));
-     max-width: 440px;
-
-     /* RIGHT — the cap is expressed in rendered pixels too. */
-     width: calc(90% / var(--ui-scale, 1));
-     max-width: calc(440px / var(--ui-scale, 1));
-     ```
-     Note the behavioural consequence: the cap is now a constant rendered size rather than one that grows with the UI scale. That is usually what you want for a modal, and the difference is small wherever `ui-scale` is near 1, but it IS a change — scope the whole rule inside a `@media (orientation: portrait)` block if the large-screen cap should keep scaling.
-  C) Warning: if the element is a FLEX ITEM, add `flex-shrink: 0`. Flex items default to `flex-shrink: 1`, so flexbox will shrink the intentionally-oversized layout box back down to the container width and silently undo the division — the symptom is that the rule "does nothing" with no error anywhere:
-     ```css
-     .modal-overlay { display: flex; align-items: center; justify-content: center; }
-     .modal-box {
-         width: calc(90% / var(--ui-scale, 1));
-         max-width: calc(440px / var(--ui-scale, 1));
-         flex-shrink: 0;   /* REQUIRED — otherwise the width above is shrunk away */
-         transform: scale(var(--ui-scale, 1));
+     Portable alternative that works on ANY loader and needs no engine
+     internals: record every request through a thin wrapper and replay it
+     verbatim. Prefer this when the engine has no parent back-pointer:
+     ```javascript
+     const manifest = new Map();                       // key -> {method, args}
+     function queueAsset(loader, method, ...args) {
+         manifest.set(args[0], { method, args });
+         loader[method](...args);
      }
-     ```
-     Absolutely positioned panels are immune to this and need only (A) and (B).
-  D) The oversized layout box overflows its centering container by design. This is safe with the default `transform-origin: 50% 50%`: flex/absolute centring places the box symmetrically, and scaling about the centre pulls it back to the intended rendered width, still centred. Do not change `transform-origin` on such an element without recomputing the offsets.
-  E) Prefer `%` over `vw` for the numerator when the game may be embedded in an iframe (portals such as CrazyGames and YouTube Playables always are). `vw` measures the viewport, `%` measures the game container — inside an iframe narrower than the viewport, `vw` silently overshoots.
-  F) Diagnosing this class of bug: compute the expected rendered size by hand and compare against the measured one. If `rendered ≈ intended x ui-scale`, the transform is being applied on top of an unadjusted layout value:
-     ```javascript
-     const el = document.querySelector('.modal-box');
-     const scale = getComputedStyle(document.documentElement).getPropertyValue('--ui-scale');
-     // getBoundingClientRect() reports the POST-transform (rendered) box;
-     // offsetWidth reports the PRE-transform (layout) box. The ratio is the scale.
-     console.log(el.getBoundingClientRect().width, el.offsetWidth, scale);
-     ```
-     That `getBoundingClientRect()` vs `offsetWidth` divergence is the definitive tell that a transform sits between layout and render.
-
---------------------------------------------------------------------------------
-30. CAPPING UI SCALE ASPECT RATIO ON EXTREMELY TALL NARROW SCREENS
---------------------------------------------------------------------------------
-Context: Games that base their UI scaling formula on height (e.g., `(height * dpr) / baseHeight`) work well on standard aspect ratios, but fail on modern ultra-tall narrow devices (e.g. 20:9 or 21:9 phones, or high-aspect-ratio browser windows where `h / w > 1.8`). On these screens, height keeps growing while width remains narrow, causing `ui-scale` to continuously inflate and make UI elements (HUD, panels, buttons) excessively large for the available width.
-Replication:
-  A) In your `applyUiScale` calculation, clamp the effective height used for scaling when portrait aspect ratio exceeds 1.8 (`h / w > 1.8`):
-     ```javascript
-     window.Game.applyUiScale = function () {
-         var dpr = Math.min(window.devicePixelRatio || 1, 2);
-         var world = document.getElementById('game-world');
-         var h = (world && world.clientHeight) || window.innerHeight || 0;
-         var w = (world && world.clientWidth) || window.innerWidth || 0;
-         var isPortrait = h > w;
-         // Cap effective calculation height at 1.8 * width on tall narrow portrait screens
-         var calcH = (isPortrait && w > 0 && (h / w) > 1.8) ? (w * 1.8) : h;
-         var baseHeight = (window.Game && window.Game.BASE_HEIGHT) || 1280;
-         var heightScale = (calcH * dpr) / baseHeight;
-         var uiScale = (heightScale + 0.14) / dpr;
-         document.documentElement.style.setProperty('--ui-scale', isPortrait ? uiScale * 0.9 : uiScale * 1.12);
+     const retry = (loader, key) => {
+         const r = manifest.get(key);
+         loader[r.method](...r.args);
      };
      ```
-  B) Why this works:
-     - On standard screens (h/w <= 1.8), `calcH = h`, so scaling behavior is completely unchanged.
-     - On extra-tall narrow screens (h/w > 1.8), `calcH` locks at `1.8 * w`. Increasing screen height further without increasing width will no longer inflate the UI scale, keeping HUD elements proportionally sized relative to screen width.
+
+  C) "BATCH COMPLETE" IS NOT "LOAD SUCCEEDED". GATE BOOT ON OUTSTANDING RETRIES.
+     A retry is scheduled behind a backoff timer, so the loader will reach
+     `complete` for the remaining files while retries are still on the clock. At
+     that instant the permanent-failure set is still empty, so a naive
+     `if (failed.size > 0) showError(); else boot();` check boots the game as if
+     everything loaded. Track work in flight and make completion a no-op until
+     it drains:
+     ```javascript
+     if (assetRetry.pending > 0) return;    // a retry is still scheduled/queued
+     if (assetLoadHasFailures()) { showLoadingFailureUI(scene); return; }
+     boot();
+     ```
+     Increment `pending` at the moment of failure (not when the timer fires) and
+     decrement it only once the request has been handed back to the loader.
+
+  D) MAKE COMPLETION HANDLERS FIRE-ONCE / IDEMPOTENT.
+     Every retry restarts the loader, so `complete` fires several times.
+     Pre-retry code typically assumes exactly one completion and will re-run
+     boot animations, rebuild UI, and call `destroy()` on already-destroyed
+     objects. Guard with an explicit latch:
+     ```javascript
+     let bootLoadHandled = false;
+     ...
+     if (bootLoadHandled) return;
+     bootLoadHandled = true;
+     ```
+     The same applies to any secondary `load.once("complete", ...)` handler (for
+     example a deferred/lazy batch registering its sounds - see section 18). If
+     retries are outstanding when it fires, it must re-arm itself rather than
+     write the assets off as failed:
+     ```javascript
+     let onDeferredComplete = () => {
+         if (assetRetry.pending > 0) { scene.load.once("complete", onDeferredComplete); return; }
+         registerDeferredAssets();
+     };
+     scene.load.once("complete", onDeferredComplete);
+     ```
+
+  E) A MANUAL "RETRY" BUTTON MUST RE-QUEUE THE FAILED REQUESTS.
+     Clearing the bookkeeping and calling `loader.start()` does NOT retry
+     anything: the failed files are no longer in the queue, so the loader runs
+     an empty batch, emits `complete` immediately, and - with the failure set
+     just cleared - reports success. The game boots with the assets still
+     missing, which is worse than the original error. Keep the request
+     descriptors and re-issue them:
+     ```javascript
+     let reqs = Object.values(assetRetry.failedReqs);
+     assetRetry.counts = {};
+     assetRetry.failedReqs = {};
+     let queued = 0;
+     for (const req of reqs) if (requeueAsset(scene, req)) queued++;
+     if (queued === 0) {                       // nothing re-issuable: stay failed
+         for (const req of reqs) assetRetry.failedReqs[req.key] = req;
+         showLoadingFailureUI(scene);
+         return;
+     }
+     scene.load.start();
+     ```
+     Verify by asserting `loader.totalToLoad > 0` after the press.
+
+  F) INSTALL THE HANDLER EXACTLY ONCE.
+     The loader's emitter usually lives on the scene/app and outlives each
+     batch. Calling the setup function again for a second batch (a deferred
+     load, a level load) adds a DUPLICATE listener that is never removed. Both
+     copies then run per failure: the attempt counter double-increments, so
+     MAX_RETRIES = 3 yields one or two real attempts, and every failed file is
+     queued twice. Latch the installation, and let repeat calls only refresh the
+     callback:
+     ```javascript
+     function setupLoaderRetryHandlers(scene, onPermanentFailure) {
+         if (onPermanentFailure) assetRetry.onPermanentFailure = onPermanentFailure;
+         if (assetRetry.installed) return;
+         assetRetry.installed = true;
+         scene.load.on("loaderror", handleLoadError);
+     }
+     ```
+     Audit with `loader.listenerCount("loaderror")` - it must stay at 1.
+
+  G) RESPECT LOADER STATE WHEN RESTARTING.
+     `LoaderPlugin.start()` is ignored unless the loader is idle
+     (`isReady()` is true for IDLE/COMPLETE only). Calling it mid-batch leaves
+     the re-added file parked in the queue forever, and because the boot gate in
+     (C) waits on it, the game hangs on the loading bar - a worse failure than a
+     missing texture. Wait for the loader to drain instead of assuming:
+     ```javascript
+     function scheduleRequeue(scene, req, delay) {
+         setTimeout(() => {
+             if (scene.load.isLoading()) { scheduleRequeue(scene, req, 250); return; }
+             assetRetry.pending--;
+             requeueAsset(scene, req) ? scene.load.start() : markPermanentlyFailed(req);
+         }, delay);
+     }
+     ```
+
+  H) CAP ATTEMPTS AND BACK OFF; TREAT UNKNOWN TYPES AS PERMANENT.
+     Use a small cap (3) with linear or exponential backoff clamped to a few
+     seconds - `Math.min(1000 * attempt, 3000)`. An unbounded retry loop against
+     a genuinely missing file is an infinite timer chain that burns battery for
+     the rest of the session. If the type has no re-issue rule, fail it
+     immediately and loudly rather than counting it down silently.
+
+  I) GUARD THE FAILURE UI AGAINST DESTROYED OBJECTS.
+     The failure UI usually mutates loading-screen widgets ("LOADING
+     INTERRUPTED"), but those are destroyed once boot succeeds. A destroyed
+     Phaser GameObject is still a live truthy reference, so `if (obj)` passes
+     and `obj.setText(...)` then throws inside the texture update
+     (`Cannot read properties of null (reading 'drawImage')`). Check that the
+     object is still attached to a scene:
+     ```javascript
+     function setLoadingTextSafe(text) {
+         let t = gameObjectsTemp.loadingText;
+         if (t && t.scene) t.setText(text);     // `t.scene` is nulled by destroy()
+     }
+     ```
+     Parent the failure UI to the same container as the rest of the loading
+     screen so it inherits its transform, and destroy it when a later attempt
+     succeeds.
+
+  J) AUTO-RESUME SUSPENDED AUDIO CONTEXTS ON FIRST INPUT.
+     Unrelated to retries but part of the same "boot survived a hostile
+     environment" pass - browser autoplay policy suspends the context until a
+     gesture:
+     ```javascript
+     window.addEventListener('pointerdown', () => {
+         const ctx = scene.sound && scene.sound.context;      // undefined on the HTML5 fallback
+         if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+     });
+     ```
+
+  K) TEST MATRIX - none of this is observable without deliberately broken
+     assets, and every rule above corresponds to a bug that testing only the
+     happy path will miss:
+       1. Permanent failure: point a request at a 404. Expect exactly
+          MAX_RETRIES warnings (not 2x - that indicates the duplicate listener
+          from (F)) followed by one permanent-failure error.
+       2. Recovery: request a composite asset whose sub-file is missing, then
+          create the file while the backoff is running. Expect the retry to
+          succeed, the asset to appear in the texture/audio cache, and NO
+          permanent failure. This is the case that proves (B) - it fails if the
+          retry re-issued the sub-file instead of the parent request.
+       3. Manual retry: after a permanent failure, press the button and assert
+          `totalToLoad > 0` and that a fresh attempt cycle actually starts.
+       4. Clean boot: assert the happy path still boots exactly once
+          (`bootLoadHandled` latches, boot logic does not re-run).
+

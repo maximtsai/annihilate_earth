@@ -965,7 +965,7 @@ canvas:focus {
     justify-content: center;
     gap: calc(5px * var(--ui-scale));
     outline: none;
-    overflow: hidden;
+    /* overflow:hidden removed to allow ::after touch-hitbox to extend outside bounds */
 }
 
 .weapon-button:not(.locked-active):not(.cooldown-active) {
@@ -1016,6 +1016,19 @@ canvas:focus {
     outline: none;
     text-shadow: 0 0 10px rgba(0, 217, 255, 0.95);
     box-shadow: 0 0 8px rgba(0, 217, 255, 0.15);
+    /* Touch hitbox (#10): position:relative enables the ::after expansion */
+    position: relative;
+}
+
+/* Expand tap area on scroll arrows without changing visual size (#10) */
+.scroll-arrow::after {
+    content: '';
+    position: absolute;
+    top: -14px;
+    bottom: -14px;
+    left: -8px;
+    right: -8px;
+    cursor: pointer;
 }
 
 .scroll-arrow:not(:disabled):hover {
@@ -1555,6 +1568,70 @@ canvas:focus {
     font-size: calc(17px + var(--font-adjust));
     color: rgba(255, 255, 255, 0.5);
     letter-spacing: 1px;
+}
+
+/* #29 — permanent asset-failure UI. Lives inside .loading-content so it
+   inherits the same scale transform as the rest of the loading screen. */
+.loading-failure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.loading-failure[hidden] {
+    display: none;
+}
+
+.loading-failure-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: calc(18px + var(--font-adjust));
+    color: #ff5a5a;
+    letter-spacing: 2px;
+    text-align: center;
+    max-width: 420px;
+    white-space: pre-line;
+    line-height: 1.5;
+}
+
+.loading-failure-retry {
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(18px + var(--font-adjust));
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: #00d9ff;
+    background: rgba(0, 217, 255, 0.08);
+    border: 2px solid rgba(0, 217, 255, 0.6);
+    border-radius: 6px;
+    padding: 12px 34px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.15s ease-out, color 0.15s ease-out;
+}
+
+.loading-failure-retry:hover:not(:disabled) {
+    background: rgba(0, 217, 255, 0.2);
+    color: #ffffff;
+}
+
+.loading-failure-retry:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* Touch hitbox (#10) */
+.loading-failure-retry {
+    position: relative;
+}
+
+.loading-failure-retry::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    bottom: -20px;
+    left: -20px;
+    right: -20px;
+    cursor: pointer;
 }
 
 @keyframes loadingPulse {

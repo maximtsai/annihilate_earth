@@ -111,19 +111,33 @@ function cubicEaseIn(t) {
     return t * t * t;
 }
 
+// ─── Floating Text Object Pool (GC optimisation #6) ───────────────────────
+// Pre-allocated objects are recycled via a free-list instead of being
+// heap-allocated on every spawn and collected after expiry.
+const _ftPool = [];        // free-list of reusable objects
+const _ftActive = [];      // mirror of the floatingTexts array (same reference)
+
+function _acquireFloatingText() {
+    return _ftPool.length > 0 ? _ftPool.pop() : {};
+}
+
+function _releaseFloatingText(obj) {
+    _ftPool.push(obj);
+}
+
 function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5, maxOffset = 50, fontSize = 28, strokeWidth = 4.5) {
-    floatingTexts.push({
-        x: x,
-        y: y,
-        startY: y,
-        text: text,
-        color: color,
-        life: duration,
-        maxLife: duration,
-        maxOffset: maxOffset,
-        fontSize: fontSize,
-        strokeWidth: strokeWidth
-    });
+    const obj = _acquireFloatingText();
+    obj.x          = x;
+    obj.y          = y;
+    obj.startY     = y;
+    obj.text       = text;
+    obj.color      = color;
+    obj.life       = duration;
+    obj.maxLife    = duration;
+    obj.maxOffset  = maxOffset;
+    obj.fontSize   = fontSize;
+    obj.strokeWidth = strokeWidth;
+    floatingTexts.push(obj);
 }
 
 let unlockNotificationTimeout = null;
@@ -159,24 +173,81 @@ function showUnlockNotification(text) {
 let isSavingState = false;
 const stateSaveQueue = [];
 
+// Updaters that have been queued but are not yet known to be persisted. An
+// updater stays here until its write has completed, so a teardown flush can
+// re-apply anything still in flight (see flushSaveStateSync).
+const unflushedUpdaters = [];
+
+// Bumped by every synchronous flush. An async save that read its snapshot
+// before a flush must not write it back afterwards — that snapshot predates the
+// flush and would silently drop the other updaters the flush persisted.
+let saveEpoch = 0;
+
+function forgetUnflushed(updater) {
+    const i = unflushedUpdaters.indexOf(updater);
+    if (i !== -1) unflushedUpdaters.splice(i, 1);
+}
+
 async function queueSaveState(updater) {
     stateSaveQueue.push(updater);
+    unflushedUpdaters.push(updater);
     if (isSavingState) return;
 
     isSavingState = true;
     while (stateSaveQueue.length > 0) {
         const currentUpdater = stateSaveQueue.shift();
         try {
+            const epoch = saveEpoch;
             const current = await getGameState();
+            if (epoch !== saveEpoch) {
+                // A flush ran while we were reading; it already persisted this
+                // updater along with everything else outstanding.
+                forgetUnflushed(currentUpdater);
+                continue;
+            }
             const state = (current && current.state) ? current.state : {};
             currentUpdater(state);
             await saveGameState(state);
         } catch (error) {
             console.warn('Failed to save state:', error.message);
         }
+        forgetUnflushed(currentUpdater);
     }
     isSavingState = false;
 }
+
+// #3A — the save queue is async, so a write can still be in flight when the tab
+// is suspended or closed; those microtasks never run and the progress is lost.
+// Apply every outstanding updater synchronously against the stored state and
+// write it in one pass. Safe to call more than once — it drains its own queue.
+function flushSaveStateSync() {
+    if (unflushedUpdaters.length === 0) return;
+
+    const pending = unflushedUpdaters.splice(0, unflushedUpdaters.length);
+    stateSaveQueue.length = 0;
+    saveEpoch++;
+
+    try {
+        const raw = window.safeLocalStorage.getItem('annihilate_earth_save');
+        const parsed = raw ? JSON.parse(raw) : null;
+        let state = (parsed && typeof parsed === 'object') ? migrateSaveState(parsed) : null;
+        if (!state || typeof state !== 'object') state = {};
+
+        for (const updater of pending) {
+            try {
+                updater(state);
+            } catch (e) {
+                console.warn('Save updater failed during teardown flush:', e && e.message);
+            }
+        }
+
+        state._version = SAVE_VERSION;
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+    } catch (e) {
+        console.warn('Failed to flush state on teardown:', e && e.message);
+    }
+}
+window.flushSaveStateSync = flushSaveStateSync;
 
 // Persistence functions for saving/loading unlocked planets
 function saveUnlockedPlanets() {
