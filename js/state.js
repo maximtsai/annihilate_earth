@@ -242,6 +242,7 @@ function flushSaveStateSync() {
         }
 
         state._version = SAVE_VERSION;
+        state._savedAt = Date.now();
         window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
     } catch (e) {
         console.warn('Failed to flush state on teardown:', e && e.message);

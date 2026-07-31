@@ -1650,10 +1650,31 @@ function triggerVictory() {
                         container.classList.remove('primed-pulse');
                     });
 
+                    let adRequestInFlight = false;
                     adBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
+                        if (adRequestInFlight) return;   // lock against double-taps
+                        adRequestInFlight = true;
+                        adBtn.disabled = true;
                         container.classList.remove('primed-pulse');
                         soundManager.play('sfx_ui_switch');
+
+                        if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
+                            window.PlatformBridge.showRewardedAd(startReplaySpinner, () => {
+                                // No reward: leave the player exactly as they
+                                // were, with the progression button still usable.
+                                adRequestInFlight = false;
+                                adBtn.disabled = false;
+                            });
+                        } else {
+                            startReplaySpinner();
+                        }
+                    });
+
+                    // Only claim the progression button once the spin is
+                    // actually happening — doing it up front stranded the player
+                    // on a disabled "STOP SPINNER" button whenever the ad failed.
+                    const startReplaySpinner = () => {
                         if (restartBtn) {
                             restartBtn.textContent = (translations[currentLanguage] || translations['en']).stopSpinner || 'STOP SPINNER';
                             restartBtn.isSpinnerStopButton = true;
@@ -1662,16 +1683,6 @@ function triggerVictory() {
                             restartBtn.style.pointerEvents = 'none';
                             restartBtn.style.cursor = 'default';
                         }
-                        if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
-                            window.PlatformBridge.showRewardedAd(() => {
-                                startReplaySpinner();
-                            });
-                        } else {
-                            startReplaySpinner();
-                        }
-                    });
-
-                    const startReplaySpinner = () => {
                         overlay.remove();
                         spinner.start();
                     };

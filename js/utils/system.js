@@ -130,39 +130,63 @@ function getPreferredStorage() {
     return null;
 }
 
+function setLocalMirror(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (e) {
+        storageFallback[key] = value;
+        return false;
+    }
+}
+
 window.safeLocalStorage = {
     getItem: function(key) {
         try {
             const store = getPreferredStorage();
-            if (store) return store.getItem(key);
+            if (store) {
+                const remote = store.getItem(key);
+                // A null here can mean "never saved" OR that a debounced write
+                // was dropped; either way the local mirror is the better answer.
+                if (remote != null) return remote;
+            }
+        } catch (e) { }
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            return storageFallback[key] !== undefined ? storageFallback[key] : null;
+        }
+    },
+    // Reads the local mirror only, bypassing SDK.data. Used to reconcile a save
+    // that the SDK's debounce may have lost.
+    getLocalItem: function(key) {
+        try {
             return localStorage.getItem(key);
         } catch (e) {
             return storageFallback[key] !== undefined ? storageFallback[key] : null;
         }
     },
     setItem: function(key, value) {
+        const str = String(value);
+        // Always mirror locally first. SDK.data debounces writes by ~1s (up to
+        // 30s in edge cases), so a write issued as the tab is being torn down
+        // can be discarded entirely — the mirror is what survives that.
+        setLocalMirror(key, str);
         try {
             const store = getPreferredStorage();
-            if (store) {
-                store.setItem(key, String(value));
-                return;
-            }
-            localStorage.setItem(key, String(value));
-        } catch (e) {
-            storageFallback[key] = String(value);
-        }
+            if (store) store.setItem(key, str);
+        } catch (e) { }
     },
     removeItem: function(key) {
         try {
-            const store = getPreferredStorage();
-            if (store) {
-                store.removeItem(key);
-                return;
-            }
             localStorage.removeItem(key);
         } catch (e) {
             delete storageFallback[key];
         }
+        try {
+            const store = getPreferredStorage();
+            if (store) store.removeItem(key);
+        } catch (e) { }
     }
 };
 
@@ -208,10 +232,14 @@ function migrateSaveState(state) {
     return state;
 }
 
+const SAVE_KEY = 'annihilate_earth_save';
+
 const saveGameState = async (state) => {
     try {
-        const toSave = Object.assign({}, state, { _version: SAVE_VERSION });
-        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(toSave));
+        // _savedAt lets a load reconcile the cloud copy against the local mirror
+        // when the SDK's debounce dropped the most recent write.
+        const toSave = Object.assign({}, state, { _version: SAVE_VERSION, _savedAt: Date.now() });
+        window.safeLocalStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
         return { success: true };
     } catch (e) {
         console.error('Failed to save state', e);
@@ -219,11 +247,33 @@ const saveGameState = async (state) => {
     }
 };
 
+function parseSave(raw) {
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        return (parsed && typeof parsed === 'object') ? parsed : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 const getGameState = async () => {
     try {
-        const saved = window.safeLocalStorage.getItem('annihilate_earth_save');
-        const parsed = saved ? JSON.parse(saved) : null;
-        return { state: parsed ? migrateSaveState(parsed) : null, success: true };
+        const primary = parseSave(window.safeLocalStorage.getItem(SAVE_KEY));
+        const mirror = parseSave(window.safeLocalStorage.getLocalItem(SAVE_KEY));
+
+        // Prefer whichever copy is newer. The cloud copy normally wins (it
+        // carries cross-device progress), but if a debounced write was lost the
+        // local mirror holds the only record of the last session.
+        let chosen = primary;
+        if (mirror && (!primary || (mirror._savedAt || 0) > (primary._savedAt || 0))) {
+            if (primary) {
+                console.warn('[Save] Local mirror is newer than the stored save; recovering it.');
+            }
+            chosen = mirror;
+        }
+
+        return { state: chosen ? migrateSaveState(chosen) : null, success: true };
     } catch (e) {
         console.error('Failed to load state', e);
         return { state: null, success: false };

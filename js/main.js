@@ -6070,8 +6070,8 @@ async function run(mode) {
             // Mark gameplay active so ad resume restarts play after the break
             if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
                 typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
-                window.PlatformBridge) {
-                window.PlatformBridge._gameplayActive = true;
+                window.PlatformBridge && typeof window.PlatformBridge.resumeGameplayAfterAd === 'function') {
+                window.PlatformBridge.resumeGameplayAfterAd();
             }
 
             // Trigger the ad break
@@ -6085,6 +6085,12 @@ async function run(mode) {
                         unlockSpecificWeapon(window.starSelectedWeapon);
                         window.starSelectedWeapon = null;
                     }
+                }, () => {
+                    // Ad unavailable or closed early: no reward, but the star
+                    // stays claimable so the offer isn't silently burned.
+                    console.log("[ShootingStar] Ad not completed; reward not granted.");
+                    window.starSelectedWeapon = null;
+                    resumeGameplayIfNeeded();
                 });
             } else {
                 // Fallback unlock if PlatformBridge isn't available

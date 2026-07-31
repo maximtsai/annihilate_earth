@@ -1,3 +1,14 @@
+// No callback from requestAd within this window means the request never
+// launched (blocked frame, hung SDK). Treat it as a failure rather than leaving
+// the game locked behind the ad overlay forever.
+const AD_REQUEST_TIMEOUT_MS = 10000;
+// adStarted fired but the ad never reported an end. Generous, since a real ad
+// plus its end card can legitimately run a while.
+const AD_MAX_DURATION_MS = 120000;
+// The SDK throttles gameplayStart/gameplayStop at 1s per method and DISCARDS
+// calls inside that window, so pacing has to happen on our side.
+const GAMEPLAY_CALL_THROTTLE_MS = 1100;
+
 window.PlatformBridge = {
     platform: 'crazygames',
     sdkLoaded: false,
@@ -7,7 +18,15 @@ window.PlatformBridge = {
     _initPromise: null,
     _gameplayActive: false,
     _adInProgress: false,
+    _adRequestPending: false,
     hasAdblock: false,
+
+    // Gameplay signalling state. `_gameplayActive` is what the GAME wants;
+    // `_sdkGameplayRunning` is what the SDK has actually been told. They diverge
+    // during ads and while a throttled call is waiting to be re-issued.
+    _sdkGameplayRunning: false,
+    _gameplaySyncTimer: null,
+    _lastGameplayCallAt: { start: 0, stop: 0 },
 
     init: function() {
         if (this._initPromise) return this._initPromise;
@@ -33,6 +52,9 @@ window.PlatformBridge = {
                         this._setupSettingsListener();
                         this._migrateLocalSaveToDataModule();
                         this._startLoadingIfNeeded();
+                        // Any gameplayStart/Stop the game issued while the SDK
+                        // was still initialising was a no-op; reconcile now.
+                        this._syncGameplayState();
 
                         try {
                             if (window.CrazyGames.SDK.ad && typeof window.CrazyGames.SDK.ad.hasAdblock === 'function') {
@@ -133,25 +155,61 @@ window.PlatformBridge = {
         }
     },
 
+    // Reconciles the SDK's gameplay state with what the game wants. Never calls
+    // the SDK when it is already in the desired state (duplicate calls are
+    // logged as errors and dropped), and reschedules itself when the 1s
+    // per-method throttle would swallow the call — otherwise a quick menu
+    // toggle leaves CrazyGames believing gameplay is running.
+    _syncGameplayState: function() {
+        if (this._gameplaySyncTimer) {
+            clearTimeout(this._gameplaySyncTimer);
+            this._gameplaySyncTimer = null;
+        }
+
+        const game = (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK)
+            ? window.CrazyGames.SDK.game : null;
+        if (!game) return;
+
+        // During an ad the SDK must see gameplay stopped regardless of intent.
+        const desired = this._adInProgress ? false : this._gameplayActive;
+        if (desired === this._sdkGameplayRunning) return;
+
+        const which = desired ? 'start' : 'stop';
+        const fn = desired ? game.gameplayStart : game.gameplayStop;
+        if (typeof fn !== 'function') return;
+
+        const now = Date.now();
+        const waited = now - this._lastGameplayCallAt[which];
+        if (waited < GAMEPLAY_CALL_THROTTLE_MS) {
+            this._gameplaySyncTimer = setTimeout(
+                () => this._syncGameplayState(),
+                GAMEPLAY_CALL_THROTTLE_MS - waited
+            );
+            return;
+        }
+
+        this._lastGameplayCallAt[which] = now;
+        this._sdkGameplayRunning = desired;
+        fn.call(game);
+        console.log("[PlatformBridge] CrazyGames gameplay" + (desired ? 'Start' : 'Stop') + " triggered.");
+    },
+
     gameplayStart: function() {
         this._gameplayActive = true;
-        if (this._adInProgress) return;
-        if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game) {
-            if (typeof window.CrazyGames.SDK.game.gameplayStart === 'function') {
-                window.CrazyGames.SDK.game.gameplayStart();
-                console.log("[PlatformBridge] CrazyGames gameplayStart triggered.");
-            }
-        }
+        this._syncGameplayState();
     },
 
     gameplayStop: function() {
         this._gameplayActive = false;
-        if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game) {
-            if (typeof window.CrazyGames.SDK.game.gameplayStop === 'function') {
-                window.CrazyGames.SDK.game.gameplayStop();
-                console.log("[PlatformBridge] CrazyGames gameplayStop triggered.");
-            }
-        }
+        this._syncGameplayState();
+    },
+
+    // Called before requesting an ad from a state where gameplay is already
+    // stopped (a popup, the victory screen), so the ad's resume knows to hand
+    // control back to gameplay afterwards.
+    resumeGameplayAfterAd: function() {
+        this._gameplayActive = true;
+        this._syncGameplayState();
     },
 
     happytime: function() {
@@ -176,11 +234,7 @@ window.PlatformBridge = {
     _pauseForAd: function() {
         this._adInProgress = true;
         window.gamePausedForAd = true;
-        if (this._gameplayActive && this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game) {
-            if (typeof window.CrazyGames.SDK.game.gameplayStop === 'function') {
-                window.CrazyGames.SDK.game.gameplayStop();
-            }
-        }
+        this._syncGameplayState();   // forces the SDK to gameplayStop if it isn't already
         if (window.soundManager && window.soundManager.context) {
             window.soundManager.context.suspend().catch(() => {});
         }
@@ -194,11 +248,7 @@ window.PlatformBridge = {
                 window.soundManager.context.resume().catch(() => {});
             }
         }
-        if (this._gameplayActive && this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game) {
-            if (typeof window.CrazyGames.SDK.game.gameplayStart === 'function') {
-                window.CrazyGames.SDK.game.gameplayStart();
-            }
-        }
+        this._syncGameplayState();   // restores gameplayStart if the game still wants it
     },
 
     _isLocalDev: function() {
@@ -206,121 +256,139 @@ window.PlatformBridge = {
         return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
     },
 
-    showAdBreak: function(onComplete) {
-        console.log("[PlatformBridge] CrazyGames commercial break requested.");
-
-        let adFinished = false;
+    // Shared driver for both ad types. `onSettled(success)` always runs exactly
+    // once — on completion, on failure, and on either watchdog firing — so no
+    // caller can be left waiting on a callback that never arrives.
+    _runAd: function(type, onSettled) {
+        let adResolved = false;
+        let settledSuccess = false;
         let transitionInFinished = false;
         let resumed = false;
         let adStarted = false;
+        let requestTimer = null;
+        let durationTimer = null;
 
-        const tryResume = () => {
-            if (adFinished && transitionInFinished && !resumed) {
-                resumed = true;
-                if (adStarted) {
-                    this._resumeAfterAd();
-                } else {
-                    window.gamePausedForAd = false;
-                }
-                if (onComplete) onComplete();
-                requestAnimationFrame(() => this._runTransitionOut());
-            }
+        const clearTimers = () => {
+            if (requestTimer) { clearTimeout(requestTimer); requestTimer = null; }
+            if (durationTimer) { clearTimeout(durationTimer); durationTimer = null; }
         };
 
-        // Block input during transition even before ad starts
-        window.gamePausedForAd = true;
+        const tryResume = () => {
+            if (!adResolved || !transitionInFinished || resumed) return;
+            resumed = true;
+            this._adRequestPending = false;
+            if (adStarted) {
+                this._resumeAfterAd();
+            } else {
+                window.gamePausedForAd = false;
+            }
+            onSettled(settledSuccess);
+            requestAnimationFrame(() => this._runTransitionOut());
+        };
+
+        const settle = (success) => {
+            if (adResolved) return;
+            adResolved = true;
+            settledSuccess = success;
+            clearTimers();
+            tryResume();
+        };
+
+        this._adRequestPending = true;
+        window.gamePausedForAd = true;   // block input during the transition too
 
         this._runTransitionIn(() => {
             transitionInFinished = true;
             tryResume();
         });
 
-        const onAdComplete = () => {
-            adFinished = true;
-            tryResume();
-        };
+        // Local dev mock comes first: a developer running with an adblocker
+        // extension still needs the reward path to be testable.
+        if (type === 'rewarded' && this._isLocalDev() &&
+            !(this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad)) {
+            console.log("[PlatformBridge] Fallback (local dev): granting mock rewarded ad.");
+            settle(true);
+            return;
+        }
+
+        // Known-unfillable: don't make the player sit through the transition
+        // waiting for an adError that is already certain.
+        if (this.hasAdblock) {
+            console.log("[PlatformBridge] Adblock detected; skipping " + type + " ad request.");
+            settle(false);
+            return;
+        }
 
         if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad) {
-            window.CrazyGames.SDK.ad.requestAd("midgame", {
-                adStarted: () => {
-                    console.log("[PlatformBridge] CrazyGames midgame ad started.");
-                    adStarted = true;
-                    this._pauseForAd();
-                },
-                adFinished: () => {
-                    console.log("[PlatformBridge] CrazyGames midgame ad completed successfully.");
-                    window.lastAdPlayTime = Date.now();
-                    onAdComplete();
-                },
-                adError: (error) => {
-                    console.warn("[PlatformBridge] CrazyGames midgame ad failed or was skipped:", error);
-                    onAdComplete();
-                }
-            });
+            // Watchdog: the request never launched at all.
+            requestTimer = setTimeout(() => {
+                console.warn("[PlatformBridge] " + type + " ad request timed out with no response; continuing.");
+                settle(false);
+            }, AD_REQUEST_TIMEOUT_MS);
+
+            try {
+                window.CrazyGames.SDK.ad.requestAd(type, {
+                    adStarted: () => {
+                        console.log("[PlatformBridge] CrazyGames " + type + " ad started.");
+                        adStarted = true;
+                        if (requestTimer) { clearTimeout(requestTimer); requestTimer = null; }
+                        // Second watchdog: the ad started but never reported an end.
+                        durationTimer = setTimeout(() => {
+                            console.warn("[PlatformBridge] " + type + " ad exceeded max duration with no end event; resuming.");
+                            settle(false);
+                        }, AD_MAX_DURATION_MS);
+                        this._pauseForAd();
+                    },
+                    adFinished: () => {
+                        console.log("[PlatformBridge] CrazyGames " + type + " ad completed successfully.");
+                        if (type === 'midgame') window.lastAdPlayTime = Date.now();
+                        settle(true);
+                    },
+                    adError: (error) => {
+                        // Per CrazyGames requirements: on adError the player is
+                        // NOT rewarded, but the game must continue normally.
+                        console.warn("[PlatformBridge] CrazyGames " + type + " ad failed or was skipped:", error);
+                        settle(false);
+                    }
+                });
+            } catch (e) {
+                console.warn("[PlatformBridge] requestAd threw synchronously:", e);
+                settle(false);
+            }
         } else {
-            console.log("[PlatformBridge] Fallback: No CrazyGames SDK loaded, skipping commercial break.");
-            onAdComplete();
+            console.log("[PlatformBridge] Fallback: No CrazyGames SDK loaded; skipping " + type + " ad.");
+            settle(type === 'midgame');
         }
     },
 
-    showRewardedAd: function(onComplete) {
-        console.log("[PlatformBridge] CrazyGames rewarded ad break requested.");
-
-        let adFinished = false;
-        let transitionInFinished = false;
-        let rewardGranted = false;
-        let resumed = false;
-        let adStarted = false;
-
-        const tryResume = () => {
-            if (adFinished && transitionInFinished && !resumed) {
-                resumed = true;
-                if (adStarted) {
-                    this._resumeAfterAd();
-                } else {
-                    window.gamePausedForAd = false;
-                }
-                if (rewardGranted && onComplete) onComplete();
-                requestAnimationFrame(() => this._runTransitionOut());
-            }
-        };
-
-        window.gamePausedForAd = true;
-
-        this._runTransitionIn(() => {
-            transitionInFinished = true;
-            tryResume();
-        });
-
-        const onAdComplete = (success) => {
-            rewardGranted = success;
-            adFinished = true;
-            tryResume();
-        };
-
-        if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad) {
-            window.CrazyGames.SDK.ad.requestAd("rewarded", {
-                adStarted: () => {
-                    console.log("[PlatformBridge] CrazyGames rewarded ad started.");
-                    adStarted = true;
-                    this._pauseForAd();
-                },
-                adFinished: () => {
-                    console.log("[PlatformBridge] CrazyGames rewarded ad completed. Granting reward.");
-                    onAdComplete(true);
-                },
-                adError: (error) => {
-                    console.warn("[PlatformBridge] CrazyGames rewarded ad failed or was skipped:", error);
-                    onAdComplete(false);
-                }
-            });
-        } else if (this._isLocalDev()) {
-            console.log("[PlatformBridge] Fallback (local dev): granting mock rewarded ad.");
-            onAdComplete(true);
-        } else {
-            console.log("[PlatformBridge] Fallback: No CrazyGames SDK; rewarded ad unavailable.");
-            onAdComplete(false);
+    showAdBreak: function(onComplete) {
+        console.log("[PlatformBridge] CrazyGames commercial break requested.");
+        if (this._adInProgress || this._adRequestPending) {
+            console.warn("[PlatformBridge] Ad already in progress; ignoring duplicate request.");
+            return;
         }
+        // A midgame break always continues the game, filled or not.
+        this._runAd('midgame', () => {
+            if (onComplete) onComplete();
+        });
+    },
+
+    // onComplete runs only when the reward was actually earned. onFailed (if
+    // given) runs otherwise, so callers can roll back any UI they locked.
+    showRewardedAd: function(onComplete, onFailed) {
+        console.log("[PlatformBridge] CrazyGames rewarded ad break requested.");
+        if (this._adInProgress || this._adRequestPending) {
+            console.warn("[PlatformBridge] Ad already in progress; ignoring duplicate request.");
+            if (onFailed) onFailed();
+            return;
+        }
+        this._runAd('rewarded', (success) => {
+            if (success) {
+                if (onComplete) onComplete();
+            } else if (onFailed) {
+                onFailed();
+            }
+        });
     },
 
     _runTransitionIn: function(onMidpoint) {
