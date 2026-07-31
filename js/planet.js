@@ -1440,11 +1440,9 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
 // Trigger Victory splash
 function triggerVictory() {
     // Site lock: only grant victory on an authorized CrazyGames domain (or local dev)
-    const hostname = window.location.hostname;
+    const hostname = window.location.hostname || '';
     const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
-    const hostParts = hostname.split('.');
-    const crazyGamesIdx = hostParts.indexOf('crazygames');
-    const isCrazyGamesDomain = crazyGamesIdx !== -1 && crazyGamesIdx >= hostParts.length - 3;
+    const isCrazyGamesDomain = hostname.toLowerCase().includes('crazy');
     if (!isLocal && !isCrazyGamesDomain) {
         const sitelockEl = document.getElementById('sitelock-message');
         if (sitelockEl) {
@@ -1581,6 +1579,9 @@ function triggerVictory() {
         unlockedPlanets.push(nextPlanetToUnlock);
         saveUnlockedPlanets();
         updatePlanetButtons();
+    }
+    if (typeof reportGameCompletionPercentage === 'function') {
+        reportGameCompletionPercentage();
     }
 
     setTimeout(() => {
@@ -1975,7 +1976,7 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     document.getElementById('victory-screen').classList.remove('show');
     initializePlanet();
     generateStars();
-    if (window.PlatformBridge && gameplayStarted && !isPlanetSwitch) {
+    if (window.PlatformBridge && gameplayStarted) {
         window.PlatformBridge.gameplayStart();
     }
     if (window.ShootingStarManager) {

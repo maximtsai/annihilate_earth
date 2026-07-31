@@ -117,15 +117,24 @@ function toggleFullscreen(enable) {
     }
 }
 
-// Safe LocalStorage fallback wrapper
+// Safe storage wrapper — prefers CrazyGames SDK.data when ready, else localStorage.
 const storageFallback = {};
+
+function getPreferredStorage() {
+    try {
+        if (window.PlatformBridge && typeof window.PlatformBridge.getDataStore === 'function') {
+            const data = window.PlatformBridge.getDataStore();
+            if (data && typeof data.getItem === 'function') return data;
+        }
+    } catch (e) { }
+    return null;
+}
 
 window.safeLocalStorage = {
     getItem: function(key) {
         try {
-            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
-                return window.CrazyGames.SDK.data.getItem(key);
-            }
+            const store = getPreferredStorage();
+            if (store) return store.getItem(key);
             return localStorage.getItem(key);
         } catch (e) {
             return storageFallback[key] !== undefined ? storageFallback[key] : null;
@@ -133,22 +142,24 @@ window.safeLocalStorage = {
     },
     setItem: function(key, value) {
         try {
-            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
-                window.CrazyGames.SDK.data.setItem(key, String(value));
-            } else {
-                localStorage.setItem(key, value);
+            const store = getPreferredStorage();
+            if (store) {
+                store.setItem(key, String(value));
+                return;
             }
+            localStorage.setItem(key, String(value));
         } catch (e) {
             storageFallback[key] = String(value);
         }
     },
     removeItem: function(key) {
         try {
-            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
-                window.CrazyGames.SDK.data.removeItem(key);
-            } else {
-                localStorage.removeItem(key);
+            const store = getPreferredStorage();
+            if (store) {
+                store.removeItem(key);
+                return;
             }
+            localStorage.removeItem(key);
         } catch (e) {
             delete storageFallback[key];
         }

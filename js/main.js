@@ -465,6 +465,12 @@ function getGradientCanvas(color) {
 }
 
 async function run(mode) {
+    // SDK init already started when platform-bridge.js loaded; keep awaiting in
+    // parallel with asset work so loadingStart can fire during real load time.
+    const bridgeReady = window.PlatformBridge
+        ? window.PlatformBridge.init()
+        : Promise.resolve();
+
     // Load spritesheet atlas assets first. #29 — if it is permanently
     // unreachable, halt boot and offer a retry instead of continuing into a
     // session where every sprite is blank. Nothing below has run yet, so
@@ -489,10 +495,7 @@ async function run(mode) {
         await document.fonts.ready;
     }
 
-    // Initialize the platform bridge interface
-    if (window.PlatformBridge) {
-        await window.PlatformBridge.init();
-    }
+    await bridgeReady;
 
     // Initialize global canvas and contexts
     const gameWorld = document.getElementById('game-world');
@@ -5373,6 +5376,9 @@ async function run(mode) {
                 soundManager.context.suspend().catch(() => { });
             }
         } else {
+            // Don't resume audio while a platform ad owns the page.
+            if (window.gamePausedForAd) return;
+            if (window.PlatformBridge && window.PlatformBridge._adInProgress) return;
             if (soundManager && soundManager.context && soundManager.isInitialized) {
                 soundManager.context.resume().catch(() => { });
             }
@@ -5918,10 +5924,29 @@ async function run(mode) {
     const musicSlider = document.getElementById('music-volume-slider');
     const musicValue = document.getElementById('music-volume-value');
 
-    optionsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+    function openOptionsMenu() {
         soundManager.play('sfx_ui_switch');
         optionsOverlay.classList.add('show');
+        if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
+            typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
+            window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
+            window.PlatformBridge.gameplayStop();
+        }
+    }
+
+    function closeOptionsMenu() {
+        optionsOverlay.classList.remove('show');
+        if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
+            typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
+            !window.gamePausedForAd &&
+            window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+            window.PlatformBridge.gameplayStart();
+        }
+    }
+
+    optionsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openOptionsMenu();
     });
 
     // Extended invisible hit-area behind the options button (same size/position,
@@ -5937,12 +5962,12 @@ async function run(mode) {
     optionsCloseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         soundManager.play('sfx_ui_switch');
-        optionsOverlay.classList.remove('show');
+        closeOptionsMenu();
     });
 
     optionsOverlay.addEventListener('click', (e) => {
         if (e.target === optionsOverlay) {
-            optionsOverlay.classList.remove('show');
+            closeOptionsMenu();
         }
     });
 
@@ -5977,8 +6002,9 @@ async function run(mode) {
                 window.PlatformBridge.gameplayStop();
             }
 
-            // Clear saved progress
+            // Clear saved progress (SDK.data when available, else localStorage)
             window.safeLocalStorage.removeItem('annihilate_earth_save');
+            try { localStorage.removeItem('annihilate_earth_save'); } catch (e) { }
 
             // Reset state variables
             unlockedPlanets = ['earth'];
@@ -5993,6 +6019,9 @@ async function run(mode) {
             unlockedTooltipShown = false;
             if (typeof saveUnlockedTooltipShown === 'function') {
                 saveUnlockedTooltipShown();
+            }
+            if (typeof reportGameCompletionPercentage === 'function') {
+                reportGameCompletionPercentage();
             }
 
             // Update UI/Locks
@@ -6023,11 +6052,27 @@ async function run(mode) {
     const adSpinNo = document.getElementById('ad-spin-no');
     const adSpinClose = document.getElementById('ad-spin-close');
 
+    function resumeGameplayIfNeeded() {
+        if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
+            typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
+            !window.gamePausedForAd &&
+            window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+            window.PlatformBridge.gameplayStart();
+        }
+    }
+
     if (adSpinYes) {
         adSpinYes.addEventListener('click', (e) => {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
             adSpinYes.classList.remove('glow-shine');
+
+            // Mark gameplay active so ad resume restarts play after the break
+            if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
+                typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
+                window.PlatformBridge) {
+                window.PlatformBridge._gameplayActive = true;
+            }
 
             // Trigger the ad break
             if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
@@ -6050,6 +6095,7 @@ async function run(mode) {
                     unlockSpecificWeapon(window.starSelectedWeapon);
                     window.starSelectedWeapon = null;
                 }
+                resumeGameplayIfNeeded();
             }
 
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
@@ -6065,6 +6111,7 @@ async function run(mode) {
                 window.activeWeaponSpinner.destroy();
             }
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+            resumeGameplayIfNeeded();
         });
     }
 
@@ -6077,6 +6124,7 @@ async function run(mode) {
                 window.activeWeaponSpinner.destroy();
             }
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+            resumeGameplayIfNeeded();
         });
     }
 

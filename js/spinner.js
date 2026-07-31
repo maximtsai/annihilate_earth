@@ -184,10 +184,8 @@ class WeaponSpinner {
                         window.location.hostname === '';
         
         const isCrazyGamesDomain = () => {
-            const hostname = window.location.hostname;
-            const parts = hostname.split(".");
-            const idx = parts.indexOf("crazygames");
-            return idx !== -1 && idx >= parts.length - 3;
+            const hostname = window.location.hostname || '';
+            return hostname.toLowerCase().includes('crazy');
         };
 
         if (!isLocal && !isCrazyGamesDomain()) {

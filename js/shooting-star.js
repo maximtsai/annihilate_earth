@@ -326,6 +326,11 @@
                 const popup = document.getElementById('ad-spin-popup-overlay');
                 if (popup) {
                     popup.style.display = 'flex';
+                    if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
+                        typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
+                        window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
+                        window.PlatformBridge.gameplayStop();
+                    }
 
                     // Reset and initialize the spinner inside the ad popup
                     const container = document.getElementById('star-spinner-container');

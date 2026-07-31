@@ -249,6 +249,25 @@ function flushSaveStateSync() {
 }
 window.flushSaveStateSync = flushSaveStateSync;
 
+// Report progression to CrazyGames (0–100). Planets beaten ≈ unlocked beyond starter.
+function reportGameCompletionPercentage() {
+    if (!window.PlatformBridge || typeof window.PlatformBridge.reportGameCompletedPercentage !== 'function') return;
+    const total = PLANET_ORDER.length;
+    let completed = 0;
+    for (let i = 0; i < total; i++) {
+        const p = PLANET_ORDER[i];
+        if (bestTimes && bestTimes[p] != null) {
+            completed = i + 1;
+        } else if (unlockedPlanets && unlockedPlanets.includes(p) && i > 0) {
+            // Unlocked next planet implies previous was beaten even without a stored best time
+            completed = Math.max(completed, i);
+        }
+    }
+    const pct = Math.min(100, Math.round((completed / total) * 100));
+    window.PlatformBridge.reportGameCompletedPercentage(pct);
+}
+window.reportGameCompletionPercentage = reportGameCompletionPercentage;
+
 // Persistence functions for saving/loading unlocked planets
 function saveUnlockedPlanets() {
     queueSaveState(state => {
@@ -440,6 +459,7 @@ async function loadUnlockedPlanets() {
             }
         }
         updateWeaponOrderOnUnlock();
+        reportGameCompletionPercentage();
     } catch (error) {
         console.warn('Failed to load unlocked planets:', error.message);
     }
