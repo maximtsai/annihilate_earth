@@ -261,7 +261,11 @@ function serializeForCompare(state) {
     return JSON.stringify(copy);
 }
 
-function readGameStateSync() {
+// Returns the live save object (or null if the player has none yet). Both
+// storage backends are synchronous — localStorage always was, and SDK.data
+// returns immediately too, debouncing only its own network sync — so there is
+// no async step anywhere in the save path.
+function readGameState() {
     if (_saveCacheLoaded) return _saveCache;
 
     try {
@@ -290,7 +294,9 @@ function readGameStateSync() {
     return _saveCache;
 }
 
-function saveGameStateSync(state) {
+// Persists the save. Returns once it is durably written, so there is never a
+// pending write to flush or serialize against.
+function saveGameState(state) {
     try {
         const toSave = Object.assign({}, state, { _version: SAVE_VERSION });
         delete toSave._savedAt;
@@ -320,15 +326,17 @@ function invalidateGameStateCache() {
     _persistedJson = null;
 }
 
-const saveGameState = async (state) => saveGameStateSync(state);
+// Read the save, apply a change, write it back. This is the entire save API —
+// every saveX() helper in state.js is a one-line call to it.
+function updateGameState(updater) {
+    const state = readGameState() || {};
+    updater(state);
+    return saveGameState(state);
+}
 
-const getGameState = async () => {
-    const state = readGameStateSync();
-    return { state: state, success: true };
-};
-
-window.readGameStateSync = readGameStateSync;
-window.saveGameStateSync = saveGameStateSync;
+window.readGameState = readGameState;
+window.saveGameState = saveGameState;
+window.updateGameState = updateGameState;
 window.invalidateGameStateCache = invalidateGameStateCache;
 
 function getConfigValue(path, defaultValue) {

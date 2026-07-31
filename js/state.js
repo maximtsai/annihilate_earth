@@ -169,94 +169,9 @@ function showUnlockNotification(text) {
     }, 2000);
 }
 
-// Serialization queue to prevent race conditions during async state saves
-let isSavingState = false;
-const stateSaveQueue = [];
-
-// Updaters that have been queued but are not yet known to be persisted. An
-// updater stays here until its write has completed, so a teardown flush can
-// re-apply anything still in flight (see flushSaveStateSync).
-const unflushedUpdaters = [];
-
-// Bumped by every synchronous flush. An async save that read its snapshot
-// before a flush must not write it back afterwards — that snapshot predates the
-// flush and would silently drop the other updaters the flush persisted.
-let saveEpoch = 0;
-
-function forgetUnflushed(updater) {
-    const i = unflushedUpdaters.indexOf(updater);
-    if (i !== -1) unflushedUpdaters.splice(i, 1);
-}
-
-async function queueSaveState(updater) {
-    stateSaveQueue.push(updater);
-    unflushedUpdaters.push(updater);
-    if (isSavingState) return;
-
-    isSavingState = true;
-    // Yield once so every updater queued in the same tick joins this batch.
-    // Boot queues several in a row; without this they'd each cost their own
-    // read/write round-trip against the storage backend.
-    await Promise.resolve();
-
-    while (stateSaveQueue.length > 0) {
-        const batch = stateSaveQueue.splice(0, stateSaveQueue.length);
-        try {
-            const epoch = saveEpoch;
-            const current = await getGameState();
-            if (epoch !== saveEpoch) {
-                // A flush ran while we were reading; it already persisted these
-                // updaters along with everything else outstanding.
-                batch.forEach(forgetUnflushed);
-                continue;
-            }
-            const state = (current && current.state) ? current.state : {};
-            for (const updater of batch) {
-                try {
-                    updater(state);
-                } catch (e) {
-                    console.warn('Save updater failed:', e && e.message);
-                }
-            }
-            // One write for the whole batch; skipped entirely if nothing changed.
-            await saveGameState(state);
-        } catch (error) {
-            console.warn('Failed to save state:', error.message);
-        }
-        batch.forEach(forgetUnflushed);
-    }
-    isSavingState = false;
-}
-
-// #3A — the save queue is async, so a write can still be in flight when the tab
-// is suspended or closed; those microtasks never run and the progress is lost.
-// Apply every outstanding updater synchronously against the stored state and
-// write it in one pass. Safe to call more than once — it drains its own queue.
-function flushSaveStateSync() {
-    if (unflushedUpdaters.length === 0) return;
-
-    const pending = unflushedUpdaters.splice(0, unflushedUpdaters.length);
-    stateSaveQueue.length = 0;
-    saveEpoch++;
-
-    try {
-        let state = window.readGameStateSync();
-        if (!state || typeof state !== 'object') state = {};
-
-        for (const updater of pending) {
-            try {
-                updater(state);
-            } catch (e) {
-                console.warn('Save updater failed during teardown flush:', e && e.message);
-            }
-        }
-
-        window.saveGameStateSync(state);
-    } catch (e) {
-        console.warn('Failed to flush state on teardown:', e && e.message);
-    }
-}
-window.flushSaveStateSync = flushSaveStateSync;
+// Saves are synchronous and durable on return (see updateGameState in
+// system.js), so there is nothing to queue, serialize, or flush at teardown.
+// Each saveX() helper below just names the field it owns.
 
 // Report progression to CrazyGames (0–100). Planets beaten ≈ unlocked beyond starter.
 function reportGameCompletionPercentage() {
@@ -279,19 +194,19 @@ window.reportGameCompletionPercentage = reportGameCompletionPercentage;
 
 // Persistence functions for saving/loading unlocked planets
 function saveUnlockedPlanets() {
-    queueSaveState(state => {
+    updateGameState(state => {
         state.unlockedPlanets = unlockedPlanets;
     });
 }
 
 function saveBestTimes() {
-    queueSaveState(state => {
+    updateGameState(state => {
         state.bestTimes = bestTimes;
     });
 }
 
 function saveOptions(options) {
-    queueSaveState(state => {
+    updateGameState(state => {
         if (options.sfxVolume !== undefined) state.sfxVolume = options.sfxVolume;
         if (options.musicVolume !== undefined) state.musicVolume = options.musicVolume;
         if (options.language !== undefined) state.language = options.language;
@@ -310,7 +225,7 @@ let unlockedTooltipShown = false;
 window.shouldShowUnlockTooltipOnNextPlanet = false;
 
 function saveClaimedPlanetSpinners() {
-    queueSaveState(state => {
+    updateGameState(state => {
         state.claimedPlanetSpinners = claimedPlanetSpinners;
     });
 }
@@ -321,20 +236,15 @@ function isWeaponUnlocked(wid) {
 }
 
 function saveUnlockedWeapons() {
-    queueSaveState(state => {
+    updateGameState(state => {
         state.unlockedWeapons = unlockedWeapons;
     });
-    // An unlock is high-value: persist it now rather than waiting for the async
-    // queue. The flush goes through the same versioned, cache-aware write path,
-    // so it can't desync the cache the way a raw storage write would.
-    flushSaveStateSync();
 }
 
 function saveUnlockedTooltipShown() {
-    queueSaveState(state => {
+    updateGameState(state => {
         state.unlockedTooltipShown = unlockedTooltipShown;
     });
-    flushSaveStateSync();
 }
 
 function unlockRandomWeapon() {
@@ -381,7 +291,7 @@ function unlockSpecificWeapon(wid) {
 }
 
 function saveWeaponOrder() {
-    queueSaveState(state => {
+    updateGameState(state => {
         state.weaponOrder = weaponOrder;
     });
 }
@@ -415,9 +325,9 @@ function updateWeaponOrderOnUnlock() {
     }
 }
 
-async function loadUnlockedPlanets() {
+function loadUnlockedPlanets() {
     try {
-        const response = await getGameState();
+        const response = { state: readGameState() };
         if (response.state) {
             if (response.state.weaponOrder) {
                 weaponOrder = response.state.weaponOrder;

@@ -51,7 +51,6 @@ window.PlatformBridge = {
 
                         this._setupSettingsListener();
                         this._setupAuthListener();
-                        this._migrateLocalSaveToDataModule();
                         this._startLoadingIfNeeded();
                         // Any gameplayStart/Stop the game issued while the SDK
                         // was still initialising was a no-op; reconcile now.
@@ -115,23 +114,6 @@ window.PlatformBridge = {
             });
         } catch (e) {
             console.warn("[PlatformBridge] Auth listener setup failed:", e);
-        }
-    },
-
-    _migrateLocalSaveToDataModule: function() {
-        try {
-            const data = window.CrazyGames.SDK.data;
-            if (!data || typeof data.getItem !== 'function') return;
-            const key = 'annihilate_earth_save';
-            if (data.getItem(key) != null) return;
-            let local = null;
-            try { local = localStorage.getItem(key); } catch (e) { return; }
-            if (local != null) {
-                data.setItem(key, local);
-                console.log("[PlatformBridge] Migrated local save into CrazyGames data module.");
-            }
-        } catch (e) {
-            console.warn("[PlatformBridge] Save migration failed:", e);
         }
     },
 

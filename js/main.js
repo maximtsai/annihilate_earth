@@ -5369,9 +5369,6 @@ async function run(mode) {
             isHolding = false;
             soundManager.stopLoop('sfx_laser_fire');
             soundManager.stopLoop('sfx_laser_hum');
-            // #3A — on mobile the tab can be killed from the background without
-            // another event, so persist any in-flight save before suspending.
-            if (window.flushSaveStateSync) window.flushSaveStateSync();
             if (soundManager && soundManager.context) {
                 soundManager.context.suspend().catch(() => { });
             }
@@ -5388,7 +5385,6 @@ async function run(mode) {
     window.addEventListener('blur', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
     const handleLifecycleTeardown = () => {
-        if (window.flushSaveStateSync) window.flushSaveStateSync();
         if (soundManager && soundManager.context) {
             soundManager.context.suspend().catch(() => { });
         }
@@ -6260,11 +6256,11 @@ async function run(mode) {
     updatePlanetButtons();
 
     // Load saved planet unlocks
-    loadUnlockedPlanets().then(async () => {
+    loadUnlockedPlanets();
+    {
         // Load options
-        const response = await getGameState();
-        if (response.success && response.state) {
-            const state = response.state;
+        const state = readGameState();
+        if (state) {
             if (state.language) {
                 currentLanguage = state.language;
                 const opt = customLangDropdown.querySelector(`.custom-select-option[data-value="${currentLanguage}"]`);
@@ -6318,7 +6314,7 @@ async function run(mode) {
         }
         // Always reset the game to set up the starting planet state and trigger gameplayStart
         resetGame(true);
-    });
+    }
 
     setLoadingProgress(90, getTranslation('loadingCalibrate'));
 
