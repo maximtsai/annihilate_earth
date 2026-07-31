@@ -195,17 +195,19 @@ window.safeLocalStorage = {
 // Current save schema version. Bump this whenever the shape of the saved state
 // changes, and add a corresponding step to SAVE_MIGRATIONS so returning players'
 // saves are upgraded on load instead of crashing or silently losing progress.
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
 // Stepwise migrations. Each key N is a function that migrates a save from
 // version N to version N+1, mutating and returning the state object.
 // Legacy saves (written before versioning existed) have no `_version` field and
 // are treated as version 0.
 const SAVE_MIGRATIONS = {
-    // 0 -> 1: original un-versioned save. Shape is already current, so this only
-    // stamps the version. Future example:
-    //   1: (s) => { s.newField = s.newField ?? []; return s; },
-    0: (state) => state
+    // 0 -> 1: original un-versioned save. Shape was already current, so this
+    // only stamps the version.
+    0: (state) => state,
+    // 1 -> 2: weaponOrder is derived from unlockedWeapons at runtime and is no
+    // longer stored. Drop the stale copy so it can't be mistaken for data.
+    1: (state) => { delete state.weaponOrder; return state; }
 };
 
 // Apply migrations in sequence from the save's version up to SAVE_VERSION.

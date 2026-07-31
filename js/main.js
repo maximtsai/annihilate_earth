@@ -6014,11 +6014,9 @@ async function run(mode) {
             initiallyUnlockedPlanets = new Set(['earth']);
             bestTimes = {};
             claimedPlanetSpinners = [];
-            weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
             unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
             initiallyUnlockedWeapons = new Set(unlockedWeapons);
-            saveWeaponOrder();
-            saveUnlockedWeapons();
+            saveUnlockedWeapons();   // weaponOrder is derived from this
             unlockedTooltipShown = false;
             if (typeof saveUnlockedTooltipShown === 'function') {
                 saveUnlockedTooltipShown();

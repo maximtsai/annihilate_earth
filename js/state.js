@@ -216,7 +216,10 @@ function saveOptions(options) {
 }
 
 let initiallyUnlockedPlanets = new Set(['earth']);
-let weaponOrder = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
+// Canonical weapon list. The displayed order is derived from this plus
+// unlockedWeapons (see updateWeaponOrderOnUnlock) and is never persisted.
+const DEFAULT_WEAPON_ORDER = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole', 'sword', 'kraken', 'worm', 'fist', 'bowling', 'lightning', 'star', 'comet', 'drill'];
+let weaponOrder = DEFAULT_WEAPON_ORDER.slice();
 let unlockedWeapons = ['missile', 'nuke', 'laser', 'asteroid', 'gamma', 'mysterybox', 'moon', 'blackhole'];
 let initiallyUnlockedWeapons = new Set(unlockedWeapons);
 const ALL_LOCKED_WEAPONS = ['lightning', 'kraken', 'worm', 'fist', 'bowling', 'star', 'comet', 'sword', 'drill'];
@@ -290,12 +293,6 @@ function unlockSpecificWeapon(wid) {
     return false;
 }
 
-function saveWeaponOrder() {
-    updateGameState(state => {
-        state.weaponOrder = weaponOrder;
-    });
-}
-
 function applyWeaponOrderToDOM() {
     const container = document.getElementById('weapon-panel-inner');
     if (!container) return;
@@ -307,18 +304,15 @@ function applyWeaponOrderToDOM() {
     });
 }
 
+// Recomputes the weapon bar order from saved data alone: unlocked weapons
+// first, then the locked ones. unlockedWeapons is itself maintained in unlock
+// order (starters in canonical order, later unlocks appended), so a newly
+// unlocked weapon still lands at the end of the unlocked group — and now that
+// position survives a reload without storing the order.
 function updateWeaponOrderOnUnlock() {
-    const unlocked = [];
-    const locked = [];
-    weaponOrder.forEach(wid => {
-        if (isWeaponUnlocked(wid)) {
-            unlocked.push(wid);
-        } else {
-            locked.push(wid);
-        }
-    });
+    const unlocked = unlockedWeapons.filter(wid => DEFAULT_WEAPON_ORDER.includes(wid));
+    const locked = DEFAULT_WEAPON_ORDER.filter(wid => !unlockedWeapons.includes(wid));
     weaponOrder = [...unlocked, ...locked];
-    saveWeaponOrder();
     applyWeaponOrderToDOM();
     if (typeof window.updateWeaponScrollButtons === 'function') {
         window.updateWeaponScrollButtons();
@@ -329,20 +323,6 @@ function loadUnlockedPlanets() {
     try {
         const response = { state: readGameState() };
         if (response.state) {
-            if (response.state.weaponOrder) {
-                weaponOrder = response.state.weaponOrder;
-                if (!weaponOrder.includes('drill')) {
-                    weaponOrder.push('drill');
-                }
-                // Enforce that 'lightning' is positioned after 'bowling' in weaponOrder
-                const lightningIdx = weaponOrder.indexOf('lightning');
-                const bowlingIdx = weaponOrder.indexOf('bowling');
-                if (lightningIdx !== -1 && bowlingIdx !== -1 && lightningIdx < bowlingIdx) {
-                    weaponOrder.splice(lightningIdx, 1);
-                    const newBowlingIdx = weaponOrder.indexOf('bowling');
-                    weaponOrder.splice(newBowlingIdx + 1, 0, 'lightning');
-                }
-            }
             if (response.state.unlockedWeapons) {
                 unlockedWeapons = response.state.unlockedWeapons;
                 if (!unlockedWeapons.includes('mysterybox')) {
