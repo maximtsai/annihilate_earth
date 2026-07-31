@@ -414,7 +414,7 @@ function spawnWeapon(clickX, clickY, typeOverride = null) {
 
     if (type === 'mysterybox') {
         // Unlocked and ammo check is handled at the beginning of spawnWeapon
-        const playVol = (0.7 + Math.random() * 0.15) * 0.2;
+        const playVol = (0.7 + Math.random() * 0.15) * 0.35;
         const detune = (Math.random() - 0.5) * 300;
         soundManager.play('sfx_launch_heavy', false, playVol, detune);
 
@@ -522,7 +522,7 @@ function executeSpawn(type, clickX, clickY) {
     if (type === 'asteroid' || type === 'moon') {
         soundManager.play('sfx_launch_heavy', false, 0.55);
     } else if (type === 'nuke') {
-        soundManager.play('sfx_launch_heavy', false, 0.1, 580 + 200 * Math.random());
+        soundManager.play('sfx_launch_heavy', false, 0.2, 580 + 200 * Math.random());
     }
 
     weapons.push({

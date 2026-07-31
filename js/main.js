@@ -195,7 +195,9 @@ const essentialSoundIds = [
     'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large',
     'sfx_victory'
 ];
-essentialSoundIds.forEach(id => soundManager.load(id));
+// Kept so run() can gate the end of the loading bar on these actually decoding.
+// SoundManager.load() never rejects, so this always settles.
+const essentialSoundsReady = Promise.all(essentialSoundIds.map(id => soundManager.load(id)));
 
 window.deferredSoundIds = [
     'sfx_laser_fire', 'sfx_laser_hum', 'sfx_laser_crack',
@@ -269,60 +271,143 @@ function extractSprite(frameName) {
     return canvas;
 }
 
-function loadSpritesAtlas() {
+// ─── #29 Asset loader failure handling & automatic retry ───
+// A dropped request must not resolve as success: booting with a blank atlas
+// crashes later, far from the real cause. Retry with a capped backoff and, if
+// the asset is genuinely unreachable, halt boot and tell the player.
+const ASSET_MAX_ATTEMPTS = 3;
+
+function assetRetryDelay(attempt) {
+    return Math.min(1000 * attempt, 3000);
+}
+
+// Cache-bust retries so a cached error response isn't replayed verbatim.
+function retryUrl(url, attempt) {
+    if (attempt === 1) return url;
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + 'retry=' + attempt;
+}
+
+function loadImageWithRetry(img, url, label) {
     return new Promise((resolve) => {
-        let jsonLoaded = false;
-        let imgLoaded = false;
-
-        const checkResolve = () => {
-            if (jsonLoaded && imgLoaded) {
-                fistImage = extractSprite('fist_punch_up.webp');
-                spriteOrange = extractSprite('orange.webp');
-                spriteVermillionRed = extractSprite('vermillion_red.webp');
-                spriteLightOrange = extractSprite('light_orange.webp');
-                spriteWhiteGold = extractSprite('white_gold.webp');
-                spriteBrightYellow = extractSprite('bright_yellow.webp');
-                spriteSmokeStandard = extractSprite('smoke_standard.webp');
-                spriteSmokeMissile = extractSprite('smoke_missile.webp');
-                spriteDuck = extractSprite('duck.png');
-
-                // Planet and core glows
-                earthGlow = extractSprite('earth-glow.png');
-                marsGlow = extractSprite('mars-glow.png');
-                neptuneGlow = extractSprite('neptune-glow.png');
-                jupiterGlow = extractSprite('jupiter-glow.png');
-                neutronStarGlow = extractSprite('neutron-star-glow.png');
-                sunCorona = extractSprite('sun-corona.png');
-                sunCoreGlow = extractSprite('sun-core-glow.png');
-                magmaCoreGlow = extractSprite('magma-core-glow.png');
-
-                resolve();
-            }
+        let attempt = 0;
+        const tryLoad = () => {
+            attempt++;
+            img.onload = () => resolve(true);
+            img.onerror = () => {
+                if (attempt < ASSET_MAX_ATTEMPTS) {
+                    console.warn(`Asset load failed (attempt ${attempt}/${ASSET_MAX_ATTEMPTS}): ${label}`);
+                    setTimeout(tryLoad, assetRetryDelay(attempt));
+                } else {
+                    console.error(`Failed to load ${label} after ${ASSET_MAX_ATTEMPTS} attempts`);
+                    resolve(false);
+                }
+            };
+            img.src = retryUrl(url, attempt);
         };
-
-        atlasImage.onload = () => {
-            imgLoaded = true;
-            checkResolve();
-        };
-        atlasImage.onerror = () => {
-            console.error("Failed to load sprites.png");
-            resolve();
-        };
-
-        atlasImage.src = './assets/sprites.png';
-
-        fetch('./assets/sprites.json')
-            .then(res => res.json())
-            .then(data => {
-                atlasData = data;
-                jsonLoaded = true;
-                checkResolve();
-            })
-            .catch(err => {
-                console.error("Failed to load sprites.json:", err);
-                resolve();
-            });
+        tryLoad();
     });
+}
+
+async function fetchJsonWithRetry(url, label) {
+    for (let attempt = 1; attempt <= ASSET_MAX_ATTEMPTS; attempt++) {
+        try {
+            const res = attempt === 1
+                ? await fetch(url)
+                : await fetch(retryUrl(url, attempt), { cache: 'reload' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        } catch (err) {
+            if (attempt < ASSET_MAX_ATTEMPTS) {
+                console.warn(`Asset load failed (attempt ${attempt}/${ASSET_MAX_ATTEMPTS}): ${label}`, err);
+                await new Promise(r => setTimeout(r, assetRetryDelay(attempt)));
+            } else {
+                console.error(`Failed to load ${label} after ${ASSET_MAX_ATTEMPTS} attempts`, err);
+            }
+        }
+    }
+    return null;
+}
+
+// Shows the permanent-failure state on the loading screen. `onRetry` must
+// re-issue the real requests — clearing bookkeeping alone would "succeed" with
+// the assets still missing.
+let loadingFailureRetryBusy = false;
+function showLoadingFailureUI(onRetry) {
+    const box = document.getElementById('loading-failure');
+    const text = document.getElementById('loading-failure-text');
+    const btn = document.getElementById('loading-failure-retry');
+    const t = translations[currentLanguage] || translations['en'];
+
+    if (text) text.textContent = t.loadFailed || 'LOADING INTERRUPTED\nCheck your connection and try again.';
+    if (btn) {
+        btn.textContent = t.loadRetry || 'RETRY';
+        btn.disabled = false;
+    }
+    if (loadingStatus) loadingStatus.textContent = '';
+    if (!box) {
+        console.error('Loading failure UI is missing from the DOM.');
+        return;
+    }
+    box.hidden = false;
+    loadingFailureRetryBusy = false;
+
+    if (btn && !btn._retryBound) {
+        btn._retryBound = true;
+        btn.addEventListener('click', () => {
+            if (loadingFailureRetryBusy) return;   // guard double-taps
+            loadingFailureRetryBusy = true;
+            btn.disabled = true;
+            hideLoadingFailureUI();
+            setLoadingProgress(20, (translations[currentLanguage] || translations['en']).loadingAssets || 'Loading assets...');
+            Promise.resolve(btn._onRetry && btn._onRetry()).catch(err => {
+                console.error('Retry attempt failed', err);
+            });
+        });
+    }
+    if (btn) btn._onRetry = onRetry;
+}
+
+function hideLoadingFailureUI() {
+    const box = document.getElementById('loading-failure');
+    if (box) box.hidden = true;
+}
+
+function extractAtlasSprites() {
+    fistImage = extractSprite('fist_punch_up.webp');
+    spriteOrange = extractSprite('orange.webp');
+    spriteVermillionRed = extractSprite('vermillion_red.webp');
+    spriteLightOrange = extractSprite('light_orange.webp');
+    spriteWhiteGold = extractSprite('white_gold.webp');
+    spriteBrightYellow = extractSprite('bright_yellow.webp');
+    spriteSmokeStandard = extractSprite('smoke_standard.webp');
+    spriteSmokeMissile = extractSprite('smoke_missile.webp');
+    spriteDuck = extractSprite('duck.png');
+
+    // Planet and core glows
+    earthGlow = extractSprite('earth-glow.png');
+    marsGlow = extractSprite('mars-glow.png');
+    neptuneGlow = extractSprite('neptune-glow.png');
+    jupiterGlow = extractSprite('jupiter-glow.png');
+    neutronStarGlow = extractSprite('neutron-star-glow.png');
+    sunCorona = extractSprite('sun-corona.png');
+    sunCoreGlow = extractSprite('sun-core-glow.png');
+    magmaCoreGlow = extractSprite('magma-core-glow.png');
+}
+
+// Resolves true only when BOTH halves of the atlas are actually usable.
+// "Request finished" is not "load succeeded" — a missing page or manifest here
+// means every sprite in the game would draw blank.
+async function loadSpritesAtlas() {
+    const [imgOk, data] = await Promise.all([
+        loadImageWithRetry(atlasImage, './assets/sprites.png', 'sprites.png'),
+        fetchJsonWithRetry('./assets/sprites.json', 'sprites.json')
+    ]);
+
+    if (!imgOk || !data) return false;
+
+    atlasData = data;
+    extractAtlasSprites();
+    return true;
 }
 
 setLoadingProgress(40, (translations[currentLanguage] || translations['en']).loadingWeaponAssets || 'Loading weapon assets...');
@@ -380,8 +465,24 @@ function getGradientCanvas(color) {
 }
 
 async function run(mode) {
-    // Load spritesheet atlas assets first
-    await loadSpritesAtlas();
+    // Load spritesheet atlas assets first. #29 — if it is permanently
+    // unreachable, halt boot and offer a retry instead of continuing into a
+    // session where every sprite is blank. Nothing below has run yet, so
+    // re-entering run() from the retry button is safe.
+    if (!await loadSpritesAtlas()) {
+        showLoadingFailureUI(() => run(mode));
+        return;
+    }
+    hideLoadingFailureUI();
+
+    // #18 — the loading bar must not reach 100% before the sounds it claims to
+    // be loading are decoded, or the first tap plays nothing. Capped so a single
+    // stalled request can't hold the game hostage; missing sounds degrade to
+    // silence and are retried lazily by SoundManager.
+    await Promise.race([
+        essentialSoundsReady,
+        new Promise(resolve => setTimeout(resolve, 8000))
+    ]);
 
     // Wait for local fonts to load to prevent canvas text rendering fallback glitches
     if (document.fonts && typeof document.fonts.ready !== 'undefined') {
@@ -485,7 +586,13 @@ async function run(mode) {
         const adSpinScale = Math.min(1.0, Math.min(adScaleW, adScaleH));
         document.documentElement.style.setProperty('--ad-spin-scale', adSpinScale);
     }
-    window.addEventListener('resize', resizeBackground);
+    // #19 — ResizeObserver with window.resize fallback for older browsers (iOS < 13.4, Safari < 13.1)
+    if (window.ResizeObserver) {
+        const _resizeObserver = new ResizeObserver(resizeBackground);
+        _resizeObserver.observe(gameWorld);
+    } else {
+        window.addEventListener('resize', resizeBackground);
+    }
     resizeBackground();
 
     // Translate loading screen
@@ -1130,6 +1237,7 @@ async function run(mode) {
                 ft.life -= deltaTime;
                 if (ft.life <= 0) {
                     floatingTexts.splice(i, 1);
+                    _releaseFloatingText(ft); // return to pool (#6 GC optimisation)
                 }
             }
 
@@ -4998,11 +5106,26 @@ async function run(mode) {
     }
 
     let bgmStarted = false;
+    let bgmPendingLoad = false;
     function startBGM() {
         if (bgmStarted) return;
         soundManager.init().then(() => {
-            soundManager.play('bgm_gentle_space', true, 0.45);
-            bgmStarted = true;
+            // play() returns null when the buffer hasn't decoded yet. Latching
+            // unconditionally would leave the player with no music for the rest
+            // of the session, so only latch on an actual start and kick a
+            // (re)load so the next interaction can succeed.
+            const source = soundManager.play('bgm_gentle_space', true, 0.45);
+            if (source) {
+                bgmStarted = true;
+            } else if (!bgmPendingLoad) {
+                bgmPendingLoad = true;
+                soundManager.load('bgm_gentle_space').then(() => {
+                    bgmPendingLoad = false;
+                    if (!bgmStarted && soundManager.play('bgm_gentle_space', true, 0.45)) {
+                        bgmStarted = true;
+                    }
+                });
+            }
         });
     }
 
@@ -5046,111 +5169,151 @@ async function run(mode) {
         }
     }, { passive: false });
 
-    // Scale-aware input handler directly on gameWorld to allow clicks on black bars
-    gameWorld.addEventListener('mousedown', (e) => {
-        if (window.gamePausedForAd) return;
-        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
-            return;
-        }
-        if (canvas) canvas.focus(); // Focus canvas to redirect keyboard shortcuts
-        startBGM();
-        if (!gameplayStarted) {
-            gameplayStarted = true;
-            if (window.PlatformBridge) {
-                window.PlatformBridge.gameplayStart();
+    // Input landing on the HUD belongs to the HUD, not the planet: no weapon
+    // spawn, and (on the legacy touch path) no preventDefault, or the scrollable
+    // weapon list can't be panned.
+    function isUiInputTarget(target) {
+        if (!target || typeof target.closest !== 'function') return false;
+        return !!(target.closest('.weapon-button') || target.closest('.planet-btn') ||
+            target.closest('.options-toggle-wrapper') || target.closest('.options-hitbox') ||
+            target.closest('.options-popup-overlay') || target.closest('.weapon-bar-wrapper') ||
+            target.closest('.victory-screen') || target.closest('.loading-screen'));
+    }
+
+    // #27 — Pointer Events with Touch Event Fallback for iOS < 13
+    if (window.PointerEvent) {
+        gameWorld.addEventListener('pointerdown', (e) => {
+            if (window.gamePausedForAd) return;
+            if (isUiInputTarget(e.target)) {
+                return;
             }
-        }
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / SCREEN_W;
-        const scaleY = rect.height / SCREEN_H;
-        const x = (e.clientX - rect.left) / scaleX;
-        const y = (e.clientY - rect.top) / scaleY;
-        pointerX = x;
-        pointerY = y;
-        showPointer = true;
-
-        // Check shooting star click
-        if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
-            return;
-        }
-
-        if (mode === 'play') {
-            isHolding = true;
-            missileLaunchTimer = 0;
-            spawnWeapon(x, y);
-        }
-    });
-    gameWorld.addEventListener('mousemove', (e) => {
-        if (window.gamePausedForAd) return;
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / SCREEN_W;
-        const scaleY = rect.height / SCREEN_H;
-        pointerX = (e.clientX - rect.left) / scaleX;
-        pointerY = (e.clientY - rect.top) / scaleY;
-        showPointer = true;
-    });
-
-    gameWorld.addEventListener('mouseleave', () => {
-        showPointer = false;
-    });
-
-    gameWorld.addEventListener('touchstart', (e) => {
-        if (window.gamePausedForAd) return;
-        if (e.target.closest('.weapon-button') || e.target.closest('.planet-btn') || e.target.closest('.options-toggle-wrapper') || e.target.closest('.options-hitbox') || e.target.closest('.options-popup-overlay') || e.target.closest('.weapon-bar-wrapper') || e.target.closest('.victory-screen') || e.target.closest('.loading-screen')) {
-            return;
-        }
-        if (canvas) canvas.focus(); // Focus canvas on touch gesture
-        startBGM();
-        if (!gameplayStarted) {
-            gameplayStarted = true;
-            if (window.PlatformBridge) {
-                window.PlatformBridge.gameplayStart();
+            if (canvas) canvas.focus();
+            startBGM();
+            if (!gameplayStarted) {
+                gameplayStarted = true;
+                if (window.PlatformBridge) {
+                    window.PlatformBridge.gameplayStart();
+                }
             }
-        }
-        e.preventDefault(); // Prevents duplicate mouse trigger on mobile
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / SCREEN_W;
-        const scaleY = rect.height / SCREEN_H;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = rect.width / SCREEN_W;
+            const scaleY = rect.height / SCREEN_H;
+            const x = (e.clientX - rect.left) / scaleX;
+            const y = (e.clientY - rect.top) / scaleY;
+            pointerX = x;
+            pointerY = y;
+            showPointer = true;
 
-        // Defensive coordinate check for mock touch profiles
-        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
-        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
-        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
+            if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
+                return;
+            }
 
-        const x = (clientX - rect.left) / scaleX;
-        const y = (clientY - rect.top) / scaleY;
-        pointerX = x;
-        pointerY = y;
-        showPointer = true;
+            if (mode === 'play') {
+                isHolding = true;
+                missileLaunchTimer = 0;
+                spawnWeapon(x, y);
+            }
+        });
 
-        // Check shooting star click
-        if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
-            return;
-        }
+        gameWorld.addEventListener('pointermove', (e) => {
+            if (window.gamePausedForAd) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = rect.width / SCREEN_W;
+            const scaleY = rect.height / SCREEN_H;
+            pointerX = (e.clientX - rect.left) / scaleX;
+            pointerY = (e.clientY - rect.top) / scaleY;
+            showPointer = true;
+        });
 
-        if (mode === 'play') {
-            isHolding = true;
-            missileLaunchTimer = 0;
-            spawnWeapon(x, y);
-        }
-    }, { passive: false });
+        window.addEventListener('pointerup', () => {
+            if (window.gamePausedForAd) return;
+            isHolding = false;
+            soundManager.stopLoop('sfx_laser_fire');
+            soundManager.stopLoop('sfx_laser_hum');
+            handleLightningRelease();
+        });
 
-    gameWorld.addEventListener('touchmove', (e) => {
-        if (window.gamePausedForAd) return;
-        e.preventDefault(); // Prevents screen dragging/scrolling on mobile devices
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = rect.width / SCREEN_W;
-        const scaleY = rect.height / SCREEN_H;
+        window.addEventListener('pointercancel', () => {
+            if (window.gamePausedForAd) return;
+            isHolding = false;
+            handleLightningRelease();
+        });
+    } else {
+        // Touch events fallback ONLY for legacy browsers without PointerEvent (iOS < 13)
+        gameWorld.addEventListener('touchstart', (e) => {
+            if (window.gamePausedForAd) return;
+            if (isUiInputTarget(e.target)) {
+                return;
+            }
+            if (canvas) canvas.focus(); // Focus canvas on touch gesture
+            startBGM();
+            if (!gameplayStarted) {
+                gameplayStarted = true;
+                if (window.PlatformBridge) {
+                    window.PlatformBridge.gameplayStart();
+                }
+            }
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = rect.width / SCREEN_W;
+            const scaleY = rect.height / SCREEN_H;
 
-        // Defensive coordinate check for mock touch profiles
-        const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
-        const clientX = touch.clientX !== undefined ? touch.clientX : 0;
-        const clientY = touch.clientY !== undefined ? touch.clientY : 0;
+            // Defensive coordinate check for mock touch profiles
+            const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
+            const clientX = touch.clientX !== undefined ? touch.clientX : 0;
+            const clientY = touch.clientY !== undefined ? touch.clientY : 0;
 
-        pointerX = (clientX - rect.left) / scaleX;
-        pointerY = (clientY - rect.top) / scaleY;
-        showPointer = true;
-    }, { passive: false });
+            const x = (clientX - rect.left) / scaleX;
+            const y = (clientY - rect.top) / scaleY;
+            pointerX = x;
+            pointerY = y;
+            showPointer = true;
+
+            // Check shooting star click
+            if (window.ShootingStarManager && window.ShootingStarManager.checkClick(x, y)) {
+                return;
+            }
+
+            if (mode === 'play') {
+                isHolding = true;
+                missileLaunchTimer = 0;
+                spawnWeapon(x, y);
+            }
+        }, { passive: false });
+
+        gameWorld.addEventListener('touchmove', (e) => {
+            if (window.gamePausedForAd) return;
+            // #2B — do not swallow the move over scrollable HUD overlays (the
+            // weapon list lives inside #game-world and must still pan).
+            if (isUiInputTarget(e.target)) return;
+            e.preventDefault(); // Prevents screen dragging/scrolling on mobile devices
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = rect.width / SCREEN_W;
+            const scaleY = rect.height / SCREEN_H;
+
+            // Defensive coordinate check for mock touch profiles
+            const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : ((e.changedTouches && e.changedTouches.length > 0) ? e.changedTouches[0] : e);
+            const clientX = touch.clientX !== undefined ? touch.clientX : 0;
+            const clientY = touch.clientY !== undefined ? touch.clientY : 0;
+
+            pointerX = (clientX - rect.left) / scaleX;
+            pointerY = (clientY - rect.top) / scaleY;
+            showPointer = true;
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => {
+            if (window.gamePausedForAd) return;
+            isHolding = false;
+            soundManager.stopLoop('sfx_laser_fire');
+            soundManager.stopLoop('sfx_laser_hum');
+            handleLightningRelease();
+        });
+
+        window.addEventListener('touchcancel', () => {
+            if (window.gamePausedForAd) return;
+            isHolding = false;
+            handleLightningRelease();
+        });
+    }
 
     function handleLightningRelease() {
         if (selectedWeapon === 'lightning') {
@@ -5203,6 +5366,9 @@ async function run(mode) {
             isHolding = false;
             soundManager.stopLoop('sfx_laser_fire');
             soundManager.stopLoop('sfx_laser_hum');
+            // #3A — on mobile the tab can be killed from the background without
+            // another event, so persist any in-flight save before suspending.
+            if (window.flushSaveStateSync) window.flushSaveStateSync();
             if (soundManager && soundManager.context) {
                 soundManager.context.suspend().catch(() => { });
             }
@@ -5215,16 +5381,14 @@ async function run(mode) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
-    window.addEventListener('beforeunload', () => {
+    const handleLifecycleTeardown = () => {
+        if (window.flushSaveStateSync) window.flushSaveStateSync();
         if (soundManager && soundManager.context) {
             soundManager.context.suspend().catch(() => { });
         }
-    });
-    window.addEventListener('pagehide', () => {
-        if (soundManager && soundManager.context) {
-            soundManager.context.suspend().catch(() => { });
-        }
-    });
+    };
+    window.addEventListener('beforeunload', handleLifecycleTeardown);
+    window.addEventListener('pagehide', handleLifecycleTeardown);
 
     // Weapon selections panel
     document.querySelectorAll('.weapon-button').forEach(button => {

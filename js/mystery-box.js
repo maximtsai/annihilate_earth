@@ -424,7 +424,7 @@ function updateMysteryBoxes(deltaTime, dt60) {
                         const vy = (dirY / dist) * speed;
                         const launchAngle = angle + Math.PI;
 
-                        soundManager.play('sfx_launch_heavy', false, 0.1, 580 + 200 * Math.random());
+                        soundManager.play('sfx_launch_heavy', false, 0.2, 580 + 200 * Math.random());
                         weapons.push({
                             type: 'nuke',
                             x: box.x,
