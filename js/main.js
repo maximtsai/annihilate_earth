@@ -399,7 +399,7 @@ function extractAtlasSprites() {
 // means every sprite in the game would draw blank.
 async function loadSpritesAtlas() {
     const [imgOk, data] = await Promise.all([
-        loadImageWithRetry(atlasImage, './assets/sprites.png', 'sprites.png'),
+        loadImageWithRetry(atlasImage, './assets/sprites.webp', 'sprites.webp'),
         fetchJsonWithRetry('./assets/sprites.json', 'sprites.json')
     ]);
 
