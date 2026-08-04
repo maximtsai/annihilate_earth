@@ -1439,11 +1439,13 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
 
 // Trigger Victory splash
 function triggerVictory() {
-    // Site lock: only grant victory on an authorized CrazyGames domain (or local dev)
-    const hostname = window.location.hostname || '';
-    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
-    const isCrazyGamesDomain = hostname.toLowerCase().includes('crazy');
-    if (!isLocal && !isCrazyGamesDomain) {
+    // Site lock: only grant victory where the CrazyGames SDK is really serving
+    // us (see PlatformBridge.isAuthorizedHost). No bridge at all means the
+    // build was stripped apart, which is exactly what this blocks.
+    const authorized = window.PlatformBridge && typeof window.PlatformBridge.isAuthorizedHost === 'function'
+        ? window.PlatformBridge.isAuthorizedHost()
+        : false;
+    if (!authorized) {
         const sitelockEl = document.getElementById('sitelock-message');
         if (sitelockEl) {
             const t = translations[currentLanguage] || translations['en'];

@@ -178,17 +178,12 @@ class WeaponSpinner {
     start() {
         if (this.lockedWeapons.length === 0) return;
 
-        // Site lock check: allow local dev, otherwise check if hosted on valid CrazyGames domains
-        const isLocal = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' || 
-                        window.location.hostname === '';
-        
-        const isCrazyGamesDomain = () => {
-            const hostname = window.location.hostname || '';
-            return hostname.toLowerCase().includes('crazy');
-        };
-
-        if (!isLocal && !isCrazyGamesDomain()) {
+        // Site lock check: same predicate as the victory screen — a live SDK,
+        // local dev, or a genuine crazygames.* host.
+        const authorized = window.PlatformBridge && typeof window.PlatformBridge.isAuthorizedHost === 'function'
+            ? window.PlatformBridge.isAuthorizedHost()
+            : false;
+        if (!authorized) {
             return;
         }
 

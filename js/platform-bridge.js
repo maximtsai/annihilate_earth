@@ -27,6 +27,7 @@ window.PlatformBridge = {
     _sdkGameplayRunning: false,
     _gameplaySyncTimer: null,
     _lastGameplayCallAt: { start: 0, stop: 0 },
+    _audioSuspendedForAd: false,
 
     init: function() {
         if (this._initPromise) return this._initPromise;
@@ -232,10 +233,23 @@ window.PlatformBridge = {
         }
     },
 
+    // Runs BEFORE requestAd: CrazyGames expects gameplay to already be stopped
+    // when an ad is requested, not once it starts playing. Audio is left alone
+    // here — an unfilled request can take seconds to fail and silencing the
+    // game for that is worse than the ad never appearing.
     _pauseForAd: function() {
         this._adInProgress = true;
         window.gamePausedForAd = true;
         this._syncGameplayState();   // forces the SDK to gameplayStop if it isn't already
+        // Input is frozen from here on, so a hold in progress would never see
+        // its release event. Drop it now instead of leaking it past the ad.
+        if (typeof window.releaseHeldInput === 'function') {
+            try { window.releaseHeldInput(); } catch (e) { }
+        }
+    },
+
+    _suspendAudioForAd: function() {
+        this._audioSuspendedForAd = true;
         if (window.soundManager && window.soundManager.context) {
             window.soundManager.context.suspend().catch(() => {});
         }
@@ -244,9 +258,14 @@ window.PlatformBridge = {
     _resumeAfterAd: function() {
         this._adInProgress = false;
         window.gamePausedForAd = false;
-        if (window.soundManager && window.soundManager.context && window.soundManager.isInitialized) {
-            if (!document.hidden) {
-                window.soundManager.context.resume().catch(() => {});
+        // Only un-suspend what this bridge suspended; an ad that never started
+        // left the audio context alone and must not be force-resumed here.
+        if (this._audioSuspendedForAd) {
+            this._audioSuspendedForAd = false;
+            if (window.soundManager && window.soundManager.context && window.soundManager.isInitialized) {
+                if (!document.hidden) {
+                    window.soundManager.context.resume().catch(() => {});
+                }
             }
         }
         this._syncGameplayState();   // restores gameplayStart if the game still wants it
@@ -257,6 +276,20 @@ window.PlatformBridge = {
         return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
     },
 
+    // Sitelock predicate for the parts of the game that only unlock on an
+    // authorized host. A live SDK is the real signal — a rehosted copy can fake
+    // a hostname but cannot make CrazyGames' SDK initialize for it. The
+    // hostname check stays as a fallback because an ad blocker can stop the SDK
+    // script from loading on the genuine site, and that must not lock a paying
+    // player out of the victory screen.
+    isAuthorizedHost: function() {
+        if (this.sdkReady) return true;
+        if (this._isLocalDev()) return true;
+        const hostname = (window.location.hostname || '').toLowerCase();
+        // crazygames.com, games.crazygames.com, regional variants (crazygames.com.br)
+        return /(^|\.)crazygames\.[a-z]{2,3}(\.[a-z]{2})?$/.test(hostname);
+    },
+
     // Shared driver for both ad types. `onSettled(success)` always runs exactly
     // once — on completion, on failure, and on either watchdog firing — so no
     // caller can be left waiting on a callback that never arrives.
@@ -265,7 +298,6 @@ window.PlatformBridge = {
         let settledSuccess = false;
         let transitionInFinished = false;
         let resumed = false;
-        let adStarted = false;
         let requestTimer = null;
         let durationTimer = null;
 
@@ -278,11 +310,10 @@ window.PlatformBridge = {
             if (!adResolved || !transitionInFinished || resumed) return;
             resumed = true;
             this._adRequestPending = false;
-            if (adStarted) {
-                this._resumeAfterAd();
-            } else {
-                window.gamePausedForAd = false;
-            }
+            // Unconditional: gameplay is now stopped from the moment the ad is
+            // requested, so every exit path — filled, unfilled, timed out —
+            // has to hand control back.
+            this._resumeAfterAd();
             onSettled(settledSuccess);
             requestAnimationFrame(() => this._runTransitionOut());
         };
@@ -321,6 +352,9 @@ window.PlatformBridge = {
         }
 
         if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad) {
+            // Gameplay must be stopped before the request, not after adStarted.
+            this._pauseForAd();
+
             // Watchdog: the request never launched at all.
             requestTimer = setTimeout(() => {
                 console.warn("[PlatformBridge] " + type + " ad request timed out with no response; continuing.");
@@ -331,14 +365,13 @@ window.PlatformBridge = {
                 window.CrazyGames.SDK.ad.requestAd(type, {
                     adStarted: () => {
                         console.log("[PlatformBridge] CrazyGames " + type + " ad started.");
-                        adStarted = true;
                         if (requestTimer) { clearTimeout(requestTimer); requestTimer = null; }
                         // Second watchdog: the ad started but never reported an end.
                         durationTimer = setTimeout(() => {
                             console.warn("[PlatformBridge] " + type + " ad exceeded max duration with no end event; resuming.");
                             settle(false);
                         }, AD_MAX_DURATION_MS);
-                        this._pauseForAd();
+                        this._suspendAudioForAd();
                     },
                     adFinished: () => {
                         console.log("[PlatformBridge] CrazyGames " + type + " ad completed successfully.");
@@ -365,7 +398,11 @@ window.PlatformBridge = {
     showAdBreak: function(onComplete) {
         console.log("[PlatformBridge] CrazyGames commercial break requested.");
         if (this._adInProgress || this._adRequestPending) {
-            console.warn("[PlatformBridge] Ad already in progress; ignoring duplicate request.");
+            // Skip the ad, but never swallow the callback: progression to the
+            // next planet rides on it, and dropping it strands the player on
+            // the victory screen with a dead button.
+            console.warn("[PlatformBridge] Ad already in progress; continuing without a second break.");
+            if (onComplete) onComplete();
             return;
         }
         // A midgame break always continues the game, filled or not.

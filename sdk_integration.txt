@@ -1,0 +1,178 @@
+===============================================================================
+CRAZYGAMES SDK INTEGRATION ARCHITECTURE & SPECIFICATION MANUAL
+===============================================================================
+Target Audience: AI coding agents, developers, and reference implementations.
+Purpose: Comprehensive technical specification detailing how to integrate the 
+CrazyGames HTML5 SDK v3 in plain JavaScript web games, including exact call 
+signatures, lifecycle hooks, data synchronization, ad rules, and safety patterns.
+
+-------------------------------------------------------------------------------
+1. ARCHITECTURE OVERVIEW & BRIDGE DESIGN
+-------------------------------------------------------------------------------
+The codebase abstracts all platform features through an SDK Bridge (`sdk-bridge.js`)
+implementing a unified `BaseSDKAdapter` interface.
+
+Key Architectural Principles:
+1. Pure Adapter Pattern: Game logic calls `window.GameSDK.<method>()` unconditionally.
+2. Degradation & Fallbacks: If the CrazyGames SDK script fails to load (e.g., adblocker 
+   or offline), `CrazyGamesAdapter` degrades gracefully to `localStorage` and safe 
+   error callbacks without throwing runtime exceptions.
+3. Eager Initialization & Memoization: `CrazyGamesAdapter.init()` fires eagerly when 
+   `sdk-bridge.js` parses and returns a memoized promise so `await window.GameSDK.init()` 
+   in `main.js` reuses the same execution context.
+
+Global Namespace Entry: `window.CrazyGames.SDK`
+
+-------------------------------------------------------------------------------
+2. LIFECYCLE HOOKS (SDK.game)
+-------------------------------------------------------------------------------
+
+A. SDK Initialization
+- SDK Call: `await window.CrazyGames.SDK.init()`
+- When Used: At boot time in `sdk-bridge.js` and `js/main.js` (L804) before preloading assets.
+- Behavior: Initializes the SDK runtime, reads initial host settings (e.g. `muteAudio`), 
+  and registers setting listeners.
+
+B. Loading Events
+- SDK Call: `window.CrazyGames.SDK.game.loadingStart()`
+  - When Used: Called immediately after `SDK.init()` completes (L805 in `main.js`).
+  - Purpose: Signals to CrazyGames that asset downloading/parsing has begun.
+- SDK Call: `window.CrazyGames.SDK.game.loadingStop()`
+  - When Used: Called in `main.js` (L849) once asset preloading (`Promise.all`) is 
+    complete and the loader UI begins hiding.
+  - Purpose: Signals that the game is fully interactive and playable.
+
+C. First Frame Rendered
+- SDK Call: `window.CrazyGames.SDK.firstFrameReady()`
+  - When Used: Triggered via `requestAnimationFrame` on the very first canvas paint 
+    (L825 in `main.js`), strictly BEFORE `loadingStop()`.
+
+D. Gameplay State Tracking (gameplayStart / gameplayStop)
+CrazyGames requires strict tracking of active gameplay vs. idle/menu states to 
+manage ad eligibility and server resources.
+
+- SDK Call: `window.CrazyGames.SDK.game.gameplayStart()`
+  - When Used:
+    1. Right after `loadingStop()` when the game first starts (L852 in `main.js`).
+    2. When any overlay/modal popup is closed (`window.Game.popupClosed(el)` in `main.js` L96).
+    3. When an ad break (midgame or rewarded) finishes or fails (`ui.js` L94, `rewardAd.js` L87).
+    4. When the game engine unpauses via `window.Game.resumeGame()` (L1254 in `main.js`), 
+       guarded so it only fires if no popups or ad breaks are pending.
+  - Guard Logic: Wrapped in `sdkGameplayStart()` which ensures `_gameplayActive` is false 
+    before firing, preventing duplicate start events.
+
+- SDK Call: `window.CrazyGames.SDK.game.gameplayStop()`
+  - When Used:
+    1. When an overlay/modal popup opens (`window.Game.popupOpened(el)` in `main.js` L79).
+    2. When an ad break starts (`showAd` `onStarted` callback in `ui.js` L105).
+    3. When the game engine explicitly pauses via `window.Game.pauseGame()` (L1236 in `main.js`).
+  - Guard Logic: Wrapped in `sdkGameplayStop()` which ensures `_gameplayActive` is true 
+    before firing.
+
+Note on Window Focus / Tab Switching:
+Per official CrazyGames SDK guidelines, do NOT call `gameplayStop()` in `visibilitychange` 
+or `blur` event listeners. The CrazyGames SDK automatically detects browser window focus/tab switches.
+
+E. Celebratory Moments (happyTime)
+- SDK Call: `window.CrazyGames.SDK.game.happytime()`
+  - When Used: Triggered during positive gameplay moments such as multi-merges, combos, 
+    level unlocks, or fulfilling contracts.
+
+-------------------------------------------------------------------------------
+3. MONETIZATION & ADS (SDK.ad)
+-------------------------------------------------------------------------------
+
+- SDK Call: `window.CrazyGames.SDK.ad.requestAd(type, callbacks)`
+  - Parameters:
+    - `type`: `'midgame'` | `'rewarded'`
+    - `callbacks`: `{ adStarted: Function, adFinished: Function, adError: Function }`
+  - Trigger Situations:
+    1. `'midgame'`: Requested after major popups are closed or after level milestones (`ui.js` L101).
+    2. `'rewarded'`: Requested when player explicitly clicks "Free Upgrade" or reward buttons (`rewardAd.js`).
+
+- CRITICAL MONETIZATION RULES:
+  1. `adStarted`: Must pause audio, freeze game loop (`pauseGame()`), and trigger `sdkGameplayStop()`.
+  2. `adFinished`: Resumes game loop (`resumeGame()`) and triggers `sdkGameplayStart()`. For `'rewarded'`, 
+     rewards are granted ONLY inside `adFinished`.
+  3. `adError`: Resumes game loop without granting any reward. Supported error types include 
+     `'adblock'`, `'unfilled'`, and `'adCooldown'`. An error must NEVER result in a reward.
+  4. SDK Unavailable Fallback: If `SDK.ad` is missing (e.g. adblocker), `showAd()` immediately 
+     invokes `callbacks.onError('adblock')` and returns `false`. It must NEVER call `onFinished`.
+
+- Synchronous Ad Pending Flag (`window.Game._adPending`):
+  Popups that request an ad immediately upon closing synchronously set `_adPending = true` before 
+  closing. This prevents `popupClosed()` from briefly emitting `gameplayStart()` right before 
+  the ad emits `gameplayStop()`.
+
+-------------------------------------------------------------------------------
+4. DUAL-PERSISTENCE & CLOUD SAVE MIRRORING (SDK.data)
+-------------------------------------------------------------------------------
+
+- SDK Calls:
+  - `window.CrazyGames.SDK.data.setItem(key, value)`
+  - `window.CrazyGames.SDK.data.getItem(key)`
+  - `window.CrazyGames.SDK.data.removeItem(key)`
+  - `window.CrazyGames.SDK.data.clear()`
+
+- DUAL-WRITE MIRROR PATTERN:
+  CrazyGames `SDK.data` performs cloud-synced storage for logged-in users. However, if a player 
+  later plays offline or with an adblocker, `SDK.data` will be unavailable.
+  
+  To prevent data loss:
+  1. `saveData(data)` and `setItem(key, val)` ALWAYS write to `localStorage` synchronously FIRST, 
+     then attempt to write to `SDK.data.setItem(...)`.
+  2. `loadData()` attempts to read `SDK.data.getItem(...)`. If a valid cloud save is returned, 
+     it syncs it to `localStorage`.
+  3. If cloud save returns `null` or fails, BUT `localStorage` contains a valid local save, 
+     the adapter sets `this.usedLocalBackup = true` and loads the local save.
+  4. On load completion, if `usedLocalBackup` is true, the game displays a user notification:
+     `"Cloud Save missing, using local backup."` (omitted for new games and hard resets).
+
+-------------------------------------------------------------------------------
+5. AUDIO SYNCHRONIZATION (SDK.game.settings)
+-------------------------------------------------------------------------------
+
+- SDK Calls:
+  - `window.CrazyGames.SDK.game.settings.muteAudio`
+  - `window.CrazyGames.SDK.game.addSettingsChangeListener(cb)`
+  - `window.CrazyGames.SDK.game.removeSettingsChangeListener(cb)`
+
+- Implementation Rules:
+  1. The platform's mute state OVERRIDES in-game volume settings.
+  2. `CrazyGamesAdapter` listens to `addSettingsChangeListener` and notifies the audio system 
+     via `onAudioEnabledChange`.
+  3. Muting is implemented at the Web Audio Master Gain Node level (or `audioCtx.suspend()`). 
+     Player stored volume preferences are NEVER zeroed out (preserving cloud save settings).
+  4. A 1-second polling safety net (`isAudioEnabled()`) runs in `main.js` (L1287) to ensure 
+     the audio graph self-corrects even if setting events are missed during load.
+
+-------------------------------------------------------------------------------
+6. USER IDENTITY & LOCALE (SDK.user)
+-------------------------------------------------------------------------------
+
+- SDK Calls:
+  - `await window.CrazyGames.SDK.user.isUserAccountAvailable()`
+  - `await window.CrazyGames.SDK.user.getUser()`
+    - Returns: `{ username: string, profilePictureUrl: string }` or `null`.
+    - Used for personalizing leaderboards and profile cards.
+  - `window.CrazyGames.SDK.user.systemInfo.locale`
+    - Returns: BCP-47 locale string (e.g. `"en-US"`, `"zh-CN"`). Used as primary language 
+      detection before falling back to `navigator.language`.
+
+-------------------------------------------------------------------------------
+7. POPUP & MODAL TRACKING SYSTEM (openPopupCount)
+-------------------------------------------------------------------------------
+
+To maintain strict `gameplayStart`/`gameplayStop` balance across nested UI elements:
+- Global counter: `openPopupCount` (in `main.js`).
+- Element marking: `el.__popupCounted = true` ensures an overlay closed via multiple inputs 
+  (e.g., Escape key AND click) cannot decrement the counter twice.
+- Flow:
+  - `openPopupCount` transitions 0 -> 1: calls `sdkGameplayStop()`.
+  - `openPopupCount` transitions 1 -> 0: calls `sdkGameplayStart()` (if not paused/ad pending).
+- Confirmation dialogs (`.confirm-overlay`) are momentary yes/no prompts and are excluded from 
+  `popupOpened`/`popupClosed` tracking.
+
+===============================================================================
+END OF SPECIFICATION MANUAL
+===============================================================================

@@ -5342,6 +5342,20 @@ async function run(mode) {
         }
     }
 
+    // An ad takes the page over mid-hold: the pointerup that ends the hold
+    // lands while input is frozen and never reaches the handlers below, so the
+    // bridge calls this instead. The lightning charge is discarded rather than
+    // fired — the player never chose to release it.
+    window.releaseHeldInput = function () {
+        isHolding = false;
+        if (soundManager) {
+            soundManager.stopLoop('sfx_laser_fire');
+            soundManager.stopLoop('sfx_laser_hum');
+        }
+        lightningHoldTime = 0;
+        lightningLastChargedCount = 0;
+    };
+
     window.addEventListener('mouseup', () => {
         if (window.gamePausedForAd) return;
         isHolding = false;
