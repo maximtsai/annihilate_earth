@@ -1667,6 +1667,18 @@ function triggerVictory() {
                                 // were, with the progression button still usable.
                                 adRequestInFlight = false;
                                 adBtn.disabled = false;
+                                // The victory screen owns the display here, so the
+                                // in-game unlock toast would be buried. Say it
+                                // inside the overlay the player is looking at.
+                                let notice = overlay.querySelector('.ad-unavailable-notice');
+                                if (!notice) {
+                                    notice = document.createElement('div');
+                                    notice.className = 'ad-unavailable-notice';
+                                    notice.style.cssText = "color:#ff6b8a;font-family:'Orbitron',sans-serif;font-size:12px;text-align:center;line-height:1.45;letter-spacing:0.5px;max-width:320px;margin-top:12px;";
+                                    overlay.appendChild(notice);
+                                }
+                                const tNow = translations[currentLanguage] || translations['en'];
+                                notice.textContent = tNow.adUnavailable || translations['en'].adUnavailable;
                             });
                         } else {
                             startReplaySpinner();

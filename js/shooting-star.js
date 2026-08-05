@@ -326,10 +326,8 @@
                 const popup = document.getElementById('ad-spin-popup-overlay');
                 if (popup) {
                     popup.style.display = 'flex';
-                    if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
-                        typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
-                        window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
-                        window.PlatformBridge.gameplayStop();
+                    if (typeof window.popupOpened === 'function') {
+                        window.popupOpened(popup);
                     }
 
                     // Reset and initialize the spinner inside the ad popup

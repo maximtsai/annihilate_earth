@@ -97,6 +97,55 @@ let totalCratersMade = 0; // (User feature 4: Stats tracking)
 let planetTimeSpent = 0;
 let bestTimes = {};
 let gameplayStarted = false;
+
+// ─── Popup ref-counting for strict gameplayStart/Stop balance ────────────
+// Tracks how many overlay/modals are open. The SDK sees a single
+// gameplayStop on the 0→1 transition and a single gameplayStart on 1→0.
+// Element marking (__popupCounted) prevents double-decrement when a popup
+// can close via multiple paths (e.g. Escape key AND click).
+let openPopupCount = 0;
+
+window.popupOpened = function(el) {
+    if (!el || el.__popupCounted) return;
+    el.__popupCounted = true;
+    openPopupCount++;
+    if (openPopupCount === 1 && gameplayStarted && !victoryTriggered) {
+        if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
+            window.PlatformBridge.gameplayStop();
+        }
+    }
+};
+
+window.popupClosed = function(el) {
+    if (!el || !el.__popupCounted) return;
+    el.__popupCounted = false;
+    openPopupCount = Math.max(0, openPopupCount - 1);
+    if (openPopupCount === 0 && gameplayStarted && !victoryTriggered &&
+        !window.gamePausedForAd) {
+        if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+            window.PlatformBridge.gameplayStart();
+        }
+    }
+};
+
+// Force-resets the counter (e.g. after a hard game reset where all popups
+// are hidden at once without individual close events).
+window.resetPopupCount = function() {
+    const wasOpen = openPopupCount > 0;
+    openPopupCount = 0;
+    // Clear marking on all tracked overlays
+    document.querySelectorAll('[class*="overlay"]').forEach(el => {
+        el.__popupCounted = false;
+    });
+    // Those popups had already issued a gameplayStop on the 0→1 transition.
+    // Dropping the count without the matching start would leave the SDK
+    // believing gameplay is stopped for the rest of the session.
+    if (wasOpen && gameplayStarted && !victoryTriggered && !window.gamePausedForAd) {
+        if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
+            window.PlatformBridge.gameplayStart();
+        }
+    }
+};
 let planetRotation = 0;
 let planetScale = 1.0;
 let isPlanetSwitching = false;

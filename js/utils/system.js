@@ -274,11 +274,24 @@ function readGameState() {
         const primary = parseSave(window.safeLocalStorage.getItem(SAVE_KEY));
         const mirror = parseSave(window.safeLocalStorage.getLocalItem(SAVE_KEY));
 
-        // Prefer whichever copy is newer. The cloud copy normally wins (it
-        // carries cross-device progress), but if a debounced write was lost the
-        // local mirror holds the only record of the last session.
+        // The cloud copy is authoritative for signed-in players: the SDK syncs
+        // it across devices, so a locally-newer mirror is almost always a stale
+        // leftover from another session (or a clock-skewed device) and must not
+        // overwrite it. Guests have no cross-device sync (the SDK backs their
+        // data module with this device's localStorage), so for them the
+        // newer-timestamp heuristic still applies — it is the only thing that
+        // recovers a save the SDK's 1s debounce dropped at tab teardown.
         let chosen = primary;
-        if (mirror && (!primary || (mirror._savedAt || 0) > (primary._savedAt || 0))) {
+        const signedIn = !!(window.PlatformBridge &&
+            typeof window.PlatformBridge.isUserSignedIn === 'function' &&
+            window.PlatformBridge.isUserSignedIn());
+        if (signedIn) {
+            if (!primary && mirror) {
+                // Signed in but the account has no cloud copy yet: seed it from
+                // the last local save rather than wiping visible progress.
+                chosen = mirror;
+            }
+        } else if (mirror && (!primary || (mirror._savedAt || 0) > (primary._savedAt || 0))) {
             if (primary) {
                 console.warn('[Save] Local mirror is newer than the stored save; recovering it.');
             }

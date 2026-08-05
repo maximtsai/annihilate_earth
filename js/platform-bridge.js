@@ -8,6 +8,12 @@ const AD_MAX_DURATION_MS = 120000;
 // The SDK throttles gameplayStart/gameplayStop at 1s per method and DISCARDS
 // calls inside that window, so pacing has to happen on our side.
 const GAMEPLAY_CALL_THROTTLE_MS = 1100;
+// The whole SDK handshake — script load, init(), hasAdblock(), getUser() — is
+// awaited before the game boots. Every step is a promise the SDK owns, and one
+// that never settles would hold the loading screen up forever, so cap the wait
+// and continue in fallback mode. Late arrivals still populate sdkReady and the
+// rest; they just stop gating the boot.
+const SDK_INIT_TIMEOUT_MS = 8000;
 
 window.PlatformBridge = {
     platform: 'crazygames',
@@ -20,6 +26,11 @@ window.PlatformBridge = {
     _adInProgress: false,
     _adRequestPending: false,
     hasAdblock: false,
+    _sdkLocale: null,
+    // Whether the CrazyGames user is signed in. Gates the save reconciliation
+    // in system.js: the cloud copy is authoritative when signed in, because the
+    // SDK syncs it across devices.
+    userSignedIn: false,
 
     // Gameplay signalling state. `_gameplayActive` is what the GAME wants;
     // `_sdkGameplayRunning` is what the SDK has actually been told. They diverge
@@ -33,25 +44,61 @@ window.PlatformBridge = {
         if (this._initPromise) return this._initPromise;
 
         this._initPromise = new Promise((resolve) => {
-            const finish = () => resolve();
+            let initTimer = setTimeout(() => {
+                initTimer = null;
+                console.warn("[PlatformBridge] CrazyGames SDK handshake exceeded " +
+                    SDK_INIT_TIMEOUT_MS + "ms; booting without waiting for it.");
+                resolve();
+            }, SDK_INIT_TIMEOUT_MS);
+
+            const finish = () => {
+                if (initTimer) { clearTimeout(initTimer); initTimer = null; }
+                resolve();
+            };
 
             const script = document.createElement('script');
             script.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
             script.onload = () => {
-                if (typeof window.CrazyGames === 'undefined' || !window.CrazyGames.SDK) {
-                    console.warn("[PlatformBridge] CrazyGames SDK variable not found; using fallback mode.");
+                if (typeof window.CrazyGames === 'undefined' || !window.CrazyGames.SDK ||
+                    typeof window.CrazyGames.SDK.init !== 'function') {
+                    console.warn("[PlatformBridge] CrazyGames SDK not usable; using fallback mode.");
                     finish();
                     return;
                 }
 
-                window.CrazyGames.SDK.init()
+                // Guard against a synchronous throw: if init() is missing or
+                // throws, finish() never runs and the game hangs on
+                // `await bridgeReady` with no way to recover.
+                let initResult;
+                try {
+                    initResult = window.CrazyGames.SDK.init();
+                } catch (e) {
+                    console.warn("[PlatformBridge] CrazyGames SDK init threw synchronously; using fallback mode.", e);
+                    finish();
+                    return;
+                }
+
+                initResult
                     .then(async () => {
+                        // v3 SDK.init() resolves on every host: on CrazyGames it
+                        // builds the real module, but on a rehosted domain or a
+                        // server-side "fail mode" it resolves into a stub whose
+                        // module getters THROW on access. Probe before trusting
+                        // it, or sdkReady would be true while every SDK call
+                        // blows up in the game boot.
+                        if (!this._probeSdkFunctional()) {
+                            console.warn("[PlatformBridge] CrazyGames SDK loaded but not functional; using fallback mode.");
+                            finish();
+                            return;
+                        }
+
                         this.sdkLoaded = true;
                         this.sdkReady = true;
                         console.log("[PlatformBridge] CrazyGames SDK successfully initialized.");
 
                         this._setupSettingsListener();
                         this._setupAuthListener();
+                        this._readLocale();
                         this._startLoadingIfNeeded();
                         // Any gameplayStart/Stop the game issued while the SDK
                         // was still initialising was a no-op; reconcile now.
@@ -67,6 +114,18 @@ window.PlatformBridge = {
                             }
                         } catch (e) {
                             console.warn("[PlatformBridge] hasAdblock check failed:", e);
+                        }
+
+                        // Signed-in state decides whether the cloud save is
+                        // authoritative in system.js. Resolve it before the game
+                        // boots so the first readGameState() knows which backend
+                        // to trust.
+                        try {
+                            if (window.CrazyGames.SDK.user && typeof window.CrazyGames.SDK.user.getUser === 'function') {
+                                this.userSignedIn = !!(await window.CrazyGames.SDK.user.getUser());
+                            }
+                        } catch (e) {
+                            this.userSignedIn = false;
                         }
 
                         finish();
@@ -107,7 +166,8 @@ window.PlatformBridge = {
         try {
             const user = window.CrazyGames.SDK.user;
             if (!user || typeof user.addAuthListener !== 'function') return;
-            user.addAuthListener(() => {
+            user.addAuthListener((u) => {
+                this.userSignedIn = !!u;
                 console.log("[PlatformBridge] Auth changed; invalidating cached save.");
                 if (typeof window.invalidateGameStateCache === 'function') {
                     window.invalidateGameStateCache();
@@ -116,6 +176,25 @@ window.PlatformBridge = {
         } catch (e) {
             console.warn("[PlatformBridge] Auth listener setup failed:", e);
         }
+    },
+
+    // Read the platform locale so first-time visitors get a language matching
+    // the CrazyGames portal they arrived from (e.g. crazygames.com.br → pt-BR).
+    _readLocale: function() {
+        try {
+            const user = window.CrazyGames.SDK.user;
+            if (user && user.systemInfo && user.systemInfo.locale) {
+                this._sdkLocale = user.systemInfo.locale;
+                console.log("[PlatformBridge] SDK locale:", this._sdkLocale);
+            }
+        } catch (e) {
+            console.warn("[PlatformBridge] Failed to read SDK locale:", e);
+        }
+    },
+
+    // Returns the BCP-47 locale from the SDK, or null if unavailable.
+    getLocale: function() {
+        return this._sdkLocale;
     },
 
     _startLoadingIfNeeded: function() {
@@ -133,6 +212,18 @@ window.PlatformBridge = {
         }
     },
 
+    // v3's init() resolves even where the SDK cannot actually run (rehosted
+    // domains, server-side fail mode). Its module getters throw when accessed
+    // there, so probe the game module before declaring the SDK usable.
+    _probeSdkFunctional: function() {
+        try {
+            const game = window.CrazyGames.SDK.game;
+            return !!(game && typeof game.gameplayStart === 'function' && typeof game.loadingStart === 'function');
+        } catch (e) {
+            return false;
+        }
+    },
+
     getDataStore: function() {
         if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.data) {
             return window.CrazyGames.SDK.data;
@@ -140,21 +231,37 @@ window.PlatformBridge = {
         return null;
     },
 
+    isUserSignedIn: function() {
+        return this.userSignedIn;
+    },
+
     gameLoadingFinished: function() {
         this._loadingFinished = true;
-        if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game) {
-            if (this._loadingStarted && typeof window.CrazyGames.SDK.game.loadingStop === 'function') {
-                window.CrazyGames.SDK.game.loadingStop();
-                console.log("[PlatformBridge] CrazyGames loadingStop triggered.");
+        if (!this.sdkReady) return;
+        // Accessing the module getters throws on a stubbed SDK; the sdkReady
+        // probe already rules that out, but keep the reads guarded so a future
+        // module change can't soft-lock the boot.
+        let game = null;
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK) {
+                game = window.CrazyGames.SDK.game;
             }
-            // Re-apply mute in case soundManager was created after settings were first read
-            try {
-                const settings = window.CrazyGames.SDK.game.settings;
-                if (settings && settings.muteAudio !== undefined && window.soundManager) {
-                    window.soundManager.setCrazyGamesMuted(settings.muteAudio);
-                }
-            } catch (e) { }
+        } catch (e) {
+            game = null;
         }
+        if (!game) return;
+
+        if (this._loadingStarted && typeof game.loadingStop === 'function') {
+            game.loadingStop();
+            console.log("[PlatformBridge] CrazyGames loadingStop triggered.");
+        }
+        // Re-apply mute in case soundManager was created after settings were first read
+        try {
+            const settings = game.settings;
+            if (settings && settings.muteAudio !== undefined && window.soundManager) {
+                window.soundManager.setCrazyGamesMuted(settings.muteAudio);
+            }
+        } catch (e) { }
     },
 
     // Reconciles the SDK's gameplay state with what the game wants. Never calls
@@ -168,8 +275,16 @@ window.PlatformBridge = {
             this._gameplaySyncTimer = null;
         }
 
-        const game = (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK)
-            ? window.CrazyGames.SDK.game : null;
+        // Accessing the module getters throws on a stubbed SDK; keep this
+        // guarded so a bad module can't crash gameplayStart/Stop callers.
+        let game = null;
+        try {
+            if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK) {
+                game = window.CrazyGames.SDK.game;
+            }
+        } catch (e) {
+            game = null;
+        }
         if (!game) return;
 
         // During an ad the SDK must see gameplay stopped regardless of intent.
@@ -268,7 +383,23 @@ window.PlatformBridge = {
                 }
             }
         }
+        // Re-check platform mute: the user may have toggled it during the ad
+        // and our settings listener may have missed it or been no-oped.
+        this._reapplyMuteState();
         this._syncGameplayState();   // restores gameplayStart if the game still wants it
+    },
+
+    // Re-reads the SDK mute flag and pushes it to the audio system. Acts as a
+    // safety net so a mute change that occurred during an ad (when events can
+    // be swallowed) never leaks audible audio into a muted portal.
+    _reapplyMuteState: function() {
+        try {
+            if (!this.sdkReady || !window.CrazyGames || !window.CrazyGames.SDK) return;
+            const settings = window.CrazyGames.SDK.game && window.CrazyGames.SDK.game.settings;
+            if (settings && settings.muteAudio !== undefined && window.soundManager) {
+                window.soundManager.setCrazyGamesMuted(settings.muteAudio);
+            }
+        } catch (e) { }
     },
 
     _isLocalDev: function() {
@@ -277,17 +408,21 @@ window.PlatformBridge = {
     },
 
     // Sitelock predicate for the parts of the game that only unlock on an
-    // authorized host. A live SDK is the real signal — a rehosted copy can fake
-    // a hostname but cannot make CrazyGames' SDK initialize for it. The
-    // hostname check stays as a fallback because an ad blocker can stop the SDK
-    // script from loading on the genuine site, and that must not lock a paying
-    // player out of the victory screen.
+    // authorized host. The v3 SDK initializes on ANY host (it resolves into a
+    // "disabled" stub off CrazyGames), so sdkReady is NOT an authorization
+    // signal — a rehosted copy would pass it trivially. Hostname is the gate;
+    // it also keeps real players unlocked if an ad blocker stops the SDK script
+    // from loading on the genuine site.
+    //
+    // Intentionally lenient: any hostname containing "crazy" passes. This is a
+    // speed bump against casual re-hosting, not a security boundary — a
+    // determined thief just registers a matching domain. Erring wide is the
+    // deliberate trade, since a host we fail to recognise silently locks
+    // legitimate players out of the victory screen and the weapon spinner,
+    // and that covers every CrazyGames regional domain automatically.
     isAuthorizedHost: function() {
-        if (this.sdkReady) return true;
         if (this._isLocalDev()) return true;
-        const hostname = (window.location.hostname || '').toLowerCase();
-        // crazygames.com, games.crazygames.com, regional variants (crazygames.com.br)
-        return /(^|\.)crazygames\.[a-z]{2,3}(\.[a-z]{2})?$/.test(hostname);
+        return (window.location.hostname || '').toLowerCase().includes('crazy');
     },
 
     // Shared driver for both ad types. `onSettled(success)` always runs exactly

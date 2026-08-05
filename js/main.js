@@ -5939,20 +5939,15 @@ async function run(mode) {
     function openOptionsMenu() {
         soundManager.play('sfx_ui_switch');
         optionsOverlay.classList.add('show');
-        if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
-            typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
-            window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
-            window.PlatformBridge.gameplayStop();
+        if (typeof window.popupOpened === 'function') {
+            window.popupOpened(optionsOverlay);
         }
     }
 
     function closeOptionsMenu() {
         optionsOverlay.classList.remove('show');
-        if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
-            typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
-            !window.gamePausedForAd &&
-            window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
-            window.PlatformBridge.gameplayStart();
+        if (typeof window.popupClosed === 'function') {
+            window.popupClosed(optionsOverlay);
         }
     }
 
@@ -6010,9 +6005,6 @@ async function run(mode) {
             e.stopPropagation();
             soundManager.play('sfx_ui_switch');
 
-            if (window.PlatformBridge && typeof window.PlatformBridge.gameplayStop === 'function') {
-                window.PlatformBridge.gameplayStop();
-            }
 
             // Clear saved progress (SDK.data when available, else localStorage)
             window.safeLocalStorage.removeItem('annihilate_earth_save');
@@ -6055,9 +6047,12 @@ async function run(mode) {
             gameplayStarted = true;
             resetGame(false);
 
-            // Hide popups
+            // Hide popups and reset ref-count (all dismissed at once)
             if (confirmOverlay) confirmOverlay.style.display = 'none';
             if (optionsOverlay) optionsOverlay.classList.remove('show');
+            if (typeof window.resetPopupCount === 'function') {
+                window.resetPopupCount();
+            }
         });
     }
 
@@ -6078,11 +6073,9 @@ async function run(mode) {
     window.setAdSpinAdblockNotice = setAdSpinAdblockNotice;
 
     function resumeGameplayIfNeeded() {
-        if (typeof gameplayStarted !== 'undefined' && gameplayStarted &&
-            typeof victoryTriggered !== 'undefined' && !victoryTriggered &&
-            !window.gamePausedForAd &&
-            window.PlatformBridge && typeof window.PlatformBridge.gameplayStart === 'function') {
-            window.PlatformBridge.gameplayStart();
+        // Close the ad-spin popup via the ref-counting system
+        if (typeof window.popupClosed === 'function' && adSpinOverlay) {
+            window.popupClosed(adSpinOverlay);
         }
     }
 
@@ -6120,8 +6113,11 @@ async function run(mode) {
                 }, () => {
                     // Ad unavailable or closed early: no reward, but the star
                     // stays claimable so the offer isn't silently burned.
+                    // CrazyGames requires the player be TOLD an ad could not be
+                    // shown rather than left wondering where the reward went.
                     console.log("[ShootingStar] Ad not completed; reward not granted.");
                     window.starSelectedWeapon = null;
+                    showUnlockNotification(getTranslation('adUnavailable'));
                     resumeGameplayIfNeeded();
                 });
             } else {
@@ -6137,6 +6133,13 @@ async function run(mode) {
             }
 
             if (adSpinOverlay) adSpinOverlay.style.display = 'none';
+            // Balance the popupOpened() that showed this overlay. Runs while the
+            // ad request is still pending, which is fine: gamePausedForAd is
+            // already set, so this decrements the count without issuing a
+            // gameplayStart the ad would immediately have to undo.
+            if (typeof window.popupClosed === 'function' && adSpinOverlay) {
+                window.popupClosed(adSpinOverlay);
+            }
             setAdSpinAdblockNotice(false);
         });
     }
@@ -6272,17 +6275,39 @@ async function run(mode) {
     {
         // Load options
         const state = readGameState();
-        if (state) {
-            if (state.language) {
-                currentLanguage = state.language;
-                const opt = customLangDropdown.querySelector(`.custom-select-option[data-value="${currentLanguage}"]`);
-                if (opt) {
-                    customLangLabelText.textContent = opt.textContent;
-                    customLangDropdown.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
-                    opt.classList.add('selected');
-                }
-                applyLanguage();
+
+        function selectLanguage(lang) {
+            if (lang === currentLanguage) return;
+            currentLanguage = lang;
+            const opt = customLangDropdown.querySelector(`.custom-select-option[data-value="${currentLanguage}"]`);
+            if (opt) {
+                customLangLabelText.textContent = opt.textContent;
+                customLangDropdown.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
             }
+            applyLanguage();
+        }
+
+        // Language is resolved outside the `state` guard on purpose: a
+        // first-time visitor has no save at all, and they are exactly who the
+        // locale detection below exists for.
+        if (state && state.language) {
+            selectLanguage(state.language);
+        } else {
+            // No saved language: use SDK locale as primary detection (it
+            // reflects the CrazyGames portal the player arrived from), falling
+            // back to navigator.language.
+            const sdkLocale = (window.PlatformBridge && typeof window.PlatformBridge.getLocale === 'function')
+                ? window.PlatformBridge.getLocale()
+                : null;
+            const detected = sdkLocale || (navigator.language || navigator.userLanguage || 'en');
+            const supported = ['en', 'zh-CN', 'zh-TW', 'es', 'fr', 'ru', 'ja', 'ar'];
+            const exact = supported.find(l => l === detected);
+            const prefix = !exact && supported.find(l => detected.startsWith(l.split('-')[0]));
+            selectLanguage(exact || prefix || 'en');
+        }
+
+        if (state) {
             if (state.sfxVolume !== undefined) {
                 sfxSlider.value = state.sfxVolume;
                 sfxValue.textContent = state.sfxVolume + '%';
