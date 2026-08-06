@@ -901,16 +901,16 @@ async function run(mode) {
                 laserHoldTime += deltaTime;
                 // Laser hum: start loop if not playing, ramp volume based on hold time (35% quieter overall)
                 if (!soundManager.activeLoops['sfx_laser_hum']) {
-                    soundManager.play('sfx_laser_hum', true, 0.024);
+                    soundManager.play('sfx_laser_hum', true, 0.018);
                 }
-                // Volume ramp: 0.024 at start, 0.17 at tier2 (1.1s), 0.4875 at tier3 (3.0s)
-                let humVol = 0.024;
+                // Volume ramp: 0.018 at start, 0.1275 at tier2 (1.1s), 0.3656 at tier3 (3.0s)
+                let humVol = 0.018;
                 if (laserHoldTime <= 1.1) {
-                    humVol = 0.024 + (laserHoldTime / 1.1) * 0.146;
+                    humVol = 0.018 + (laserHoldTime / 1.1) * 0.1095;
                 } else if (laserHoldTime <= 3.0) {
-                    humVol = 0.17 + ((laserHoldTime - 1.1) / 1.9) * 0.3175;
+                    humVol = 0.1275 + ((laserHoldTime - 1.1) / 1.9) * 0.2381;
                 } else {
-                    humVol = 0.4875;
+                    humVol = 0.3656;
                 }
                 soundManager.setLoopVolume('sfx_laser_hum', humVol);
                 // Flicker transition before tier 2 enhancement
@@ -2471,7 +2471,6 @@ async function run(mode) {
                 }
 
                 let blackholeHitThisFrame = false;
-                const sharedData = getSharedPlanetData();
 
                 // Update rain projectiles
                 for (let pIdx = bh.projectiles.length - 1; pIdx >= 0; pIdx--) {
@@ -2486,6 +2485,10 @@ async function run(mode) {
 
                     if (px >= 0 && px < PLANET_CANVAS_SIZE && py >= 0 && py < PLANET_CANVAS_SIZE) {
                         const idx = (py * PLANET_CANVAS_SIZE + px) * 4;
+                        // Re-fetched per projectile: an earlier rain drop in this
+                        // same loop can carve terrain, which swaps out the cached
+                        // snapshot behind our back.
+                        const sharedData = getSharedPlanetData();
                         if (sharedData.data[idx + 3] > 0) {
                             // Collision detected! Read exact color
                             const color = `rgb(${sharedData.data[idx]},${sharedData.data[idx + 1]},${sharedData.data[idx + 2]})`;
@@ -6006,9 +6009,8 @@ async function run(mode) {
             soundManager.play('sfx_ui_switch');
 
 
-            // Clear saved progress (SDK.data when available, else localStorage)
+            // Clear saved progress via the CrazyGames SDK data store
             window.safeLocalStorage.removeItem('annihilate_earth_save');
-            try { localStorage.removeItem('annihilate_earth_save'); } catch (e) { }
             // Drop the in-memory copy too, or the next save would write the
             // old progress straight back over the wipe.
             if (typeof window.invalidateGameStateCache === 'function') {

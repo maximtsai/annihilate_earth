@@ -20,8 +20,8 @@ Key Architectural Principles:
 1. Single Adapter: Game logic calls `window.PlatformBridge.<method>()` unconditionally.
    The bridge handles SDK availability checks internally.
 2. Degradation & Fallbacks: If the CrazyGames SDK script fails to load (e.g., adblocker
-   or offline), the bridge degrades gracefully to `localStorage` and safe error
-   callbacks without throwing runtime exceptions.
+   or offline), the bridge degrades gracefully to safe no-op fallbacks (no persistence,
+   no ads) without throwing runtime exceptions.
 3. Eager Initialization & Memoization: `PlatformBridge.init()` fires eagerly when
    `platform-bridge.js` parses and returns a memoized promise so `await init()` in
    `main.js` reuses the same execution context.
@@ -178,14 +178,11 @@ F. Game Completion Percentage
   player later plays offline or with an adblocker, `SDK.data` will be unavailable.
 
   To prevent data loss (`safeLocalStorage` in `system.js`):
-  1. `setItem(key, val)` ALWAYS writes to `localStorage` synchronously FIRST, then
-     attempts to write to `SDK.data.setItem(...)`. SDK.data debounces writes by ~1s
-     (up to 30s in edge cases), so the local mirror is what survives tab teardown.
-  2. `getItem(key)` reads from `SDK.data` first. If cloud returns non-null, it wins.
-     If cloud returns null, falls back to localStorage (which may contain a more
-     recent write that SDK.data's debounce dropped).
-  3. A `getLocalItem(key)` method reads the local mirror only, bypassing SDK.data,
-     for reconciling saves the SDK's debounce may have lost.
+  1. `setItem(key, val)` ALWAYS writes to `SDK.data.setItem(...)` — there is no
+     localStorage fallback. If the SDK data store is unavailable, the write is a
+     no-op (with a console warning) so nothing persists off-platform.
+  2. `getItem(key)` reads from `SDK.data` only; returns `null` when the store is
+     unavailable.
 
 - SAVE CACHE & MIGRATION:
   The parsed save is held in memory (`_saveCache`) and treated as authoritative for the

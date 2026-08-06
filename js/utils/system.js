@@ -117,9 +117,10 @@ function toggleFullscreen(enable) {
     }
 }
 
-// Safe storage wrapper — prefers CrazyGames SDK.data when ready, else localStorage.
-const storageFallback = {};
-
+// Safe storage wrapper — uses the CrazyGames SDK data store exclusively.
+// There is no localStorage fallback: when the SDK is unavailable (adblocker,
+// offline, rehosted domain) writes are no-ops and reads return null rather than
+// persisting anywhere off-platform.
 function getPreferredStorage() {
     try {
         if (window.PlatformBridge && typeof window.PlatformBridge.getDataStore === 'function') {
@@ -130,59 +131,28 @@ function getPreferredStorage() {
     return null;
 }
 
-function setLocalMirror(key, value) {
-    try {
-        localStorage.setItem(key, value);
-        return true;
-    } catch (e) {
-        storageFallback[key] = value;
-        return false;
-    }
-}
-
 window.safeLocalStorage = {
     getItem: function(key) {
         try {
             const store = getPreferredStorage();
-            if (store) {
-                const remote = store.getItem(key);
-                // A null here can mean "never saved" OR that a debounced write
-                // was dropped; either way the local mirror is the better answer.
-                if (remote != null) return remote;
-            }
+            if (store) return store.getItem(key);
         } catch (e) { }
-        try {
-            return localStorage.getItem(key);
-        } catch (e) {
-            return storageFallback[key] !== undefined ? storageFallback[key] : null;
-        }
-    },
-    // Reads the local mirror only, bypassing SDK.data. Used to reconcile a save
-    // that the SDK's debounce may have lost.
-    getLocalItem: function(key) {
-        try {
-            return localStorage.getItem(key);
-        } catch (e) {
-            return storageFallback[key] !== undefined ? storageFallback[key] : null;
-        }
+        return null;
     },
     setItem: function(key, value) {
         const str = String(value);
-        // Always mirror locally first. SDK.data debounces writes by ~1s (up to
-        // 30s in edge cases), so a write issued as the tab is being torn down
-        // can be discarded entirely — the mirror is what survives that.
-        setLocalMirror(key, str);
         try {
             const store = getPreferredStorage();
-            if (store) store.setItem(key, str);
-        } catch (e) { }
+            if (store) {
+                store.setItem(key, str);
+                return;
+            }
+            console.warn('[Save] CrazyGames SDK data store unavailable; save not persisted.');
+        } catch (e) {
+            console.warn('[Save] Failed to write to CrazyGames SDK data store.', e);
+        }
     },
     removeItem: function(key) {
-        try {
-            localStorage.removeItem(key);
-        } catch (e) {
-            delete storageFallback[key];
-        }
         try {
             const store = getPreferredStorage();
             if (store) store.removeItem(key);
@@ -263,42 +233,16 @@ function serializeForCompare(state) {
     return JSON.stringify(copy);
 }
 
-// Returns the live save object (or null if the player has none yet). Both
-// storage backends are synchronous — localStorage always was, and SDK.data
-// returns immediately too, debouncing only its own network sync — so there is
-// no async step anywhere in the save path.
+// Returns the live save object (or null if the player has none yet). The
+// CrazyGames SDK data module is synchronous — it returns immediately,
+// debouncing only its own network sync — so there is no async step in the
+// save path.
 function readGameState() {
     if (_saveCacheLoaded) return _saveCache;
 
     try {
-        const primary = parseSave(window.safeLocalStorage.getItem(SAVE_KEY));
-        const mirror = parseSave(window.safeLocalStorage.getLocalItem(SAVE_KEY));
-
-        // The cloud copy is authoritative for signed-in players: the SDK syncs
-        // it across devices, so a locally-newer mirror is almost always a stale
-        // leftover from another session (or a clock-skewed device) and must not
-        // overwrite it. Guests have no cross-device sync (the SDK backs their
-        // data module with this device's localStorage), so for them the
-        // newer-timestamp heuristic still applies — it is the only thing that
-        // recovers a save the SDK's 1s debounce dropped at tab teardown.
-        let chosen = primary;
-        const signedIn = !!(window.PlatformBridge &&
-            typeof window.PlatformBridge.isUserSignedIn === 'function' &&
-            window.PlatformBridge.isUserSignedIn());
-        if (signedIn) {
-            if (!primary && mirror) {
-                // Signed in but the account has no cloud copy yet: seed it from
-                // the last local save rather than wiping visible progress.
-                chosen = mirror;
-            }
-        } else if (mirror && (!primary || (mirror._savedAt || 0) > (primary._savedAt || 0))) {
-            if (primary) {
-                console.warn('[Save] Local mirror is newer than the stored save; recovering it.');
-            }
-            chosen = mirror;
-        }
-
-        _saveCache = chosen ? migrateSaveState(chosen) : null;
+        const saved = parseSave(window.safeLocalStorage.getItem(SAVE_KEY));
+        _saveCache = saved ? migrateSaveState(saved) : null;
         _persistedJson = _saveCache ? serializeForCompare(_saveCache) : null;
     } catch (e) {
         console.error('Failed to load state', e);

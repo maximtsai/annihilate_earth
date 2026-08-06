@@ -19,9 +19,9 @@ This branch of the project is dedicated exclusively to the **CrazyGames SDK v3**
 ## Features Implemented in this Branch
 
 ### 1. CrazyGames Cloud Saves (Data Module)
-- All game progress (unlocked planets, unlocked weapons, best times, option settings) is saved using `window.CrazyGames.SDK.data` when the SDK is active, falling back to standard `localStorage`.
+- All game progress (unlocked planets, unlocked weapons, best times, option settings) is saved using `window.CrazyGames.SDK.data` exclusively.
 - Saves automatically synchronize with the user's CrazyGames account across devices.
-- Progress resets also properly clear both LocalStorage and CrazyGames cloud save states.
+- Progress resets also properly clear the CrazyGames cloud save state.
 
 ### 2. Happy Time Celebrations
 - Employs the `window.CrazyGames.SDK.game.happytime()` endpoint.

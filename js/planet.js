@@ -2009,58 +2009,13 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     }
 }
 
-// Find impact point of laser on rotating planet surface
+// Find impact point of laser on rotating planet surface.
+// Ray-marches against the shared cached planet snapshot (kept fresh by the
+// cache-invalidation hooks in main.js) instead of a full-canvas getImageData
+// readback on every call. With no dirX/dirY this is exactly equivalent to the
+// former inline version (it aims toward the planet center).
 function findLaserImpact(spawnX, spawnY) {
-    const screenCenterX = CENTER_X;
-    const screenCenterY = CENTER_Y;
-    const dx = screenCenterX - spawnX;
-    const dy = screenCenterY - spawnY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    let impactX = screenCenterX;
-    let impactY = screenCenterY;
-    let localHit = null;
-
-    if (dist > 0) {
-        const imgData = hiddenCtx.getImageData(0, 0, PLANET_CANVAS_SIZE, PLANET_CANVAS_SIZE);
-        const data = imgData.data;
-
-        const stepSize = 2; // high precision step size in pixels
-        // Extend ray past center: planet radius + 200px extra to reach far side
-        const totalDist = dist + getPlanetSize() / 2 + 200;
-        const numSteps = totalDist / stepSize;
-        const stepX = (dx / dist) * stepSize;
-        const stepY = (dy / dist) * stepSize;
-
-        let rx = spawnX;
-        let ry = spawnY;
-
-        const cos = Math.cos(-planetRotation);
-        const sin = Math.sin(-planetRotation);
-
-        for (let s = 0; s < numSteps; s++) {
-            const rx_dx = rx - screenCenterX;
-            const ry_dy = ry - screenCenterY;
-            const px = Math.floor(rx_dx * cos - ry_dy * sin + planetCenterX);
-            const py = Math.floor(rx_dx * sin + ry_dy * cos + planetCenterY);
-
-            if (px >= 0 && px < PLANET_CANVAS_SIZE && py >= 0 && py < PLANET_CANVAS_SIZE) {
-                const idx = (py * PLANET_CANVAS_SIZE + px) * 4;
-                if (data[idx + 3] > 0) {
-                    impactX = rx;
-                    impactY = ry;
-                    localHit = {
-                        x: rx_dx * cos - ry_dy * sin + planetCenterX,
-                        y: rx_dx * sin + ry_dy * cos + planetCenterY
-                    };
-                    break;
-                }
-            }
-            rx += stepX;
-            ry += stepY;
-        }
-    }
-    return { x: impactX, y: impactY, local: localHit };
+    return findLaserImpactWithData(spawnX, spawnY, getSharedPlanetData());
 }
 
 // Spawn weapon at clicked location
