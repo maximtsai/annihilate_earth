@@ -5153,6 +5153,9 @@ async function run(mode) {
     document.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // Prevent unwanted page scroll via mouse wheel and scroll through weapons if playing (CrazyGames common fixes)
+    let lastWheelSwitchSoundTime = 0;
+    let suppressWheelSwitchSound = false;
+
     window.addEventListener('wheel', (e) => {
         e.preventDefault();
         if (window.gamePausedForAd) return;
@@ -5169,6 +5172,13 @@ async function run(mode) {
                     nextIndex = (currentIndex + 1) % buttons.length;
                 }
                 if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < buttons.length) {
+                    const now = performance.now();
+                    if (now - lastWheelSwitchSoundTime >= 150) {
+                        lastWheelSwitchSoundTime = now;
+                        suppressWheelSwitchSound = false;
+                    } else {
+                        suppressWheelSwitchSound = true;
+                    }
                     buttons[nextIndex].click();
                 }
             }
@@ -5414,7 +5424,10 @@ async function run(mode) {
         button.addEventListener('click', (e) => {
             startBGM();
             e.stopPropagation();
-            soundManager.play('sfx_ui_switch');
+            if (!suppressWheelSwitchSound) {
+                soundManager.play('sfx_ui_switch');
+            }
+            suppressWheelSwitchSound = false;
             soundManager.stopLoop('sfx_laser_fire');
             selectedWeapon = button.dataset.weapon;
             ensureWeaponSoundsLoaded(selectedWeapon);
@@ -6251,6 +6264,10 @@ async function run(mode) {
     // Fullscreen toggle is hidden: CrazyGames provides its own fullscreen control.
 
     // Vibration Option Logic
+    const vibOptionGroup = document.getElementById('vibration-option-group');
+    if (vibOptionGroup && !isMobile) {
+        vibOptionGroup.style.display = 'none';
+    }
     const vibCheckbox = document.getElementById('vibration-checkbox');
     if (vibCheckbox) {
         vibCheckbox.addEventListener('change', (e) => {
