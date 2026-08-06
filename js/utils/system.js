@@ -52,6 +52,14 @@ var isMobile = (function () {
     return uaMatch || smallScreen;
 })();
 
+// UA-only mobile detection. isMobile above also counts narrow desktop
+// windows as mobile (needed for touch-target sizing), but UI features that
+// must only appear on real handheld devices need a stricter check.
+var isMobileUA = (function () {
+    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+})();
+
 function detectGlowSupport() {
     // Heuristic for extremely low-end devices: return false early if single-core or RAM < 1GB
     if (typeof navigator !== 'undefined') {

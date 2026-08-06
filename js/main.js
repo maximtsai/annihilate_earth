@@ -5850,10 +5850,7 @@ async function run(mode) {
         PLANET_ORDER.forEach(planet => {
             const btn = document.getElementById(`btn-planet-${planet}`);
             if (btn) {
-                const iconSpan = btn.querySelector('.planet-btn-icon');
-                const iconHTML = iconSpan ? iconSpan.outerHTML : '';
-                const name = t.planets[planet] || planet;
-                btn.innerHTML = iconHTML + ' ' + name;
+                renderPlanetButton(btn, planet);
                 // Re-apply translated lock tooltip if locked
                 if (btn.classList.contains('locked')) {
                     const idx = PLANET_ORDER.indexOf(planet);
@@ -6265,7 +6262,7 @@ async function run(mode) {
 
     // Vibration Option Logic
     const vibOptionGroup = document.getElementById('vibration-option-group');
-    if (vibOptionGroup && !isMobile) {
+    if (vibOptionGroup && !isMobileUA) {
         vibOptionGroup.style.display = 'none';
     }
     const vibCheckbox = document.getElementById('vibration-checkbox');

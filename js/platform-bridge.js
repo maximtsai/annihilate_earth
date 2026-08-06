@@ -14,6 +14,10 @@ const GAMEPLAY_CALL_THROTTLE_MS = 1100;
 // and continue in fallback mode. Late arrivals still populate sdkReady and the
 // rest; they just stop gating the boot.
 const SDK_INIT_TIMEOUT_MS = 8000;
+// Dev toggle: when true, every ad request (rewarded or midgame) settles
+// instantly. Rewarded ads grant the reward immediately, so every reward
+// button skips straight to its payout. Flip back to false to restore real ads.
+const SKIP_ADS = true;
 
 window.PlatformBridge = {
     platform: 'crazygames',
@@ -468,6 +472,13 @@ window.PlatformBridge = {
             transitionInFinished = true;
             tryResume();
         });
+
+        // Dev toggle: short-circuit every ad to its successful outcome.
+        if (SKIP_ADS) {
+            console.log("[PlatformBridge] SKIP_ADS enabled; skipping " + type + " ad and granting success.");
+            settle(true);
+            return;
+        }
 
         // Local dev mock comes first: a developer running with an adblocker
         // extension still needs the reward path to be testable.

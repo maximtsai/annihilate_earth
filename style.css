@@ -71,9 +71,9 @@ canvas:focus {
 
 #game-world.lang-cjk {
     --font-adjust: 3px;
-    --weapon-font-adjust: 8px;
-    --planet-font-adjust: 8px;
-    --title-font-adjust: 8px;
+    --weapon-font-adjust: 6px;
+    --planet-font-adjust: 6px;
+    --title-font-adjust: 6px;
 }
 
 #background-canvas {
@@ -273,20 +273,28 @@ canvas:focus {
 }
 
 .planet-btn-icon {
-    font-size: calc((32.5px + var(--planet-font-adjust)) * var(--ui-scale));
+    font-size: calc((32px + var(--planet-font-adjust)) * var(--ui-scale));
     /* Make the planet icon prominent and large */
     line-height: 1;
     transition: filter 250ms ease;
 }
 
 @media (orientation: landscape) {
+    .weapon-name {
+        font-size: calc((13px + var(--weapon-font-adjust)) * var(--ui-scale));
+    }
+
+    .weapon-ammo {
+        font-size: calc((16px + var(--weapon-font-adjust)) * var(--ui-scale));
+    }
+
     .planet-selector {
         gap: calc(8px * var(--ui-scale));
     }
 
     .planet-btn {
         width: calc(99px * var(--ui-scale));
-        height: calc(80px * var(--ui-scale));
+        height: calc(76px * var(--ui-scale));
         font-size: calc((13.5px + var(--planet-font-adjust)) * var(--ui-scale));
         padding: calc(10px * var(--ui-scale)) calc(8px * var(--ui-scale)) calc(7px * var(--ui-scale)) calc(8px * var(--ui-scale));
         gap: calc(5.4px * var(--ui-scale));
@@ -363,9 +371,9 @@ canvas:focus {
     color: #ffffff;
     text-shadow: 0 0 5px #ff0055;
     padding: 8px 14px;
-    width: 206px;
+    width: calc(206px * var(--ui-scale));
     font-family: 'Share Tech Mono', monospace;
-    font-size: 23px;
+    font-size: calc(23px * var(--ui-scale));
     text-align: center;
     line-height: 1.3;
     white-space: pre-line;
@@ -895,11 +903,11 @@ canvas:focus {
 .weapon-bar-wrapper {
     position: absolute;
     right: max(24px, env(safe-area-inset-right, 24px));
-    top: calc(54.75% + var(--planet-offset-y) * var(--ui-scale));
+    top: calc(54% + var(--planet-offset-y) * var(--ui-scale));
     transform: translateY(-50%);
     width: calc(126px * var(--ui-scale));
-    height: 83%;
-    max-height: calc(83% - 50px);
+    height: 78%;
+    max-height: calc(78% - 10px);
     padding: 1.5px;
     background: linear-gradient(90deg, #00d9ff, rgba(0, 153, 255, 0.2));
     clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
@@ -946,6 +954,12 @@ canvas:focus {
     padding: 4px 0;
     width: 100%;
     align-items: center;
+}
+
+@media (orientation: landscape) {
+    .weapon-panel-inner {
+        gap: 4px;
+    }
 }
 
 .weapon-button {
@@ -1777,9 +1791,9 @@ canvas:focus {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 8px;
-        width: 90%;
-        max-width: 680px;
+        gap: 7px;
+        width: 98%;
+        max-width: 880px;
         height: auto;
         padding: 5px 0;
         margin: 0;
@@ -1788,14 +1802,14 @@ canvas:focus {
 
     .planet-btn {
         font-size: calc((24px + var(--planet-font-adjust)) * var(--ui-scale));
-        width: calc(180px * var(--ui-scale));
-        height: calc(140px * var(--ui-scale));
+        width: calc(178px * var(--ui-scale));
+        height: calc(142px * var(--ui-scale));
         padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
         flex-shrink: 0;
     }
 
     .planet-btn-icon {
-        font-size: calc((52px + var(--planet-font-adjust)) * var(--ui-scale));
+        font-size: calc((50px + var(--planet-font-adjust)) * var(--ui-scale));
     }
 
     .lang-cjk .planet-btn {

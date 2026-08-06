@@ -1758,23 +1758,36 @@ function getNextPlanet(planet) {
     return PLANET_ORDER[(idx + 1) % PLANET_ORDER.length];
 }
 
+function getPlanetIcon(planet) {
+    if (planet === 'neutron_star') {
+        return unlockedPlanets.includes(planet) ? '⚛' : '❓';
+    }
+    const icons = { earth: '🌍', mars: '🔴', neptune: '🔵', jupiter: '🪐', sun: '☀️' };
+    return icons[planet] || '🌍';
+}
+
+function getPlanetLabel(planet) {
+    const t = translations[currentLanguage] || translations['en'];
+    if (planet === 'neutron_star' && !unlockedPlanets.includes(planet)) {
+        return t.mystery || 'MYSTERY';
+    }
+    return t.planets[planet] || planet;
+}
+
+function renderPlanetButton(btn, planet) {
+    btn.innerHTML = `<span class="planet-btn-icon">${getPlanetIcon(planet)}</span> ${getPlanetLabel(planet)}`;
+}
+
 function updatePlanetButtons() {
     PLANET_ORDER.forEach((planet, index) => {
         const btn = document.getElementById(`btn-planet-${planet}`);
         if (!btn) return;
 
         const isUnlocked = unlockedPlanets.includes(planet);
+        renderPlanetButton(btn, planet);
         if (isUnlocked) {
             btn.classList.remove('locked');
             btn.removeAttribute('data-tooltip');
-            const iconSpan = btn.querySelector('.planet-btn-icon');
-            if (iconSpan) {
-                if (planet === 'earth') iconSpan.textContent = '🌍';
-                else if (planet === 'mars') iconSpan.textContent = '🔴';
-                else if (planet === 'neptune') iconSpan.textContent = '🔵';
-                else if (planet === 'jupiter') iconSpan.textContent = '🪐';
-                else if (planet === 'sun') iconSpan.textContent = '☀️';
-            }
         } else {
             btn.classList.add('locked');
             const prevPlanet = PLANET_ORDER[index - 1];
@@ -1783,11 +1796,6 @@ function updatePlanetButtons() {
             const destroyVerb = (tLock.annihilate || 'DESTROY').toUpperCase();
             const toUnlockText = (tLock.toUnlock || 'TO UNLOCK!').toUpperCase();
             btn.setAttribute('data-tooltip', `${destroyVerb} ${prevName}\n${toUnlockText}`);
-
-            const iconSpan = btn.querySelector('.planet-btn-icon');
-            if (iconSpan) {
-                iconSpan.textContent = '🔒';
-            }
         }
     });
 }
