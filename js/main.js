@@ -5903,7 +5903,14 @@ async function run(mode) {
         if (adSpinClose) adSpinClose.textContent = t.close || 'X';
         if (adSpinMsg) adSpinMsg.textContent = t.spinToDiscover || 'SPIN TO DISCOVER A WEAPON!';
         if (adSpinNo) adSpinNo.textContent = t.nevermind || 'NEVERMIND';
-        if (adSpinYes) adSpinYes.textContent = t.watch || 'WATCH!';
+        if (adSpinYes) {
+            const watchLabel = adSpinYes.querySelector('.ad-spin-watch-label');
+            if (watchLabel) {
+                watchLabel.textContent = t.watch || 'WATCH!';
+            } else {
+                adSpinYes.textContent = t.watch || 'WATCH!';
+            }
+        }
         if (adSpinAdblock) adSpinAdblock.textContent = t.adblockWeaponLocked || 'AdBlock detected. New weapon locked.';
 
         // New best badge

@@ -2636,6 +2636,13 @@ html.no-glows *::after {
     font-size: 18px;
 }
 
+#ad-spin-popup-overlay .ad-spin-watch-icon {
+    font-size: 16px;
+    line-height: 1;
+    color: #ffe600;
+    filter: drop-shadow(0 0 4px rgba(255, 230, 0, 0.5));
+}
+
 /* Photo Mode / UI Toggle */
 .ui-hidden-mode {
     display: none !important;
