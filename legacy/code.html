@@ -6280,13 +6280,16 @@
                 // Apply Screen Shake translates
                 ctx.translate(screenShake.x, screenShake.y);
 
-                // Draw background stars — bigger (closer) stars shift more with screen shake for parallax depth
+                // Draw background stars — bigger (closer) stars shift more with screen shake for parallax depth.
+                // Set fillStyle once and drive twinkle via globalAlpha instead of re-parsing a color string per star.
+                ctx.fillStyle = '#ffffff';
                 stars.forEach(star => {
-                    ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                    ctx.globalAlpha = star.opacity;
                     const pxOff = star.size > 2.0 ? screenShake.x * -0.22 : screenShake.x * -0.07;
                     const pyOff = star.size > 2.0 ? screenShake.y * -0.22 : screenShake.y * -0.07;
                     ctx.fillRect(star.x - star.size / 2 + pxOff, star.y - star.size / 2 + pyOff, star.size, star.size);
                 });
+                ctx.globalAlpha = 1.0;
 
                 const planetSize = getPlanetSize();
                 const radius = planetSize / 2;
