@@ -24,12 +24,35 @@ let unlockedPlanets = ['earth'];
 let weapons = [];
 
 // High-performance pre-allocated particle pool class
+function getSpriteForColor(color) {
+    if (!color) return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+    if (color.startsWith('hsl(')) {
+        const match = color.match(/hsl\(([^,]+),\s*([^,]+),\s*([^%)]+)%?\)/);
+        if (match) {
+            const h = parseFloat(match[1]);
+            const l = parseFloat(match[3]);
+            if (l >= 88) return typeof spriteWhiteGold !== 'undefined' ? spriteWhiteGold : null;
+            if (l >= 82) return typeof spriteBrightYellow !== 'undefined' ? spriteBrightYellow : null;
+            if (h >= 52) return typeof spriteLightOrange !== 'undefined' ? spriteLightOrange : null;
+            if (h >= 30) return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+            return typeof spriteVermillionRed !== 'undefined' ? spriteVermillionRed : null;
+        }
+    } else if (color.includes('255, 255') || color.includes('255, 255, 120')) {
+        return typeof spriteBrightYellow !== 'undefined' ? spriteBrightYellow : null;
+    } else if (color === '#66b2ff' || color === '#00f0ff' || color === '#ffffff') {
+        return null;
+    }
+    return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+}
+
 class ParticlePool {
     constructor(maxSize = 450) {
         this.maxSize = maxSize;
         this.pool = [];
+        this.freeList = [];
         for (let i = 0; i < maxSize; i++) {
-            this.pool.push({
+            const p = {
+                poolIndex: i,
                 active: false,
                 x: 0,
                 y: 0,
@@ -40,24 +63,23 @@ class ParticlePool {
                 size: 0,
                 color: '',
                 type: '',
+                sprite: null,
                 moonExhaust: false,
                 isComet: false,
                 isFreeze: false
-            });
+            };
+            this.pool.push(p);
+            this.freeList.push(i);
         }
     }
 
     push(properties) {
-        // Find inactive particle
         let p = null;
-        for (let i = 0; i < this.maxSize; i++) {
-            if (!this.pool[i].active) {
-                p = this.pool[i];
-                break;
-            }
-        }
-        // Fallback: steal oldest (lowest life)
-        if (!p) {
+        if (this.freeList.length > 0) {
+            const idx = this.freeList.pop();
+            p = this.pool[idx];
+        } else {
+            // Fallback: steal oldest (lowest life)
             let minLife = Infinity;
             for (let i = 0; i < this.maxSize; i++) {
                 if (this.pool[i].active && this.pool[i].life < minLife) {
@@ -77,15 +99,26 @@ class ParticlePool {
             p.size = properties.size;
             p.color = properties.color;
             p.type = properties.type;
+            p.sprite = properties.sprite !== undefined ? properties.sprite : getSpriteForColor(properties.color);
             p.moonExhaust = !!properties.moonExhaust;
             p.isComet = !!properties.isComet;
             p.isFreeze = !!properties.isFreeze;
         }
+        return p;
+    }
+
+    release(p) {
+        if (p && p.active) {
+            p.active = false;
+            this.freeList.push(p.poolIndex);
+        }
     }
 
     clear() {
+        this.freeList = [];
         for (let i = 0; i < this.maxSize; i++) {
             this.pool[i].active = false;
+            this.freeList.push(i);
         }
     }
 }
