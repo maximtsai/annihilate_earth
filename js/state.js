@@ -10,6 +10,7 @@ var CENTER_Y = 450 + PLANET_OFFSET_Y;
 var PLANET_CANVAS_SIZE = 460;
 var MAX_COOLDOWNS;
 var dt60 = 1;
+var frameDeltaTime = 0;
 var weaponQueues = {};
 
 // Game States
