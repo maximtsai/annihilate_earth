@@ -24,12 +24,35 @@ let unlockedPlanets = ['earth'];
 let weapons = [];
 
 // High-performance pre-allocated particle pool class
+function getSpriteForColor(color) {
+    if (!color) return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+    if (color.startsWith('hsl(')) {
+        const match = color.match(/hsl\(([^,]+),\s*([^,]+),\s*([^%)]+)%?\)/);
+        if (match) {
+            const h = parseFloat(match[1]);
+            const l = parseFloat(match[3]);
+            if (l >= 88) return typeof spriteWhiteGold !== 'undefined' ? spriteWhiteGold : null;
+            if (l >= 82) return typeof spriteBrightYellow !== 'undefined' ? spriteBrightYellow : null;
+            if (h >= 52) return typeof spriteLightOrange !== 'undefined' ? spriteLightOrange : null;
+            if (h >= 30) return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+            return typeof spriteVermillionRed !== 'undefined' ? spriteVermillionRed : null;
+        }
+    } else if (color.includes('255, 255') || color.includes('255, 255, 120')) {
+        return typeof spriteBrightYellow !== 'undefined' ? spriteBrightYellow : null;
+    } else if (color === '#66b2ff' || color === '#00f0ff' || color === '#ffffff') {
+        return null;
+    }
+    return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+}
+
 class ParticlePool {
     constructor(maxSize = 450) {
         this.maxSize = maxSize;
         this.pool = [];
+        this.freeList = [];
         for (let i = 0; i < maxSize; i++) {
-            this.pool.push({
+            const p = {
+                poolIndex: i,
                 active: false,
                 x: 0,
                 y: 0,
@@ -40,24 +63,23 @@ class ParticlePool {
                 size: 0,
                 color: '',
                 type: '',
+                sprite: null,
                 moonExhaust: false,
                 isComet: false,
                 isFreeze: false
-            });
+            };
+            this.pool.push(p);
+            this.freeList.push(i);
         }
     }
 
     push(properties) {
-        // Find inactive particle
         let p = null;
-        for (let i = 0; i < this.maxSize; i++) {
-            if (!this.pool[i].active) {
-                p = this.pool[i];
-                break;
-            }
-        }
-        // Fallback: steal oldest (lowest life)
-        if (!p) {
+        if (this.freeList.length > 0) {
+            const idx = this.freeList.pop();
+            p = this.pool[idx];
+        } else {
+            // Fallback: steal oldest (lowest life)
             let minLife = Infinity;
             for (let i = 0; i < this.maxSize; i++) {
                 if (this.pool[i].active && this.pool[i].life < minLife) {
@@ -77,15 +99,26 @@ class ParticlePool {
             p.size = properties.size;
             p.color = properties.color;
             p.type = properties.type;
+            p.sprite = properties.sprite !== undefined ? properties.sprite : getSpriteForColor(properties.color);
             p.moonExhaust = !!properties.moonExhaust;
             p.isComet = !!properties.isComet;
             p.isFreeze = !!properties.isFreeze;
         }
+        return p;
+    }
+
+    release(p) {
+        if (p && p.active) {
+            p.active = false;
+            this.freeList.push(p.poolIndex);
+        }
     }
 
     clear() {
+        this.freeList = [];
         for (let i = 0; i < this.maxSize; i++) {
             this.pool[i].active = false;
+            this.freeList.push(i);
         }
     }
 }
@@ -598,20 +631,25 @@ let lightningLastChargedCount = 0;
 
 
 
-// 2D Value Noise Grid
+var coreBuffer32 = new Uint32Array(PLANET_CANVAS_SIZE * PLANET_CANVAS_SIZE);
+
+// 2D Value Noise Grid.
+// smoothNoise() wraps with a bitmask and indexes rows with a shift instead of
+// % and *, so NOISE_SIZE must stay a power of two - these two derived constants
+// keep that dependency explicit rather than hard-coded at the use sites.
 const NOISE_SIZE = 128;
+const NOISE_MASK = NOISE_SIZE - 1;          // 127
+const NOISE_SHIFT = Math.log2(NOISE_SIZE);  // 7
 const noiseGrid = new Float32Array(NOISE_SIZE * NOISE_SIZE);
 for (let i = 0; i < noiseGrid.length; i++) {
     noiseGrid[i] = Math.random();
 }
 
 function smoothNoise(x, y) {
-    let x1 = Math.floor(x) % NOISE_SIZE;
-    let y1 = Math.floor(y) % NOISE_SIZE;
-    if (x1 < 0) x1 += NOISE_SIZE;
-    if (y1 < 0) y1 += NOISE_SIZE;
-    const x2 = (x1 + 1) % NOISE_SIZE;
-    const y2 = (y1 + 1) % NOISE_SIZE;
+    const x1 = Math.floor(x) & NOISE_MASK;
+    const y1 = Math.floor(y) & NOISE_MASK;
+    const x2 = (x1 + 1) & NOISE_MASK;
+    const y2 = (y1 + 1) & NOISE_MASK;
 
     const tx = x - Math.floor(x);
     const ty = y - Math.floor(y);
@@ -619,10 +657,13 @@ function smoothNoise(x, y) {
     const sx = tx * tx * (3 - 2 * tx);
     const sy = ty * ty * (3 - 2 * ty);
 
-    const n11 = noiseGrid[y1 * NOISE_SIZE + x1];
-    const n12 = noiseGrid[y1 * NOISE_SIZE + x2];
-    const n21 = noiseGrid[y2 * NOISE_SIZE + x1];
-    const n22 = noiseGrid[y2 * NOISE_SIZE + x2];
+    const y1Shift = y1 << NOISE_SHIFT;
+    const y2Shift = y2 << NOISE_SHIFT;
+
+    const n11 = noiseGrid[y1Shift + x1];
+    const n12 = noiseGrid[y1Shift + x2];
+    const n21 = noiseGrid[y2Shift + x1];
+    const n22 = noiseGrid[y2Shift + x2];
 
     const nx1 = n11 + sx * (n12 - n11);
     const nx2 = n21 + sx * (n22 - n21);
