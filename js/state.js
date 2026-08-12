@@ -642,20 +642,25 @@ let lightningLastChargedCount = 0;
 
 
 
-// 2D Value Noise Grid
+var coreBuffer32 = new Uint32Array(PLANET_CANVAS_SIZE * PLANET_CANVAS_SIZE);
+
+// 2D Value Noise Grid.
+// smoothNoise() wraps with a bitmask and indexes rows with a shift instead of
+// % and *, so NOISE_SIZE must stay a power of two - these two derived constants
+// keep that dependency explicit rather than hard-coded at the use sites.
 const NOISE_SIZE = 128;
+const NOISE_MASK = NOISE_SIZE - 1;          // 127
+const NOISE_SHIFT = Math.log2(NOISE_SIZE);  // 7
 const noiseGrid = new Float32Array(NOISE_SIZE * NOISE_SIZE);
 for (let i = 0; i < noiseGrid.length; i++) {
     noiseGrid[i] = Math.random();
 }
 
 function smoothNoise(x, y) {
-    let x1 = Math.floor(x) % NOISE_SIZE;
-    let y1 = Math.floor(y) % NOISE_SIZE;
-    if (x1 < 0) x1 += NOISE_SIZE;
-    if (y1 < 0) y1 += NOISE_SIZE;
-    const x2 = (x1 + 1) % NOISE_SIZE;
-    const y2 = (y1 + 1) % NOISE_SIZE;
+    const x1 = Math.floor(x) & NOISE_MASK;
+    const y1 = Math.floor(y) & NOISE_MASK;
+    const x2 = (x1 + 1) & NOISE_MASK;
+    const y2 = (y1 + 1) & NOISE_MASK;
 
     const tx = x - Math.floor(x);
     const ty = y - Math.floor(y);
@@ -663,10 +668,13 @@ function smoothNoise(x, y) {
     const sx = tx * tx * (3 - 2 * tx);
     const sy = ty * ty * (3 - 2 * ty);
 
-    const n11 = noiseGrid[y1 * NOISE_SIZE + x1];
-    const n12 = noiseGrid[y1 * NOISE_SIZE + x2];
-    const n21 = noiseGrid[y2 * NOISE_SIZE + x1];
-    const n22 = noiseGrid[y2 * NOISE_SIZE + x2];
+    const y1Shift = y1 << NOISE_SHIFT;
+    const y2Shift = y2 << NOISE_SHIFT;
+
+    const n11 = noiseGrid[y1Shift + x1];
+    const n12 = noiseGrid[y1Shift + x2];
+    const n21 = noiseGrid[y2Shift + x1];
+    const n22 = noiseGrid[y2Shift + x2];
 
     const nx1 = n11 + sx * (n12 - n11);
     const nx2 = n21 + sx * (n22 - n21);
