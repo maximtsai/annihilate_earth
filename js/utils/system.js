@@ -45,12 +45,43 @@
 })();
 
 // 3. Device & API Capability Detections
-var isMobile = (function () {
+// Two-tier device classification: `mobile` (any phone/tablet-class device, however
+// fast) and `weak` (the slow end - reduced particle/effect budgets).
+// Detection is never gated on the UA alone: iPad, ChromeOS and embedded webviews
+// ship desktop UA strings, so touch/pointer/screen signals are queried first and
+// the UA is only used to widen the result.
+//
+// Touch alone is NOT enough: touchscreen laptops and 2-in-1s report
+// maxTouchPoints > 1 but are full-power desktops with a mouse. `mobile` drives
+// glow-disable and finger-sized UI (bigger meters, bigger floating text), so a
+// false positive there is a visible regression, not just a perf tradeoff.
+// Requiring a coarse *primary* pointer alongside touch keeps iPad in and
+// touch-capable desktops out.
+var deviceTier = (function () {
     var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
-    var uaMatch = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+    var hasTouch = typeof navigator !== 'undefined' && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
+    var coarsePointer = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && !!window.matchMedia('(pointer: coarse)').matches;
     var smallScreen = typeof window !== 'undefined' && window.innerWidth <= 768;
-    return uaMatch || smallScreen;
+    var uaMobile = /Mobi|Android|iPhone|iPod/i.test(ua);
+    var mobile = uaMobile || (hasTouch && coarsePointer) || smallScreen;
+
+    var weak = false;
+    if (typeof navigator !== 'undefined') {
+        if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) weak = true;
+        if (navigator.deviceMemory && navigator.deviceMemory < 2) weak = true;
+    }
+    // Very small viewport = ancient/entry-level device (modern phones are 360-430 CSS px wide)
+    if (typeof window !== 'undefined' && window.innerWidth <= 320) weak = true;
+
+    return { mobile: mobile, weak: weak };
 })();
+var isMobile = deviceTier.mobile;
+var isWeakDevice = deviceTier.weak;
+// Effect budget multiplier (1.0 = full effects). Applied at emission sites, not per call.
+// The `weak` thresholds (<4 cores, <2GB, <=320px) almost never fire on hardware
+// shipping today, so mid-range phones get their own middle tier rather than
+// falling through to the full desktop budget.
+var particleBudget = isWeakDevice ? 0.6 : (isMobile ? 0.8 : 1);
 
 // UA-only mobile detection. isMobile above also counts narrow desktop
 // windows as mobile (needed for touch-target sizing), but UI features that

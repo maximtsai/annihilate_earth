@@ -1915,7 +1915,10 @@ async function run(mode) {
                 } else if (w.state === 'stuck') {
                     w.stuckTimer -= deltaTime;
 
-                    if (Math.random() < 0.08) {
+                    // Fixed-rate rumble tick (independent of refresh rate)
+                    w.sfxTimer = (w.sfxTimer || 0) + deltaTime;
+                    if (w.sfxTimer >= 0.21) {
+                        w.sfxTimer = 0;
                         soundManager.play('sfx_ui_switch', false, 0.3, 800);
                     }
 
@@ -2225,8 +2228,10 @@ async function run(mode) {
                     }
                 }
 
-                // Spawn sand/dust particles trailing from body segments
-                if (Math.random() < 0.45) {
+                // Spawn sand/dust particles trailing from body segments (fixed rate, not per-frame)
+                worm.dustTimer = (worm.dustTimer || 0) + deltaTime;
+                if (worm.dustTimer >= 0.037 / particleBudget) {
+                    worm.dustTimer = 0;
                     const followSegment = worm.segments[3 + Math.floor(Math.random() * 3)] || head;
                     const pAngle = Math.random() * Math.PI * 2;
                     const pSpeed = Math.random() * 1.5 + 0.5;
@@ -2433,10 +2438,15 @@ async function run(mode) {
                 // Spawn invisible rain particles during growing phase (0 to 5s)
                 if (bh.time <= 5.0) {
                     const progress = Math.min(1.0, bh.time / 5.0);
-                    const spawnChance = (0.12 + progress * 0.35) * 0.8;
+                    // Spawn interval in seconds, refresh-rate independent (was per-frame chance).
+                    // particleBudget scales the interval up (fewer spawns), matching every
+                    // other emission site - it must not divide the rate.
+                    const rainInterval = 1 / ((0.12 + progress * 0.35) * 0.8 * 60 * particleBudget);
 
                     // Current behavior: rain falling from outer orbit
-                    if (Math.random() < spawnChance) {
+                    bh.rainTimer = (bh.rainTimer || 0) + deltaTime;
+                    if (bh.rainTimer >= rainInterval) {
+                        bh.rainTimer -= rainInterval;
                         const bhAngle = Math.atan2(bh.y - CENTER_Y, bh.x - CENTER_X);
                         const spreadWidth = 0.9 + progress * 2; // scales from 0.4 to 2.2 rad
                         const spreadAngle = bhAngle + (Math.random() - 0.5) * spreadWidth;
@@ -2455,7 +2465,10 @@ async function run(mode) {
                     }
 
                     // Old behavior: shoot particles outwards from the black hole itself at 25% the frequency
-                    if (Math.random() < spawnChance * 0.35) {
+                    const outwardInterval = rainInterval / 0.35;
+                    bh.outwardTimer = (bh.outwardTimer || 0) + deltaTime;
+                    if (bh.outwardTimer >= outwardInterval) {
+                        bh.outwardTimer -= outwardInterval;
                         const toPlanetAngle = Math.atan2(CENTER_Y - bh.y, CENTER_X - bh.x);
                         const spreadWidth = 2.2;
                         const spreadAngle = toPlanetAngle + (Math.random() - 0.5) * spreadWidth;
@@ -2502,8 +2515,10 @@ async function run(mode) {
                                 radius *= 0.94;
                             }
 
-                            // Play subtle crackling/crushing impact sound
-                            if (Math.random() < 0.25) {
+                            // Play subtle crackling/crushing impact sound (fixed per-projectile rate)
+                            rp.crackleTimer = (rp.crackleTimer || 0) + deltaTime;
+                            if (rp.crackleTimer >= 0.067) {
+                                rp.crackleTimer = 0;
                                 const detune = (Math.random() - 1.3) * 1400;
                                 soundManager.play('sfx_explosion_small', false, 0.15, detune);
                             }
@@ -2598,8 +2613,10 @@ async function run(mode) {
                         chunk.x += pullX + swirlX;
                         chunk.y += pullY + swirlY;
 
-                        // Spawn small dust particles behind chunk, swirling along
-                        if (Math.random() < 0.15) {
+                        // Spawn small dust particles behind chunk, swirling along (fixed per-chunk rate)
+                        chunk.dustTimer = (chunk.dustTimer || 0) + deltaTime;
+                        if (chunk.dustTimer >= 0.111 / particleBudget) {
+                            chunk.dustTimer = 0;
                             particles.push({
                                 x: chunk.x,
                                 y: chunk.y,
@@ -3541,8 +3558,10 @@ async function run(mode) {
 
             const baseRadius = 17.5; // Beefy Lovecraftian muscle mass!
 
-            // Eldritch crackling purple/cyan lightning along the tentacle body
-            if (Math.random() < 0.15) {
+            // Eldritch crackling purple/cyan lightning along the tentacle body (fixed flicker rate)
+            tent.lightningTimer = (tent.lightningTimer || 0) + frameDeltaTime;
+            if (tent.lightningTimer >= 0.111 / particleBudget) {
+                tent.lightningTimer = 0;
                 ctx.save();
                 ctx.strokeStyle = Math.random() > 0.45 ? '#d946ef' : '#00f3ff';
                 ctx.lineWidth = 1.4;
@@ -4163,8 +4182,11 @@ async function run(mode) {
 
                 ctx.restore();
 
-                // Continuous spark particles spray at impact point
-                if (impact.local && Math.random() < 0.3) {
+                // Continuous spark particles spray at impact point (fixed rate, not per-frame)
+                box.sparkTimer = (box.sparkTimer || 0) + frameDeltaTime;
+                if (!impact.local) box.sparkTimer = 0;
+                if (impact.local && box.sparkTimer >= 0.056 / particleBudget) {
+                    box.sparkTimer = 0;
                     const pAngle = beamAngle + Math.PI + (Math.random() - 0.5) * 1.5;
                     const speed = Math.random() * 2 + 1;
                     particles.push({
@@ -6457,6 +6479,7 @@ async function run(mode) {
         if (deltaTime > 0.1) {
             deltaTime = 0.1;
         }
+        frameDeltaTime = deltaTime;
 
         // Guard a single frame's work so one bad frame reports the error but
         // does not break the requestAnimationFrame chain (which would freeze
