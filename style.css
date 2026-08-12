@@ -1808,7 +1808,7 @@ canvas:focus {
         height: calc(26px + 158px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
-        background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
+        background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.485));
         clip-path: none;
         border-radius: 1px;
     }
