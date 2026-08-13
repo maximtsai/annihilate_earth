@@ -252,7 +252,6 @@ function updateMysteryBoxes(deltaTime, dt60) {
                 }
 
                 if (selectedEffect && typeof selectedEffect.trigger === 'function') {
-                    console.log(`[MysteryBox] Triggered effect: ${selectedEffect.name}`);
                     if (selectedEffect.name === 'blackhole_summon') {
                         hasSpawnedBlackHoleFromMysteryBox = true;
                     }

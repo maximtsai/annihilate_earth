@@ -28,7 +28,6 @@
             clickStars = [];
             lastUnlockedCount = -1;
             adBlockCount = 0;
-            console.log("[ShootingStar] Initialized. Spawn scheduled at " + spawnTime.toFixed(2) + "s");
         },
 
         update: function (deltaTime) {
@@ -71,9 +70,7 @@
             if (shouldAttemptSpawn) {
                 if (adCooldownActive) {
                     adBlockCount++;
-                    console.log("[ShootingStar] Spawn blocked by ad cooldown. Block count: " + adBlockCount);
                     if (adBlockCount % 2 === 0) {
-                        console.log("[ShootingStar] Ignoring ad cooldown block (every second time). Spawning anyway.");
                         this.spawn();
                     }
                 } else {
@@ -90,7 +87,6 @@
                 // Check distance from planet center (CENTER_X, CENTER_Y)
                 const dist = Math.sqrt((star.x - CENTER_X) ** 2 + (star.y - CENTER_Y) ** 2);
                 if (dist > 1000) {
-                    console.log("[ShootingStar] Left screen, deactivating.");
                     star = null;
                     spawned = false;
                 } else {
@@ -167,7 +163,6 @@
             };
             spawned = true;
             lastSpawnTimestamp = Date.now();
-            console.log("[ShootingStar] Spawned at (" + spawnX.toFixed(0) + ", " + spawnY.toFixed(0) + ") closest approach: 275px");
 
             // Play spawn sound 1 second after spawn
             setTimeout(() => {
@@ -295,8 +290,6 @@
             const dist = Math.sqrt((star.x - clickX) ** 2 + (star.y - clickY) ** 2);
             const clickRadius = isMobile ? 52 : 40;
             if (dist <= clickRadius) {
-                console.log("[ShootingStar] Clicked!");
-
                 // Spawn several smaller click stars that fly out and fade
                 clickStars = [];
                 const count = 5 + Math.floor(Math.random() * 4); // 5 to 8 stars

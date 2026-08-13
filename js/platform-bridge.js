@@ -98,7 +98,6 @@ window.PlatformBridge = {
 
                         this.sdkLoaded = true;
                         this.sdkReady = true;
-                        console.log("[PlatformBridge] CrazyGames SDK successfully initialized.");
 
                         this._setupSettingsListener();
                         this._setupAuthListener();
@@ -112,9 +111,6 @@ window.PlatformBridge = {
                             if (window.CrazyGames.SDK.ad && typeof window.CrazyGames.SDK.ad.hasAdblock === 'function') {
                                 this.hasAdblock = !!(await window.CrazyGames.SDK.ad.hasAdblock());
                                 window.hasAdblock = this.hasAdblock;
-                                if (this.hasAdblock) {
-                                    console.log("[PlatformBridge] Adblock detected; game remains fully playable.");
-                                }
                             }
                         } catch (e) {
                             console.warn("[PlatformBridge] hasAdblock check failed:", e);
@@ -172,7 +168,6 @@ window.PlatformBridge = {
             if (!user || typeof user.addAuthListener !== 'function') return;
             user.addAuthListener((u) => {
                 this.userSignedIn = !!u;
-                console.log("[PlatformBridge] Auth changed; invalidating cached save.");
                 if (typeof window.invalidateGameStateCache === 'function') {
                     window.invalidateGameStateCache();
                 }
@@ -189,7 +184,6 @@ window.PlatformBridge = {
             const user = window.CrazyGames.SDK.user;
             if (user && user.systemInfo && user.systemInfo.locale) {
                 this._sdkLocale = user.systemInfo.locale;
-                console.log("[PlatformBridge] SDK locale:", this._sdkLocale);
             }
         } catch (e) {
             console.warn("[PlatformBridge] Failed to read SDK locale:", e);
@@ -208,11 +202,9 @@ window.PlatformBridge = {
 
         window.CrazyGames.SDK.game.loadingStart();
         this._loadingStarted = true;
-        console.log("[PlatformBridge] CrazyGames loadingStart triggered.");
 
         if (this._loadingFinished && typeof window.CrazyGames.SDK.game.loadingStop === 'function') {
             window.CrazyGames.SDK.game.loadingStop();
-            console.log("[PlatformBridge] CrazyGames loadingStop triggered (deferred).");
         }
     },
 
@@ -257,7 +249,6 @@ window.PlatformBridge = {
 
         if (this._loadingStarted && typeof game.loadingStop === 'function') {
             game.loadingStop();
-            console.log("[PlatformBridge] CrazyGames loadingStop triggered.");
         }
         // Re-apply mute in case soundManager was created after settings were first read
         try {
@@ -312,7 +303,6 @@ window.PlatformBridge = {
         this._lastGameplayCallAt[which] = now;
         this._sdkGameplayRunning = desired;
         fn.call(game);
-        console.log("[PlatformBridge] CrazyGames gameplay" + (desired ? 'Start' : 'Stop') + " triggered.");
     },
 
     gameplayStart: function() {
@@ -337,7 +327,6 @@ window.PlatformBridge = {
         if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game) {
             if (typeof window.CrazyGames.SDK.game.happytime === 'function') {
                 window.CrazyGames.SDK.game.happytime();
-                console.log("[PlatformBridge] CrazyGames happytime triggered.");
             }
         }
     },
@@ -347,7 +336,6 @@ window.PlatformBridge = {
         if (this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game) {
             if (typeof window.CrazyGames.SDK.game.reportGameCompletedPercentage === 'function') {
                 window.CrazyGames.SDK.game.reportGameCompletedPercentage(value);
-                console.log("[PlatformBridge] CrazyGames completion % reported:", value);
             }
         }
     },
@@ -475,7 +463,6 @@ window.PlatformBridge = {
 
         // Dev toggle: short-circuit every ad to its successful outcome.
         if (SKIP_ADS) {
-            console.log("[PlatformBridge] SKIP_ADS enabled; skipping " + type + " ad and granting success.");
             settle(true);
             return;
         }
@@ -484,7 +471,6 @@ window.PlatformBridge = {
         // extension still needs the reward path to be testable.
         if (type === 'rewarded' && this._isLocalDev() &&
             !(this.sdkReady && window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad)) {
-            console.log("[PlatformBridge] Fallback (local dev): granting mock rewarded ad.");
             settle(true);
             return;
         }
@@ -492,7 +478,6 @@ window.PlatformBridge = {
         // Known-unfillable: don't make the player sit through the transition
         // waiting for an adError that is already certain.
         if (this.hasAdblock) {
-            console.log("[PlatformBridge] Adblock detected; skipping " + type + " ad request.");
             settle(false);
             return;
         }
@@ -510,7 +495,6 @@ window.PlatformBridge = {
             try {
                 window.CrazyGames.SDK.ad.requestAd(type, {
                     adStarted: () => {
-                        console.log("[PlatformBridge] CrazyGames " + type + " ad started.");
                         if (requestTimer) { clearTimeout(requestTimer); requestTimer = null; }
                         // Second watchdog: the ad started but never reported an end.
                         durationTimer = setTimeout(() => {
@@ -520,7 +504,6 @@ window.PlatformBridge = {
                         this._suspendAudioForAd();
                     },
                     adFinished: () => {
-                        console.log("[PlatformBridge] CrazyGames " + type + " ad completed successfully.");
                         if (type === 'midgame') window.lastAdPlayTime = Date.now();
                         settle(true);
                     },
@@ -536,13 +519,11 @@ window.PlatformBridge = {
                 settle(false);
             }
         } else {
-            console.log("[PlatformBridge] Fallback: No CrazyGames SDK loaded; skipping " + type + " ad.");
             settle(type === 'midgame');
         }
     },
 
     showAdBreak: function(onComplete) {
-        console.log("[PlatformBridge] CrazyGames commercial break requested.");
         if (this._adInProgress || this._adRequestPending) {
             // Skip the ad, but never swallow the callback: progression to the
             // next planet rides on it, and dropping it strands the player on
@@ -560,7 +541,6 @@ window.PlatformBridge = {
     // onComplete runs only when the reward was actually earned. onFailed (if
     // given) runs otherwise, so callers can roll back any UI they locked.
     showRewardedAd: function(onComplete, onFailed) {
-        console.log("[PlatformBridge] CrazyGames rewarded ad break requested.");
         if (this._adInProgress || this._adRequestPending) {
             console.warn("[PlatformBridge] Ad already in progress; ignoring duplicate request.");
             if (onFailed) onFailed();

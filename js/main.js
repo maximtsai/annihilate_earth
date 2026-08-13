@@ -1,6 +1,5 @@
 // Core Game Engine & Main Loop
 supportsGlow = detectGlowSupport();
-console.log("[Glow Detection] Smooth gradient support:", supportsGlow);
 
 if (!supportsGlow) {
     // Intercept Canvas shadowBlur setter to disable it game-wide
@@ -6186,7 +6185,6 @@ async function run(mode) {
             // Trigger the ad break
             if (window.PlatformBridge && typeof window.PlatformBridge.showRewardedAd === 'function') {
                 window.PlatformBridge.showRewardedAd(() => {
-                    console.log("[ShootingStar] Ad finished. Spinner reward granted.");
                     if (window.ShootingStarManager && ShootingStarManager.onWeaponClaimed) {
                         ShootingStarManager.onWeaponClaimed();
                     }
@@ -6199,7 +6197,6 @@ async function run(mode) {
                     // stays claimable so the offer isn't silently burned.
                     // CrazyGames requires the player be TOLD an ad could not be
                     // shown rather than left wondering where the reward went.
-                    console.log("[ShootingStar] Ad not completed; reward not granted.");
                     window.starSelectedWeapon = null;
                     showUnlockNotification(getTranslation('adUnavailable'));
                     resumeGameplayIfNeeded();
