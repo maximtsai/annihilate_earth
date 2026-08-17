@@ -13,8 +13,8 @@
 	"frame": {"x":1264,"y":896,"w":69,"h":61},
 	"rotated": true,
 	"trimmed": true,
-	"spriteSourceSize": {"x":3,"y":3,"w":69,"h":61},
-	"sourceSize": {"w":75,"h":67}
+	"spriteSourceSize": {"x":0,"y":4,"w":69,"h":61},
+	"sourceSize": {"w":69,"h":69}
 },
 "earth-glow.png":
 {
@@ -139,10 +139,10 @@
 "meta": {
 	"app": "https://www.codeandweb.com/texturepacker",
 	"version": "1.0",
-	"image": "sprites.webp",
+	"image": "sprites.png",
 	"format": "RGBA8888",
 	"size": {"w":1934,"h":1191},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:e8ec3e573f022bd4336174528196100e:d1126352dd91a3ac8ee1d82c04c77f77:8f90a40215e76b7d1e55396bb87b74be$"
+	"smartupdate": "$TexturePacker:SmartUpdate:e1a45ed198c5716d237fb92e9b376882:39efee47c901dc0cce109e0c7850efe8:1eabdf11f75e3a4fe3147baf7b5be24b$"
 }
 }
