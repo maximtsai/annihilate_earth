@@ -257,17 +257,27 @@ function extractSprite(frameName) {
     canvas.height = spriteInfo.sourceSize.h;
     const ctx = canvas.getContext('2d');
 
-    const sx = f.x;
-    const sy = f.y;
-    const sw = f.w;
-    const sh = f.h;
-
     const dx = spriteInfo.spriteSourceSize ? spriteInfo.spriteSourceSize.x : 0;
     const dy = spriteInfo.spriteSourceSize ? spriteInfo.spriteSourceSize.y : 0;
-    const dw = sw;
-    const dh = sh;
 
-    ctx.drawImage(atlasImage, sx, sy, sw, sh, dx, dy, dw, dh);
+    if (spriteInfo.rotated) {
+        // TexturePacker rotates frames 90 degrees CCW to pack them into the atlas.
+        // In the atlas, the texture rectangle has width f.h and height f.w at (f.x, f.y).
+        // Draw the rotated rectangle upright at (dx, dy).
+        ctx.save();
+        ctx.translate(dx + f.w, dy);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(atlasImage, f.x, f.y, f.h, f.w, 0, 0, f.h, f.w);
+        ctx.restore();
+    } else {
+        const sx = f.x;
+        const sy = f.y;
+        const sw = f.w;
+        const sh = f.h;
+        const dw = sw;
+        const dh = sh;
+        ctx.drawImage(atlasImage, sx, sy, sw, sh, dx, dy, dw, dh);
+    }
     return canvas;
 }
 
@@ -5979,7 +5989,7 @@ async function run(mode) {
             const names = planetNames[currentLanguage] || planetNames['en'];
             titleEl.textContent = `${t.annihilate} ${names[currentPlanet] || currentPlanet.toUpperCase()}`;
         }
-        document.title = titleEl.textContent;
+        document.title = 'ANNIHILATE EARTH';
     }
 
     // Options popup trigger
