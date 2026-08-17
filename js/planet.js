@@ -45,6 +45,7 @@ function initializePlanet() {
     // below that exists precisely to avoid blocking. Bound it to the core's
     // bounding box (a superset of the disc, so no read can miss).
     const coreRad = d / 2;
+    const coreScale = coreRad / 120;
     const isSun = (currentPlanet === 'sun');
     const coreTexRadius = Math.ceil(getCoreRadius(d));
     const coreMinY = Math.max(0, Math.floor(cy - coreTexRadius));
@@ -57,7 +58,7 @@ function initializePlanet() {
         for (let px = coreMinX; px <= coreMaxX; px++) {
             const dxCenter = px - cx;
             const nx = dxCenter / coreRad;
-            const coreNoiseVal = fbm(nx * 5.0 + seedX, ny * 5.0 + seedY, 4);
+            const coreNoiseVal = fbm(nx * 5.0 * coreScale + seedX, ny * 5.0 * coreScale + seedY, 4);
             let cr = 0, cg = 0, cb = 0;
             if (isSun) {
                 if (coreNoiseVal < 0.45) {
@@ -105,8 +106,9 @@ function initializePlanet() {
                         const nx = dx / radius;
                         const ny = dy / radius;
 
-                        const noiseX = nx * 3.6 + seedX;
-                        const noiseY = ny * 3.6 + seedY;
+                        const noiseScale = radius / 120;
+                        const noiseX = nx * 3.6 * noiseScale + seedX;
+                        const noiseY = ny * 3.6 * noiseScale + seedY;
                         const noiseVal = fbm(noiseX, noiseY, 5);
 
                         let r = 0, g = 0, b = 0;
@@ -142,8 +144,8 @@ function initializePlanet() {
                             }
 
                             // Cloud Layer fBm overlay
-                            const cloudX = nx * 6.0 + cloudSeedX;
-                            const cloudY = ny * 6.0 + cloudSeedY;
+                            const cloudX = nx * 6.0 * noiseScale + cloudSeedX;
+                            const cloudY = ny * 6.0 * noiseScale + cloudSeedY;
                             const cloudVal = fbm(cloudX, cloudY, 4);
                             if (cloudVal > 0.55) {
                                 const cloudOpacity = Math.min((cloudVal - 0.55) / 0.18, 0.85);
@@ -183,8 +185,8 @@ function initializePlanet() {
                             }
 
                             // Secondary fBm dust storm haze overlay
-                            const hazeX = nx * 3.5 + cloudSeedX;
-                            const hazeY = ny * 3.5 + cloudSeedY;
+                            const hazeX = nx * 3.5 * noiseScale + cloudSeedX;
+                            const hazeY = ny * 3.5 * noiseScale + cloudSeedY;
                             const hazeVal = fbm(hazeX, hazeY, 4);
                             if (hazeVal > 0.55) {
                                 const hazeOpacity = Math.min((hazeVal - 0.55) / 0.22, 0.4);
@@ -218,8 +220,8 @@ function initializePlanet() {
                             }
 
                             // Ice haze mist overlay
-                            const cloudX = nx * 3.8 + cloudSeedX;
-                            const cloudY = ny * 3.8 + cloudSeedY;
+                            const cloudX = nx * 3.8 * noiseScale + cloudSeedX;
+                            const cloudY = ny * 3.8 * noiseScale + cloudSeedY;
                             const cloudVal = fbm(cloudX, cloudY, 4);
                             if (cloudVal > 0.54) {
                                 const cloudOpacity = Math.min((cloudVal - 0.54) / 0.2, 0.45);
@@ -264,8 +266,8 @@ function initializePlanet() {
                                 b = Math.floor(b * (1 - blend) + 30 * blend);
                             }
                             // Secondary atmospheric wind storm swirls
-                            const swirlX = nx * 4.5 + cloudSeedX;
-                            const swirlY = ny * 4.5 + cloudSeedY;
+                            const swirlX = nx * 4.5 * noiseScale + cloudSeedX;
+                            const swirlY = ny * 4.5 * noiseScale + cloudSeedY;
                             const swirlVal = fbm(swirlX, swirlY, 4);
                             if (swirlVal > 0.55) {
                                 const swirlOpacity = Math.min((swirlVal - 0.55) / 0.22, 0.35);
@@ -306,8 +308,8 @@ function initializePlanet() {
                             }
 
                             // Dynamic magnetic solar flares / cloud prominence overlay
-                            const flareX = nx * 5.0 + cloudSeedX;
-                            const flareY = ny * 5.0 + cloudSeedY;
+                            const flareX = nx * 5.0 * noiseScale + cloudSeedX;
+                            const flareY = ny * 5.0 * noiseScale + cloudSeedY;
                             const flareVal = fbm(flareX, flareY, 4);
                             if (flareVal > 0.62) {
                                 const flareOpacity = Math.min((flareVal - 0.62) / 0.18, 0.75);
@@ -329,8 +331,8 @@ function initializePlanet() {
                             }
 
                             // Intense electromagnetic current swirl overlay (bright cyan/blue)
-                            const stormX = nx * 5.5 + cloudSeedX;
-                            const stormY = ny * 5.5 + cloudSeedY;
+                            const stormX = nx * 5.5 * noiseScale + cloudSeedX;
+                            const stormY = ny * 5.5 * noiseScale + cloudSeedY;
                             const stormVal = fbm(stormX, stormY, 4);
                             if (stormVal > 0.55) {
                                 const stormOpacity = Math.min((stormVal - 0.55) / 0.20, 0.65);
@@ -903,8 +905,9 @@ function popConnectedIce(popX, popY) {
                             const rad = planetSize / 2;
                             const nx = dxCenter / rad;
                             const ny = dyCenter / rad;
-                            const nsNoiseX = nx * 3.6 + seedX;
-                            const nsNoiseY = ny * 3.6 + seedY;
+                            const nsScale = rad / 120;
+                            const nsNoiseX = nx * 3.6 * nsScale + seedX;
+                            const nsNoiseY = ny * 3.6 * nsScale + seedY;
                             const nsNoiseVal = fbm(nsNoiseX, nsNoiseY, 4);
                             let nr = 230, ng = 240, nb = 255;
                             if (nsNoiseVal < 0.38) {
@@ -1352,7 +1355,11 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
     }
 
     // Blast particles
-    const particleCount = getConfigValue(`weapons.${weaponType}.particleCount`, 1);
+    let particleCount = getConfigValue(`weapons.${weaponType}.particleCount`, 1);
+    if (weaponType === 'gamma') {
+        // Reduce particles given off by each individual hit of gamma burst explosions by 40% (60% chance to spawn 1 particle)
+        particleCount = Math.random() < 0.6 ? 1 : 0;
+    }
     const speedScale = getConfigValue(`weapons.${weaponType}.particleSpeedScale`, 0.8);
     const lifeScale = getConfigValue(`weapons.${weaponType}.particleLifeScale`, 0.8);
     for (let i = 0; i < particleCount; i++) {
