@@ -343,6 +343,9 @@ function initializePlanet() {
                                 g = Math.floor(g * (1 - stormOpacity) + 190 * stormOpacity);
                                 b = 255;
                             }
+                        } else if (currentPlanet === 'custom') {
+                            // Simple off-white planet
+                            r = 245; g = 243; b = 238;
                         }
 
                         data[idx] = r;
@@ -350,9 +353,6 @@ function initializePlanet() {
                         data[idx + 2] = b;
                         data[idx + 3] = 255;
                     }
-                } else if (currentPlanet === 'custom') {
-                    // Simple off-white planet
-                    r = 245; g = 243; b = 238;
                 }
             }
 
