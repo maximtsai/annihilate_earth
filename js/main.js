@@ -2093,18 +2093,110 @@ async function run(mode) {
 
                 } else if (w.state === 'sinking_pause') {
                     w.timer += deltaTime;
-                    if (w.timer >= 0.75) { // pause for 0.75s
+                    if (w.timer >= 0.25) { // pause briefly after sinking (0.25s)
+                        w.state = 'pullback';
+                        w.timer = 0.0;
+                        w.contactX = w.x;
+                        w.contactY = w.y;
+                        const pullDist = 75; // pull back 75px to wind up for the second slam
+                        w.targetX = w.x - Math.cos(w.angle) * pullDist;
+                        w.targetY = w.y - Math.sin(w.angle) * pullDist;
+                    }
+
+                } else if (w.state === 'pullback') {
+                    w.timer += deltaTime;
+                    const duration = 0.35; // wind up over 0.35s
+                    const t = Math.max(0, Math.min(1.0, w.timer / duration));
+                    const easeT = 1 - Math.pow(1 - t, 2);
+                    w.x = w.contactX + (w.targetX - w.contactX) * easeT;
+                    w.y = w.contactY + (w.targetY - w.contactY) * easeT;
+
+                    if (w.timer >= duration) {
+                        w.state = 'pullback_pause';
+                        w.timer = 0.0;
+                    }
+
+                } else if (w.state === 'pullback_pause') {
+                    w.timer += deltaTime;
+                    if (w.timer >= 0.15) { // brief pause at apex before slamming down
+                        w.state = 'second_slam';
+                        w.timer = 0.0;
+                        w.slamSpeed = 10.0;
+                        w.slamStartX = w.x;
+                        w.slamStartY = w.y;
+                    }
+
+                } else if (w.state === 'second_slam') {
+                    // Accelerate rapidly into the second slam
+                    w.slamSpeed += deltaTime * 65;
+                    const stepDist = w.slamSpeed * dt60;
+                    w.x += Math.cos(w.angle) * stepDist;
+                    w.y += Math.sin(w.angle) * stepDist;
+
+                    // Wide rectangular hitbox checks (7 evenly-spaced points along the front face)
+                    let makesContact = false;
+                    const hHalf = w.width * 0.42;
+                    const perpAngle = w.angle + Math.PI / 2;
+                    const imgData = getSharedPlanetData();
+                    const data = imgData.data;
+
+                    for (let k = -3; k <= 3; k++) {
+                        const offset = (k / 3) * hHalf;
+                        const sx = w.x + Math.cos(perpAngle) * offset;
+                        const sy = w.y + Math.sin(perpAngle) * offset;
+
+                        const local = screenToLocal(sx, sy, CENTER_X, CENTER_Y, planetRotation);
+                        const px = Math.floor(local.x);
+                        const py = Math.floor(local.y);
+
+                        if (px >= 0 && px < PLANET_CANVAS_SIZE && py >= 0 && py < PLANET_CANVAS_SIZE) {
+                            const idx = (py * PLANET_CANVAS_SIZE + px) * 4;
+                            if (data[idx + 3] > 0) {
+                                makesContact = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Check if it reached max travel depth even if terrain under it was completely destroyed
+                    const travDx = w.x - w.slamStartX;
+                    const travDy = w.y - w.slamStartY;
+                    const totalTravel = Math.sqrt(travDx * travDx + travDy * travDy);
+                    const maxTravel = 180;
+
+                    if (makesContact || totalTravel >= maxTravel) {
+                        // Second slam impact made!
+                        soundManager.play('sfx_fist_impact');
+                        screenShake = { x: 0, y: 0, intensity: 36, duration: 250 };
+
+                        // Shockwave for second slam
+                        shockwaves.push({
+                            x: w.x,
+                            y: w.y,
+                            radius: 0,
+                            maxRadius: 320,
+                            life: 1.0,
+                            maxLife: 0.85,
+                            isOval: true,
+                            angle: w.angle
+                        });
+
+                        // White flash for the second round of explosions
+                        screenFlash.alpha = 0.5;
+                        screenFlash.r = 255; screenFlash.g = 255; screenFlash.b = 255;
+                        w.hasFistRamFlash = true;
+
                         w.state = 'ramming';
                         w.timer = 0.0;
                         w.contactX = w.x;
                         w.contactY = w.y;
-                        w.targetX = w.x + Math.cos(w.angle) * 65;
-                        w.targetY = w.y + Math.sin(w.angle) * 65;
+                        w.targetX = w.x + Math.cos(w.angle) * 55;
+                        w.targetY = w.y + Math.sin(w.angle) * 55;
                     }
 
                 } else if (w.state === 'ramming') {
                     w.timer += deltaTime;
-                    const duration = 0.20; // ram forward another 65px deeply over 0.2s
+                    const duration = 0.20; // ram forward another 55px deeply over 0.2s
                     const t = Math.max(0, Math.min(1.0, w.timer / duration));
                     w.x = w.contactX + (w.targetX - w.contactX) * t;
                     w.y = w.contactY + (w.targetY - w.contactY) * t;
@@ -2123,13 +2215,6 @@ async function run(mode) {
                         const key = `ram_${idx}`;
                         if (t >= expT && !w.triggeredIdxs.has(key)) {
                             w.triggeredIdxs.add(key);
-
-                            // White flash for the second round of explosions
-                            if (!w.hasFistRamFlash) {
-                                screenFlash.alpha = 0.5;
-                                screenFlash.r = 255; screenFlash.g = 255; screenFlash.b = 255;
-                                w.hasFistRamFlash = true;
-                            }
 
                             // Trigger medium explosion in a slightly narrower area closer to the fist's center
                             const offset = (Math.random() - 0.5) * w.width * 0.5;
