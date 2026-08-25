@@ -196,11 +196,30 @@ const essentialSoundIds = [
     'sfx_explosion_small', 'sfx_explosion_medium', 'sfx_explosion_large',
     'sfx_victory'
 ];
-essentialSoundIds.forEach(id => soundManager.load(id));
+// Kept so run() can gate the end of the loading bar on these actually decoding.
+// SoundManager.load() never rejects, so this always settles.
+const essentialSoundsReady = Promise.all(essentialSoundIds.map(id => soundManager.load(id)));
+
+window.deferredSoundIds = [
+    'sfx_laser_fire', 'sfx_laser_hum', 'sfx_laser_crack',
+    'sfx_gamma_charge', 'sfx_gamma_beam', 'sfx_gamma_warning',
+    'sfx_sword_fly', 'sfx_sword_stab', 'sfx_sword_pullout', 'sfx_sword_rumble_loop', 'sfx_holy_shine',
+    'sfx_bowling_pins',
+    'sfx_black_hole_spawn', 'sfx_black_hole_disappear',
+    'sfx_nom_short',
+    'sfx_fist_impact',
+    'sfx_mystical_moon_explosion',
+    'sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade',
+    'sfx_freeze', 'sfx_shatter',
+    'sfx_lightning',
+    'sfx_void_body',
+    'sfx_quack',
+    'sfx_error'
+];
 
 const WEAPON_SOUNDS = {
     missile: ['sfx_explosion_small'],
-    nuke: ['sfx_explosion_medium', 'sfx_out_of_ammo'],
+    nuke: ['sfx_explosion_medium'],
     laser: ['sfx_laser_fire', 'sfx_laser_crack', 'sfx_laser_hum'],
     asteroid: ['sfx_launch_heavy', 'sfx_explosion_large'],
     gamma: ['sfx_gamma_charge', 'sfx_gamma_warning', 'sfx_gamma_beam'],
@@ -208,14 +227,12 @@ const WEAPON_SOUNDS = {
     moon: ['sfx_launch_heavy', 'sfx_mystical_moon_explosion', 'sfx_holy_shine'],
     blackhole: ['sfx_black_hole_spawn', 'sfx_black_hole_disappear'],
     kraken: ['sfx_gamma_charge', 'sfx_void_body'],
-    bowling: ['sfx_launch_heavy', 'sfx_bowling_pins', 'sfx_out_of_ammo'],
+    bowling: ['sfx_launch_heavy', 'sfx_bowling_pins'],
     fist: ['sfx_launch_heavy', 'sfx_fist_impact', 'sfx_nom_short'],
     worm: ['sfx_launch_heavy', 'sfx_explosion_medium'],
     star: ['sfx_magical_star_shot', 'sfx_magical_star_shot2', 'sfx_magical_star_fade'],
     comet: ['sfx_launch_heavy', 'sfx_holy_shine', 'sfx_explosion_medium'],
-    lightning: ['sfx_lightning', 'sfx_explosion_small'],
-    drill: ['sfx_out_of_ammo'],
-    mysterybox: ['sfx_out_of_ammo']
+    lightning: ['sfx_lightning', 'sfx_explosion_small']
 };
 
 function ensureWeaponSoundsLoaded(weaponType) {
@@ -241,74 +258,167 @@ function extractSprite(frameName) {
     canvas.height = spriteInfo.sourceSize.h;
     const ctx = canvas.getContext('2d');
 
-    const sx = f.x;
-    const sy = f.y;
-    const sw = f.w;
-    const sh = f.h;
-
     const dx = spriteInfo.spriteSourceSize ? spriteInfo.spriteSourceSize.x : 0;
     const dy = spriteInfo.spriteSourceSize ? spriteInfo.spriteSourceSize.y : 0;
-    const dw = sw;
-    const dh = sh;
 
-    ctx.drawImage(atlasImage, sx, sy, sw, sh, dx, dy, dw, dh);
+    if (spriteInfo.rotated) {
+        // TexturePacker rotates frames 90 degrees CCW to pack them into the atlas.
+        // In the atlas, the texture rectangle has width f.h and height f.w at (f.x, f.y).
+        // Draw the rotated rectangle upright at (dx, dy).
+        ctx.save();
+        ctx.translate(dx + f.w, dy);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(atlasImage, f.x, f.y, f.h, f.w, 0, 0, f.h, f.w);
+        ctx.restore();
+    } else {
+        const sx = f.x;
+        const sy = f.y;
+        const sw = f.w;
+        const sh = f.h;
+        const dw = sw;
+        const dh = sh;
+        ctx.drawImage(atlasImage, sx, sy, sw, sh, dx, dy, dw, dh);
+    }
     return canvas;
 }
 
-function loadSpritesAtlas() {
+// ─── #29 Asset loader failure handling & automatic retry ───
+// A dropped request must not resolve as success: booting with a blank atlas
+// crashes later, far from the real cause. Retry with a capped backoff and, if
+// the asset is genuinely unreachable, halt boot and tell the player.
+const ASSET_MAX_ATTEMPTS = 3;
+
+function assetRetryDelay(attempt) {
+    return Math.min(1000 * attempt, 3000);
+}
+
+// Cache-bust retries so a cached error response isn't replayed verbatim.
+function retryUrl(url, attempt) {
+    if (attempt === 1) return url;
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + 'retry=' + attempt;
+}
+
+function loadImageWithRetry(img, url, label) {
     return new Promise((resolve) => {
-        let jsonLoaded = false;
-        let imgLoaded = false;
-
-        const checkResolve = () => {
-            if (jsonLoaded && imgLoaded) {
-                fistImage = extractSprite('fist_punch_up.webp');
-                spriteOrange = extractSprite('orange.webp');
-                spriteVermillionRed = extractSprite('vermillion_red.webp');
-                spriteLightOrange = extractSprite('light_orange.webp');
-                spriteWhiteGold = extractSprite('white_gold.webp');
-                spriteBrightYellow = extractSprite('bright_yellow.webp');
-                spriteSmokeStandard = extractSprite('smoke_standard.webp');
-                spriteSmokeMissile = extractSprite('smoke_missile.webp');
-                spriteDuck = extractSprite('duck.png');
-
-                // Planet and core glows
-                earthGlow = extractSprite('earth-glow.png');
-                marsGlow = extractSprite('mars-glow.png');
-                neptuneGlow = extractSprite('neptune-glow.png');
-                jupiterGlow = extractSprite('jupiter-glow.png');
-                neutronStarGlow = extractSprite('neutron-star-glow.png');
-                sunCorona = extractSprite('sun-corona.png');
-                sunCoreGlow = extractSprite('sun-core-glow.png');
-                magmaCoreGlow = extractSprite('magma-core-glow.png');
-
-                resolve();
-            }
+        let attempt = 0;
+        const tryLoad = () => {
+            attempt++;
+            img.onload = () => resolve(true);
+            img.onerror = () => {
+                if (attempt < ASSET_MAX_ATTEMPTS) {
+                    console.warn(`Asset load failed (attempt ${attempt}/${ASSET_MAX_ATTEMPTS}): ${label}`);
+                    setTimeout(tryLoad, assetRetryDelay(attempt));
+                } else {
+                    console.error(`Failed to load ${label} after ${ASSET_MAX_ATTEMPTS} attempts`);
+                    resolve(false);
+                }
+            };
+            img.src = retryUrl(url, attempt);
         };
-
-        atlasImage.onload = () => {
-            imgLoaded = true;
-            checkResolve();
-        };
-        atlasImage.onerror = () => {
-            console.error("Failed to load sprites.png");
-            resolve();
-        };
-
-        atlasImage.src = './assets/sprites.png';
-
-        fetch('./assets/sprites.json')
-            .then(res => res.json())
-            .then(data => {
-                atlasData = data;
-                jsonLoaded = true;
-                checkResolve();
-            })
-            .catch(err => {
-                console.error("Failed to load sprites.json:", err);
-                resolve();
-            });
+        tryLoad();
     });
+}
+
+async function fetchJsonWithRetry(url, label) {
+    for (let attempt = 1; attempt <= ASSET_MAX_ATTEMPTS; attempt++) {
+        try {
+            const res = attempt === 1
+                ? await fetch(url)
+                : await fetch(retryUrl(url, attempt), { cache: 'reload' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        } catch (err) {
+            if (attempt < ASSET_MAX_ATTEMPTS) {
+                console.warn(`Asset load failed (attempt ${attempt}/${ASSET_MAX_ATTEMPTS}): ${label}`, err);
+                await new Promise(r => setTimeout(r, assetRetryDelay(attempt)));
+            } else {
+                console.error(`Failed to load ${label} after ${ASSET_MAX_ATTEMPTS} attempts`, err);
+            }
+        }
+    }
+    return null;
+}
+
+// Shows the permanent-failure state on the loading screen. `onRetry` must
+// re-issue the real requests — clearing bookkeeping alone would "succeed" with
+// the assets still missing.
+let loadingFailureRetryBusy = false;
+function showLoadingFailureUI(onRetry) {
+    const box = document.getElementById('loading-failure');
+    const text = document.getElementById('loading-failure-text');
+    const btn = document.getElementById('loading-failure-retry');
+    const t = translations[currentLanguage] || translations['en'];
+
+    if (text) text.textContent = t.loadFailed || 'LOADING INTERRUPTED\nCheck your connection and try again.';
+    if (btn) {
+        btn.textContent = t.loadRetry || 'RETRY';
+        btn.disabled = false;
+    }
+    if (loadingStatus) loadingStatus.textContent = '';
+    if (!box) {
+        console.error('Loading failure UI is missing from the DOM.');
+        return;
+    }
+    box.hidden = false;
+    loadingFailureRetryBusy = false;
+
+    if (btn && !btn._retryBound) {
+        btn._retryBound = true;
+        btn.addEventListener('click', () => {
+            if (loadingFailureRetryBusy) return;   // guard double-taps
+            loadingFailureRetryBusy = true;
+            btn.disabled = true;
+            hideLoadingFailureUI();
+            setLoadingProgress(20, (translations[currentLanguage] || translations['en']).loadingAssets || 'Loading assets...');
+            Promise.resolve(btn._onRetry && btn._onRetry()).catch(err => {
+                console.error('Retry attempt failed', err);
+            });
+        });
+    }
+    if (btn) btn._onRetry = onRetry;
+}
+
+function hideLoadingFailureUI() {
+    const box = document.getElementById('loading-failure');
+    if (box) box.hidden = true;
+}
+
+function extractAtlasSprites() {
+    fistImage = extractSprite('fist_punch_up.webp');
+    spriteOrange = extractSprite('orange.webp');
+    spriteVermillionRed = extractSprite('vermillion_red.webp');
+    spriteLightOrange = extractSprite('light_orange.webp');
+    spriteWhiteGold = extractSprite('white_gold.webp');
+    spriteBrightYellow = extractSprite('bright_yellow.webp');
+    spriteSmokeStandard = extractSprite('smoke_standard.webp');
+    spriteSmokeMissile = extractSprite('smoke_missile.webp');
+    spriteDuck = extractSprite('duck.png');
+
+    // Planet and core glows
+    earthGlow = extractSprite('earth-glow.png');
+    marsGlow = extractSprite('mars-glow.png');
+    neptuneGlow = extractSprite('neptune-glow.png');
+    jupiterGlow = extractSprite('jupiter-glow.png');
+    neutronStarGlow = extractSprite('neutron-star-glow.png');
+    sunCorona = extractSprite('sun-corona.png');
+    sunCoreGlow = extractSprite('sun-core-glow.png');
+    magmaCoreGlow = extractSprite('magma-core-glow.png');
+}
+
+// Resolves true only when BOTH halves of the atlas are actually usable.
+// "Request finished" is not "load succeeded" — a missing page or manifest here
+// means every sprite in the game would draw blank.
+async function loadSpritesAtlas() {
+    const [imgOk, data] = await Promise.all([
+        loadImageWithRetry(atlasImage, './assets/sprites.png', 'sprites.png'),
+        fetchJsonWithRetry('./assets/sprites.json', 'sprites.json')
+    ]);
+
+    if (!imgOk || !data) return false;
+
+    atlasData = data;
+    extractAtlasSprites();
+    return true;
 }
 
 setLoadingProgress(40, (translations[currentLanguage] || translations['en']).loadingWeaponAssets || 'Loading weapon assets...');
@@ -366,8 +476,24 @@ function getGradientCanvas(color) {
 }
 
 async function run(mode) {
-    // Load spritesheet atlas assets first
-    await loadSpritesAtlas();
+    // Load spritesheet atlas assets first. #29 — if it is permanently
+    // unreachable, halt boot and offer a retry instead of continuing into a
+    // session where every sprite is blank. Nothing below has run yet, so
+    // re-entering run() from the retry button is safe.
+    if (!await loadSpritesAtlas()) {
+        showLoadingFailureUI(() => run(mode));
+        return;
+    }
+    hideLoadingFailureUI();
+
+    // #18 — the loading bar must not reach 100% before the sounds it claims to
+    // be loading are decoded, or the first tap plays nothing. Capped so a single
+    // stalled request can't hold the game hostage; missing sounds degrade to
+    // silence and are retried lazily by SoundManager.
+    await Promise.race([
+        essentialSoundsReady,
+        new Promise(resolve => setTimeout(resolve, 8000))
+    ]);
 
     // Wait for local fonts to load to prevent canvas text rendering fallback glitches
     if (document.fonts && typeof document.fonts.ready !== 'undefined') {
@@ -499,7 +625,13 @@ async function run(mode) {
         // Match the canvas backing-store resolution to the new on-screen size / DPI.
         updateCanvasResolution();
     }
-    window.addEventListener('resize', resizeBackground);
+    // #19 — ResizeObserver with window.resize fallback for older browsers (iOS < 13.4, Safari < 13.1)
+    if (window.ResizeObserver) {
+        const _resizeObserver = new ResizeObserver(resizeBackground);
+        _resizeObserver.observe(gameWorld);
+    } else {
+        window.addEventListener('resize', resizeBackground);
+    }
     resizeBackground();
 
     // Translate loading screen
@@ -1151,6 +1283,7 @@ async function run(mode) {
                 ft.life -= deltaTime;
                 if (ft.life <= 0) {
                     floatingTexts.splice(i, 1);
+                    _releaseFloatingText(ft); // return to pool (#6 GC optimisation)
                 }
             }
 
@@ -1236,8 +1369,8 @@ async function run(mode) {
                         const beamDirX = CENTER_X - spawnX;
                         const beamDirY = CENTER_Y - spawnY;
 
-                        // Fetch the pixel buffer ONCE for this entire tick's 10-ray sweep
-                        const sharedImgData = hiddenCtx.getImageData(0, 0, PLANET_CANVAS_SIZE, PLANET_CANVAS_SIZE);
+                        // Fetch the pixel buffer ONCE for this entire tick's 10-ray sweep via shared cache
+                        const sharedImgData = getSharedPlanetData();
 
                         let anyHit = false;
                         let playedStrikeSound = false;
@@ -1831,7 +1964,10 @@ async function run(mode) {
                 } else if (w.state === 'stuck') {
                     w.stuckTimer -= deltaTime;
 
-                    if (Math.random() < 0.08) {
+                    // Fixed-rate rumble tick (independent of refresh rate)
+                    w.sfxTimer = (w.sfxTimer || 0) + deltaTime;
+                    if (w.sfxTimer >= 0.21) {
+                        w.sfxTimer = 0;
                         soundManager.play('sfx_ui_switch', false, 0.3, 800);
                     }
 
@@ -2142,8 +2278,10 @@ async function run(mode) {
                     }
                 }
 
-                // Spawn sand/dust particles trailing from body segments
-                if (Math.random() < 0.45) {
+                // Spawn sand/dust particles trailing from body segments (fixed rate, not per-frame)
+                worm.dustTimer = (worm.dustTimer || 0) + deltaTime;
+                if (worm.dustTimer >= 0.037 / particleBudget) {
+                    worm.dustTimer = 0;
                     const followSegment = worm.segments[3 + Math.floor(Math.random() * 3)] || head;
                     const pAngle = Math.random() * Math.PI * 2;
                     const pSpeed = Math.random() * 1.5 + 0.5;
@@ -2350,10 +2488,15 @@ async function run(mode) {
                 // Spawn invisible rain particles during growing phase (0 to 5s)
                 if (bh.time <= 5.0) {
                     const progress = Math.min(1.0, bh.time / 5.0);
-                    const spawnChance = (0.12 + progress * 0.35) * 0.8;
+                    // Spawn interval in seconds, refresh-rate independent (was per-frame chance).
+                    // particleBudget scales the interval up (fewer spawns), matching every
+                    // other emission site - it must not divide the rate.
+                    const rainInterval = 1 / ((0.12 + progress * 0.35) * 0.8 * 60 * particleBudget);
 
                     // Current behavior: rain falling from outer orbit
-                    if (Math.random() < spawnChance) {
+                    bh.rainTimer = (bh.rainTimer || 0) + deltaTime;
+                    if (bh.rainTimer >= rainInterval) {
+                        bh.rainTimer -= rainInterval;
                         const bhAngle = Math.atan2(bh.y - CENTER_Y, bh.x - CENTER_X);
                         const spreadWidth = 0.9 + progress * 2; // scales from 0.4 to 2.2 rad
                         const spreadAngle = bhAngle + (Math.random() - 0.5) * spreadWidth;
@@ -2372,7 +2515,10 @@ async function run(mode) {
                     }
 
                     // Old behavior: shoot particles outwards from the black hole itself at 25% the frequency
-                    if (Math.random() < spawnChance * 0.35) {
+                    const outwardInterval = rainInterval / 0.35;
+                    bh.outwardTimer = (bh.outwardTimer || 0) + deltaTime;
+                    if (bh.outwardTimer >= outwardInterval) {
+                        bh.outwardTimer -= outwardInterval;
                         const toPlanetAngle = Math.atan2(CENTER_Y - bh.y, CENTER_X - bh.x);
                         const spreadWidth = 2.2;
                         const spreadAngle = toPlanetAngle + (Math.random() - 0.5) * spreadWidth;
@@ -2416,8 +2562,10 @@ async function run(mode) {
                                 radius *= 0.94;
                             }
 
-                            // Play subtle crackling/crushing impact sound
-                            if (Math.random() < 0.25) {
+                            // Play subtle crackling/crushing impact sound (fixed per-projectile rate)
+                            rp.crackleTimer = (rp.crackleTimer || 0) + deltaTime;
+                            if (rp.crackleTimer >= 0.067) {
+                                rp.crackleTimer = 0;
                                 const detune = (Math.random() - 1.3) * 1400;
                                 soundManager.play('sfx_explosion_small', false, 0.15, detune);
                             }
@@ -2512,8 +2660,10 @@ async function run(mode) {
                         chunk.x += pullX + swirlX;
                         chunk.y += pullY + swirlY;
 
-                        // Spawn small dust particles behind chunk, swirling along
-                        if (Math.random() < 0.15) {
+                        // Spawn small dust particles behind chunk, swirling along (fixed per-chunk rate)
+                        chunk.dustTimer = (chunk.dustTimer || 0) + deltaTime;
+                        if (chunk.dustTimer >= 0.111 / particleBudget) {
+                            chunk.dustTimer = 0;
                             particles.push({
                                 x: chunk.x,
                                 y: chunk.y,
@@ -2825,7 +2975,7 @@ async function run(mode) {
                 }
 
                 if (p.life <= 0) {
-                    p.active = false;
+                    particles.release(p);
                 }
             }
 
@@ -3455,8 +3605,10 @@ async function run(mode) {
 
             const baseRadius = 17.5; // Beefy Lovecraftian muscle mass!
 
-            // Eldritch crackling purple/cyan lightning along the tentacle body
-            if (Math.random() < 0.15) {
+            // Eldritch crackling purple/cyan lightning along the tentacle body (fixed flicker rate)
+            tent.lightningTimer = (tent.lightningTimer || 0) + frameDeltaTime;
+            if (tent.lightningTimer >= 0.111 / particleBudget) {
+                tent.lightningTimer = 0;
                 ctx.save();
                 ctx.strokeStyle = Math.random() > 0.45 ? '#d946ef' : '#00f3ff';
                 ctx.lineWidth = 1.4;
@@ -3792,6 +3944,80 @@ async function run(mode) {
         ctx.restore();
     }
 
+    // Starfield bucketing scratch: 16 alpha levels, each holding star indices.
+    // Reused every frame (length counters reset) to avoid any allocation.
+    const STAR_ALPHA_LEVELS = 16;
+    const starBuckets = [];
+    const starBucketCounts = new Uint8Array(STAR_ALPHA_LEVELS);
+    for (let i = 0; i < STAR_ALPHA_LEVELS; i++) starBuckets.push([]);
+
+    // Pre-rendered accretion disk for black holes. The original inline version
+    // drew 14 shadowBlur-30 strokes per frame (back ring + front ring + 12 band
+    // arcs) — the most expensive glow in the game. Everything is baked once into
+    // offscreen sprites at max black-hole size; per frame only a few scaled blits
+    // remain. The halo sprites bake glow + stroke together, so they reproduce the
+    // original single-stroke brightness exactly (no separate core blits — those
+    // would composite the stroke twice). The back half (full ring + dimmer band
+    // pass) is drawn behind the event horizon so the sphere occludes its far side;
+    // the front half (upper arc + brighter band pass) over it to warp around; the
+    // halos breathe via alpha and the bands rotate via a draw-time swirl.
+    const DISK_SQUISH = 0.32; // vertical squish that gives the disk its 3D perspective
+    let accretionDiskSprites = null;
+    function getAccretionDiskSprites() {
+        if (accretionDiskSprites) return accretionDiskSprites;
+        const size = 75; // max displaySize of any black hole
+        const margin = 50; // shadowBlur 30 + stroke bleed
+        const half = Math.ceil(size * 1.79 + margin);
+
+        function makeSprite(draw) {
+            const canvas = document.createElement('canvas');
+            canvas.width = half * 2;
+            canvas.height = half * 2;
+            const c = canvas.getContext('2d');
+            c.translate(half, half);
+            draw(c);
+            return canvas;
+        }
+        // Baked WITH the 0.32 squish already applied. shadowBlur is a device-space
+        // effect, so the original's blur was circular in screen space, applied after
+        // the squish. Baking round and squishing the sprite at blit time compresses
+        // the glow vertically (measured mean error 10.3/255); baking pre-squished
+        // and blitting with only the tilt reproduces the original (error 1.1).
+        // Safe for the rings because they need no draw-time swirl - unlike the
+        // bands, whose rotation has to happen inside the squish.
+        function bakeRing(c, color, alpha, arcTo) {
+            c.scale(1.0, DISK_SQUISH);
+            c.shadowBlur = 30;
+            c.shadowColor = 'rgba(255, 90, 0, 0.95)';
+            c.strokeStyle = `rgba(${color}, ${alpha})`;
+            c.lineWidth = size * 0.28;
+            c.beginPath();
+            c.arc(0, 0, size * 1.55, 0, arcTo);
+            c.stroke();
+        }
+        function bakeBands(c, goldAlpha, redAlpha) {
+            c.shadowBlur = 30;
+            c.shadowColor = 'rgba(255, 90, 0, 0.95)';
+            const diskRays = 6;
+            for (let j = 0; j < diskRays; j++) {
+                const angle = (j * Math.PI * 2) / diskRays;
+                c.strokeStyle = j % 2 === 0 ? `rgba(255, 215, 0, ${goldAlpha})` : `rgba(255, 70, 0, ${redAlpha})`;
+                c.lineWidth = size * 0.14;
+                c.beginPath();
+                c.arc(0, 0, size * (1.35 + (j % 3) * 0.22), angle, angle + 1.4);
+                c.stroke();
+            }
+        }
+        // Back pass (behind the event horizon): full ring + dimmer band layer
+        const backHalo = makeSprite(c => bakeRing(c, '255, 140, 0', 0.85, Math.PI * 2));
+        const backBands = makeSprite(c => bakeBands(c, 0.75, 0.6));
+        // Front pass (over the horizon): upper arc + brighter band layer
+        const frontHalo = makeSprite(c => bakeRing(c, '255, 140, 0', 0.9, Math.PI));
+        const frontBands = makeSprite(c => bakeBands(c, 0.85, 0.7));
+        accretionDiskSprites = { backHalo, backBands, frontHalo, frontBands };
+        return accretionDiskSprites;
+    }
+
     // Draw game screen
     function render() {
         // Clear screen
@@ -3811,15 +4037,29 @@ async function run(mode) {
         const scaleX = bgCanvas.width / 1600;
         const starScale = scaleY; // height-based scaling for stars size!
 
-        stars.forEach(star => {
-            bgCtx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
-            const pxOff = star.size > 2.0 ? (screenShake.x * -0.22) * 0.5 : (screenShake.x * -0.07) * 0.5;
-            const pyOff = star.size > 2.0 ? (screenShake.y * -0.22) * 0.5 : (screenShake.y * -0.07) * 0.5;
-            const renderX = star.x * scaleX + pxOff;
-            const renderY = star.y * scaleY + pyOff;
-            const renderSize = star.size * starScale;
-            bgCtx.fillRect(renderX - renderSize / 2, renderY - renderSize / 2, renderSize, renderSize);
-        });
+        bgCtx.fillStyle = '#ffffff';
+        // Twinkle opacity is quantized to 16 levels and stars batched per level, so
+        // globalAlpha is set at most 16 times instead of once per star per frame
+        for (let l = 0; l < STAR_ALPHA_LEVELS; l++) starBucketCounts[l] = 0;
+        for (let i = 0; i < stars.length; i++) {
+            const level = Math.min(STAR_ALPHA_LEVELS - 1, (stars[i].opacity * STAR_ALPHA_LEVELS) | 0);
+            starBuckets[level][starBucketCounts[level]++] = i;
+        }
+        for (let l = 0; l < STAR_ALPHA_LEVELS; l++) {
+            const count = starBucketCounts[l];
+            if (!count) continue;
+            bgCtx.globalAlpha = (l + 0.5) / STAR_ALPHA_LEVELS;
+            for (let k = 0; k < count; k++) {
+                const star = stars[starBuckets[l][k]];
+                const pxOff = star.size > 2.0 ? (screenShake.x * -0.22) * 0.5 : (screenShake.x * -0.07) * 0.5;
+                const pyOff = star.size > 2.0 ? (screenShake.y * -0.22) * 0.5 : (screenShake.y * -0.07) * 0.5;
+                const renderX = star.x * scaleX + pxOff;
+                const renderY = star.y * scaleY + pyOff;
+                const renderSize = star.size * starScale;
+                bgCtx.fillRect(renderX - renderSize / 2, renderY - renderSize / 2, renderSize, renderSize);
+            }
+        }
+        bgCtx.globalAlpha = 1.0;
         bgCtx.restore();
 
         const planetSize = getPlanetSize();
@@ -4133,8 +4373,11 @@ async function run(mode) {
 
                 ctx.restore();
 
-                // Continuous spark particles spray at impact point
-                if (impact.local && Math.random() < 0.3) {
+                // Continuous spark particles spray at impact point (fixed rate, not per-frame)
+                box.sparkTimer = (box.sparkTimer || 0) + frameDeltaTime;
+                if (!impact.local) box.sparkTimer = 0;
+                if (impact.local && box.sparkTimer >= 0.056 / particleBudget) {
+                    box.sparkTimer = 0;
                     const pAngle = beamAngle + Math.PI + (Math.random() - 0.5) * 1.5;
                     const speed = Math.random() * 2 + 1;
                     particles.push({
@@ -4413,30 +4656,27 @@ async function run(mode) {
             }
             ctx.restore();
 
-            // 4. Back part of Accretion Disk (drawn behind event horizon, squished for 3D perspective)
+            // 4. Accretion Disk, back half (pre-rendered; drawn behind the event
+            // horizon so the sphere occludes the far side of the ring. Halo sprites
+            // bake glow + stroke, matching the original single-stroke brightness)
+            const diskSprites = getAccretionDiskSprites();
+            const diskScale = size / 75;
+            const diskHalf = diskSprites.backHalo.width / 2;
+            const diskGlowAlpha = 0.8 + Math.sin(performance.now() * 0.01) * 0.2;
+            // One swirl phase for the whole frame, as the original's single angleOffset
+            const diskSwirl = performance.now() * 0.0035;
+            const drawDiskSprite = (sprite, alpha) => {
+                ctx.globalAlpha = alpha;
+                ctx.drawImage(sprite, -diskHalf * diskScale, -diskHalf * diskScale, diskHalf * 2 * diskScale, diskHalf * 2 * diskScale);
+            };
             ctx.save();
             ctx.rotate(tiltAngle);
-            ctx.scale(1.0, 0.32);
-
-            ctx.shadowBlur = 30 + Math.sin(performance.now() * 0.01) * 10;
-            ctx.shadowColor = 'rgba(255, 90, 0, 0.95)';
-            ctx.strokeStyle = 'rgba(255, 140, 0, 0.85)';
-            ctx.lineWidth = size * 0.28;
-            ctx.beginPath();
-            ctx.arc(0, 0, size * 1.55, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Swirling bands in the disk (back part)
-            const angleOffset = performance.now() * 0.0035;
-            const diskRays = 6;
-            for (let j = 0; j < diskRays; j++) {
-                const angle = angleOffset + (j * Math.PI * 2) / diskRays;
-                ctx.strokeStyle = j % 2 === 0 ? 'rgba(255, 215, 0, 0.75)' : 'rgba(255, 70, 0, 0.6)';
-                ctx.lineWidth = size * 0.14;
-                ctx.beginPath();
-                ctx.arc(0, 0, size * (1.35 + (j % 3) * 0.22), angle, angle + 1.4);
-                ctx.stroke();
-            }
+            // Rings are baked pre-squished, so they blit under the tilt alone; the
+            // squish only wraps the bands, whose swirl must rotate inside it.
+            drawDiskSprite(diskSprites.backHalo, diskGlowAlpha);
+            ctx.scale(1.0, DISK_SQUISH);
+            ctx.rotate(diskSwirl); // swirl phase (bands only)
+            drawDiskSprite(diskSprites.backBands, 1);
             ctx.restore();
 
             // 5. Event Horizon (black core)
@@ -4448,30 +4688,15 @@ async function run(mode) {
             ctx.fill();
             ctx.restore();
 
-            // 6. Front part of Accretion Disk (drawn over the black sphere to warp around it)
+            // 6. Accretion Disk, front half + swirling bands (pre-rendered; drawn
+            // over the sphere to warp around it. The bands rotate via draw-time
+            // swirl; the upper-arc halves stay fixed to the disk orientation)
             ctx.save();
             ctx.rotate(tiltAngle);
-            ctx.scale(1.0, 0.32);
-
-            ctx.shadowBlur = 30 + Math.sin(performance.now() * 0.01) * 10;
-            ctx.shadowColor = 'rgba(255, 90, 0, 0.95)';
-            ctx.strokeStyle = 'rgba(255, 140, 0, 0.9)';
-            ctx.lineWidth = size * 0.28;
-            ctx.beginPath();
-            // Draw from 0 to PI (front half of squished ellipse)
-            ctx.arc(0, 0, size * 1.55, 0, Math.PI);
-            ctx.stroke();
-
-            // Swirling bands (front part)
-            for (let j = 0; j < diskRays; j++) {
-                const angle = angleOffset + (j * Math.PI * 2) / diskRays;
-                // Only stroke if part of the arc is in the front
-                ctx.strokeStyle = j % 2 === 0 ? 'rgba(255, 215, 0, 0.85)' : 'rgba(255, 70, 0, 0.7)';
-                ctx.lineWidth = size * 0.14;
-                ctx.beginPath();
-                ctx.arc(0, 0, size * (1.35 + (j % 3) * 0.22), angle, angle + 1.4);
-                ctx.stroke();
-            }
+            drawDiskSprite(diskSprites.frontHalo, diskGlowAlpha);
+            ctx.scale(1.0, DISK_SQUISH);
+            ctx.rotate(diskSwirl); // swirl phase (bands only)
+            drawDiskSprite(diskSprites.frontBands, 1);
             ctx.restore();
 
             // 7. Swirling Sparks/Debris Ring (orbiting matter)
@@ -4956,34 +5181,7 @@ async function run(mode) {
                     ctx.arc(p.x, p.y, p.size * 0.85, 0, Math.PI * 2);
                     ctx.stroke();
                 } else {
-                    let img = null;
-                    if (p.color && p.color.startsWith('hsl(')) {
-                        const match = p.color.match(/hsl\(([^,]+),\s*([^,]+),\s*([^%)]+)%?\)/);
-                        if (match) {
-                            const h = parseFloat(match[1]);
-                            const l = parseFloat(match[3]);
-                            if (l >= 88) {
-                                img = spriteWhiteGold;
-                            } else if (l >= 82) {
-                                img = spriteBrightYellow;
-                            } else if (h >= 52) {
-                                img = spriteLightOrange;
-                            } else if (h >= 30) {
-                                img = spriteOrange;
-                            } else {
-                                img = spriteVermillionRed;
-                            }
-                        }
-                    } else if (p.color && (p.color.includes('255, 255') || p.color.includes('255, 255, 120'))) {
-                        img = spriteBrightYellow;
-                    } else {
-                        // Fallback/other fire particles: use spriteOrange unless it's a specific custom non-explosion color (e.g. comet debris)
-                        if (p.color && (p.color === '#66b2ff' || p.color === '#00f0ff' || p.color === '#ffffff')) {
-                            img = null;
-                        } else {
-                            img = spriteOrange;
-                        }
-                    }
+                    let img = p.sprite;
 
                     if (img) {
                         ctx.drawImage(img, p.x - p.size, p.y - p.size, drawSize, drawSize);
@@ -5082,11 +5280,26 @@ async function run(mode) {
     }
 
     let bgmStarted = false;
+    let bgmPendingLoad = false;
     function startBGM() {
         if (bgmStarted) return;
         soundManager.init().then(() => {
-            soundManager.play('bgm_gentle_space', true, 0.45);
-            bgmStarted = true;
+            // play() returns null when the buffer hasn't decoded yet. Latching
+            // unconditionally would leave the player with no music for the rest
+            // of the session, so only latch on an actual start and kick a
+            // (re)load so the next interaction can succeed.
+            const source = soundManager.play('bgm_gentle_space', true, 0.45);
+            if (source) {
+                bgmStarted = true;
+            } else if (!bgmPendingLoad) {
+                bgmPendingLoad = true;
+                soundManager.load('bgm_gentle_space').then(() => {
+                    bgmPendingLoad = false;
+                    if (!bgmStarted && soundManager.play('bgm_gentle_space', true, 0.45)) {
+                        bgmStarted = true;
+                    }
+                });
+            }
         });
     }
 
@@ -5250,6 +5463,9 @@ async function run(mode) {
             isHolding = false;
             soundManager.stopLoop('sfx_laser_fire');
             soundManager.stopLoop('sfx_laser_hum');
+            // #3A — on mobile the tab can be killed from the background without
+            // another event, so persist any in-flight save before suspending.
+            if (window.flushSaveStateSync) window.flushSaveStateSync();
             if (soundManager && soundManager.context) {
                 soundManager.context.suspend().catch(() => { });
             }
@@ -5262,16 +5478,14 @@ async function run(mode) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
-    window.addEventListener('beforeunload', () => {
+    const handleLifecycleTeardown = () => {
+        if (window.flushSaveStateSync) window.flushSaveStateSync();
         if (soundManager && soundManager.context) {
             soundManager.context.suspend().catch(() => { });
         }
-    });
-    window.addEventListener('pagehide', () => {
-        if (soundManager && soundManager.context) {
-            soundManager.context.suspend().catch(() => { });
-        }
-    });
+    };
+    window.addEventListener('beforeunload', handleLifecycleTeardown);
+    window.addEventListener('pagehide', handleLifecycleTeardown);
 
     // Weapon selections panel
     document.querySelectorAll('.weapon-button').forEach(button => {
@@ -5873,7 +6087,7 @@ async function run(mode) {
             const names = planetNames[currentLanguage] || planetNames['en'];
             titleEl.textContent = `${t.annihilate} ${names[currentPlanet] || currentPlanet.toUpperCase()}`;
         }
-        document.title = titleEl.textContent;
+        document.title = 'ANNIHILATE EARTH';
     }
 
     // Options popup trigger
@@ -6622,6 +6836,9 @@ async function run(mode) {
     window.removeEventListener('resize', resizeLoadingCanvas);
     if (missileDiv.parentNode) missileDiv.parentNode.removeChild(missileDiv);
     loadingScreen.classList.add('fade-out');
+    if (window.deferredSoundIds) {
+        window.deferredSoundIds.forEach(id => soundManager.load(id));
+    }
     setTimeout(() => {
         loadingScreen.style.display = 'none';
     }, 400);
@@ -6646,6 +6863,7 @@ async function run(mode) {
         if (deltaTime > 0.1) {
             deltaTime = 0.1;
         }
+        frameDeltaTime = deltaTime;
 
         // Guard a single frame's work so one bad frame reports the error but
         // does not break the requestAnimationFrame chain (which would freeze

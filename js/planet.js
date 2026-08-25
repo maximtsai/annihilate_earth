@@ -1,6 +1,7 @@
 // Planet Procedural Generation & Destruction Logic
 let collapseRayCache = null;
 let collapseRayCacheNumRays = 0;
+let sharedSolidPixels = new Uint32Array(1024);
 // Generate space starfield background
 function generateStars() {
     stars = [];
@@ -83,11 +84,59 @@ function initializePlanet() {
 
     const imgData = hiddenCtx.createImageData(canvasWidth, canvasHeight);
     const data = imgData.data;
+    const data32 = new Uint32Array(imgData.data.buffer);
 
     seedX = Math.random() * 1000;
     seedY = Math.random() * 1000;
     const cloudSeedX = Math.random() * 1000;
     const cloudSeedY = Math.random() * 1000;
+
+    // Pre-calculate core texture buffer for instant O(1) lookups during explosions.
+    // Every read site is gated on `distSqCenter <= coreRadiusSq`, so only the core
+    // disc is ever sampled - filling the whole 460x460 canvas would compute 5-16x
+    // more fbm() than can ever be read, synchronously, ahead of the chunked loop
+    // below that exists precisely to avoid blocking. Bound it to the core's
+    // bounding box (a superset of the disc, so no read can miss).
+    const coreRad = d / 2;
+    const coreScale = coreRad / 120;
+    const isSun = (currentPlanet === 'sun');
+    const coreTexRadius = Math.ceil(getCoreRadius(d));
+    const coreMinY = Math.max(0, Math.floor(cy - coreTexRadius));
+    const coreMaxY = Math.min(canvasHeight - 1, Math.ceil(cy + coreTexRadius));
+    const coreMinX = Math.max(0, Math.floor(cx - coreTexRadius));
+    const coreMaxX = Math.min(canvasWidth - 1, Math.ceil(cx + coreTexRadius));
+    for (let py = coreMinY; py <= coreMaxY; py++) {
+        const dyCenter = py - cy;
+        const ny = dyCenter / coreRad;
+        for (let px = coreMinX; px <= coreMaxX; px++) {
+            const dxCenter = px - cx;
+            const nx = dxCenter / coreRad;
+            const coreNoiseVal = fbm(nx * 5.0 * coreScale + seedX, ny * 5.0 * coreScale + seedY, 4);
+            let cr = 0, cg = 0, cb = 0;
+            if (isSun) {
+                if (coreNoiseVal < 0.45) {
+                    cr = 255; cg = 245; cb = 130;
+                } else if (coreNoiseVal < 0.75) {
+                    const t = (coreNoiseVal - 0.45) / 0.30;
+                    cr = 255; cg = Math.floor(245 + t * 10); cb = Math.floor(130 + t * 90);
+                } else {
+                    const t = (coreNoiseVal - 0.75) / 0.25;
+                    cr = 255; cg = 255; cb = Math.floor(220 + t * 35);
+                }
+            } else {
+                if (coreNoiseVal < 0.45) {
+                    cr = 225; cg = 25; cb = 0;
+                } else if (coreNoiseVal < 0.75) {
+                    const t = (coreNoiseVal - 0.45) / 0.30;
+                    cr = 255; cg = Math.floor(25 + t * 115); cb = 0;
+                } else {
+                    const t = (coreNoiseVal - 0.75) / 0.25;
+                    cr = 255; cg = Math.floor(140 + t * 115); cb = Math.floor(t * 120);
+                }
+            }
+            coreBuffer32[py * canvasWidth + px] = (255 << 24) | (cb << 16) | (cg << 8) | cr;
+        }
+    }
 
     const ROWS_PER_CHUNK = 40;
     let chunkStartY = 0;
@@ -110,8 +159,9 @@ function initializePlanet() {
                         const nx = dx / radius;
                         const ny = dy / radius;
 
-                        const noiseX = nx * 3.6 + seedX;
-                        const noiseY = ny * 3.6 + seedY;
+                        const noiseScale = radius / 120;
+                        const noiseX = nx * 3.6 * noiseScale + seedX;
+                        const noiseY = ny * 3.6 * noiseScale + seedY;
                         const noiseVal = fbm(noiseX, noiseY, 5);
 
                         let r = 0, g = 0, b = 0;
@@ -147,8 +197,8 @@ function initializePlanet() {
                             }
 
                             // Cloud Layer fBm overlay
-                            const cloudX = nx * 6.0 + cloudSeedX;
-                            const cloudY = ny * 6.0 + cloudSeedY;
+                            const cloudX = nx * 6.0 * noiseScale + cloudSeedX;
+                            const cloudY = ny * 6.0 * noiseScale + cloudSeedY;
                             const cloudVal = fbm(cloudX, cloudY, 4);
                             if (cloudVal > 0.55) {
                                 const cloudOpacity = Math.min((cloudVal - 0.55) / 0.18, 0.85);
@@ -188,8 +238,8 @@ function initializePlanet() {
                             }
 
                             // Secondary fBm dust storm haze overlay
-                            const hazeX = nx * 3.5 + cloudSeedX;
-                            const hazeY = ny * 3.5 + cloudSeedY;
+                            const hazeX = nx * 3.5 * noiseScale + cloudSeedX;
+                            const hazeY = ny * 3.5 * noiseScale + cloudSeedY;
                             const hazeVal = fbm(hazeX, hazeY, 4);
                             if (hazeVal > 0.55) {
                                 const hazeOpacity = Math.min((hazeVal - 0.55) / 0.22, 0.4);
@@ -223,8 +273,8 @@ function initializePlanet() {
                             }
 
                             // Ice haze mist overlay
-                            const cloudX = nx * 3.8 + cloudSeedX;
-                            const cloudY = ny * 3.8 + cloudSeedY;
+                            const cloudX = nx * 3.8 * noiseScale + cloudSeedX;
+                            const cloudY = ny * 3.8 * noiseScale + cloudSeedY;
                             const cloudVal = fbm(cloudX, cloudY, 4);
                             if (cloudVal > 0.54) {
                                 const cloudOpacity = Math.min((cloudVal - 0.54) / 0.2, 0.45);
@@ -269,8 +319,8 @@ function initializePlanet() {
                                 b = Math.floor(b * (1 - blend) + 30 * blend);
                             }
                             // Secondary atmospheric wind storm swirls
-                            const swirlX = nx * 4.5 + cloudSeedX;
-                            const swirlY = ny * 4.5 + cloudSeedY;
+                            const swirlX = nx * 4.5 * noiseScale + cloudSeedX;
+                            const swirlY = ny * 4.5 * noiseScale + cloudSeedY;
                             const swirlVal = fbm(swirlX, swirlY, 4);
                             if (swirlVal > 0.55) {
                                 const swirlOpacity = Math.min((swirlVal - 0.55) / 0.22, 0.35);
@@ -311,8 +361,8 @@ function initializePlanet() {
                             }
 
                             // Dynamic magnetic solar flares / cloud prominence overlay
-                            const flareX = nx * 5.0 + cloudSeedX;
-                            const flareY = ny * 5.0 + cloudSeedY;
+                            const flareX = nx * 5.0 * noiseScale + cloudSeedX;
+                            const flareY = ny * 5.0 * noiseScale + cloudSeedY;
                             const flareVal = fbm(flareX, flareY, 4);
                             if (flareVal > 0.62) {
                                 const flareOpacity = Math.min((flareVal - 0.62) / 0.18, 0.75);
@@ -334,8 +384,8 @@ function initializePlanet() {
                             }
 
                             // Intense electromagnetic current swirl overlay (bright cyan/blue)
-                            const stormX = nx * 5.5 + cloudSeedX;
-                            const stormY = ny * 5.5 + cloudSeedY;
+                            const stormX = nx * 5.5 * noiseScale + cloudSeedX;
+                            const stormY = ny * 5.5 * noiseScale + cloudSeedY;
                             const stormVal = fbm(stormX, stormY, 4);
                             if (stormVal > 0.55) {
                                 const stormOpacity = Math.min((stormVal - 0.55) / 0.20, 0.65);
@@ -348,10 +398,7 @@ function initializePlanet() {
                             r = 245; g = 243; b = 238;
                         }
 
-                        data[idx] = r;
-                        data[idx + 1] = g;
-                        data[idx + 2] = b;
-                        data[idx + 3] = 255;
+                        data32[y * canvasWidth + x] = (255 << 24) | (b << 16) | (g << 8) | r;
                     }
                 }
             }
@@ -367,7 +414,7 @@ function initializePlanet() {
         }
 
         function finish() {
-            // Count starting pixels directly from typed array data
+            // Count starting pixels directly from 32-bit typed array data
             initialPixelCount = 0;
             initialCorePixelCount = 0;
             const planetCanvasCX = canvasWidth / 2;
@@ -376,9 +423,11 @@ function initializePlanet() {
             const coreRadius = getCoreRadius(planetSize);
             const coreRadiusSq = coreRadius * coreRadius;
 
+            const data32 = new Uint32Array(data.buffer);
+            const totalLen = data32.length;
             let x = 0, y = 0;
-            for (let i = 3; i < data.length; i += 4) {
-                if (data[i] > 0) {
+            for (let i = 0; i < totalLen; i++) {
+                if (data32[i] !== 0) {
                     initialPixelCount++;
                     const dx = x - planetCanvasCX;
                     const dy = y - planetCanvasCY;
@@ -406,11 +455,11 @@ function initializePlanet() {
     });
 }
 
-// Recalculates dynamic center of mass centroid (Optimized flat loop)
+// Recalculates dynamic center of mass centroid (Optimized flat Uint32Array loop)
 function calculateCenterOfMass() {
     const imageData = getSharedPlanetData();
-    const data = imageData.data;
-    const len = data.length;
+    const data32 = new Uint32Array(imageData.data.buffer);
+    const len = data32.length;
     let sumX = 0, sumY = 0, totalPixels = 0;
     let corePixels = 0;
     let x = 0, y = 0;
@@ -418,16 +467,16 @@ function calculateCenterOfMass() {
     const cy = PLANET_CANVAS_SIZE / 2;
     const planetSize = getPlanetSize();
     const coreRadius = getCoreRadius(planetSize);
+    const coreRadiusSq = coreRadius * coreRadius;
 
-    for (let i = 3; i < len; i += 4) {
-        if (data[i] > 0) {
+    for (let i = 0; i < len; i++) {
+        if (data32[i] !== 0) {
             sumX += x;
             sumY += y;
             totalPixels++;
             const dx = x - cx;
             const dy = y - cy;
-            const distSq = dx * dx + dy * dy;
-            if (distSq <= coreRadius * coreRadius) {
+            if (dx * dx + dy * dy <= coreRadiusSq) {
                 corePixels++;
             }
         }
@@ -468,8 +517,9 @@ function collapseTerrain(startAngle = 0, endAngle = Math.PI * 2) {
         destData32.set(srcData32);
     }
 
-    // Dynamically scale the number of rays based on planet size to prevent Moire/scanline spacing patterns on larger bodies
-    const numRays = Math.max(720, Math.ceil(2 * Math.PI * (d / 2) * 1));
+    // Dynamically scale the number of rays based on planet size and device capability
+    const baseRays = Math.max(720, Math.ceil(2 * Math.PI * (d / 2) * 1));
+    const numRays = (typeof isWeakDevice !== 'undefined' && isWeakDevice) ? Math.max(480, Math.ceil(baseRays * 0.65)) : baseRays;
     const stepSize = 0.5;
     const maxSteps = maxRadius / stepSize;
 
@@ -487,8 +537,16 @@ function collapseTerrain(startAngle = 0, endAngle = Math.PI * 2) {
         }
     }
 
-    // Reuse a flat Uint32Array buffer for solid pixels to avoid GC churn
-    const solidPixels = new Uint32Array(Math.ceil(maxSteps));
+    // Reuse shared flat Uint32Array buffer for solid pixels to avoid GC churn.
+    // A ray needs maxSteps (= planetSize + 60) slots; 1024 covers every planet
+    // through the sun (455 -> 515). Grow rather than overflow if a bigger body is
+    // ever added: out-of-bounds typed-array writes are silently dropped, which
+    // would corrupt terrain collapse with no error to trace.
+    let solidPixels = sharedSolidPixels;
+    if (maxSteps > solidPixels.length) {
+        sharedSolidPixels = new Uint32Array(1 << Math.ceil(Math.log2(maxSteps)));
+        solidPixels = sharedSolidPixels;
+    }
 
     // Helper to check if a ray's angle is within the target slice
     const isAngleInSlice = (angle) => {
@@ -592,12 +650,13 @@ function eraseTerrain(localX, localY, radius, isCollision, weaponType) {
     const cy = PLANET_CANVAS_SIZE / 2;
     const planetSize = getPlanetSize();
     const coreRadius = getCoreRadius(planetSize);
+    const coreRadiusSq = coreRadius * coreRadius;
 
     // Check if the impact point itself is in the crust
     const dxImpact = localX - cx;
     const dyImpact = localY - cy;
-    const distImpact = Math.sqrt(dxImpact * dxImpact + dyImpact * dyImpact);
-    const isImpactInCrust = distImpact > coreRadius;
+    const distImpactSq = dxImpact * dxImpact + dyImpact * dyImpact;
+    const isImpactInCrust = distImpactSq > coreRadiusSq;
 
     // Bounding box of the erase area
     const startX = Math.max(0, Math.floor(localX - radius));
@@ -612,19 +671,22 @@ function eraseTerrain(localX, localY, radius, isCollision, weaponType) {
         const imgData = hiddenCtx.getImageData(startX, startY, width, height);
         const data = imgData.data;
         const iceHits = [];
+        const radiusSq = radius * radius;
+        const innerEraseRadius = Math.max(0, (radius - 4) * 0.78);
+        const innerEraseRadiusSq = innerEraseRadius * innerEraseRadius;
 
         for (let y = 0; y < height; y++) {
             const pixelY = startY + y;
             const dy = pixelY - localY;
+            const dySq = dy * dy;
             const dyCenter = pixelY - cy;
+            const dyCenterSq = dyCenter * dyCenter;
 
             for (let x = 0; x < width; x++) {
                 const pixelX = startX + x;
                 const dx = pixelX - localX;
-                const dxCenter = pixelX - cx;
-
-                const d_exp = Math.sqrt(dx * dx + dy * dy);
-                if (d_exp > radius) continue; // outside the maximum explosion radius
+                const distSqExp = dx * dx + dySq;
+                if (distSqExp > radiusSq) continue; // outside maximum explosion radius
 
                 const idx = (y * width + x) * 4;
                 const gridX = Math.floor(pixelX / 4);
@@ -635,44 +697,17 @@ function eraseTerrain(localX, localY, radius, isCollision, weaponType) {
                 }
                 if (data[idx + 3] === 0) continue; // skip already erased pixels
 
-                const d_center = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
-                const inCore = d_center <= coreRadius;
+                const dxCenter = pixelX - cx;
+                const distSqCenter = dxCenter * dxCenter + dyCenterSq;
+                const inCore = distSqCenter <= coreRadiusSq;
 
                 if (inCore) {
                     if (weaponType === 'worm') {
                         // Worm does not damage the core! It only reveals it.
-                        const rad = planetSize / 2;
-                        const nx = dxCenter / rad;
-                        const ny = dyCenter / rad;
-                        const coreNoiseX = nx * 5.0 + seedX;
-                        const coreNoiseY = ny * 5.0 + seedY;
-                        const coreNoiseVal = fbm(coreNoiseX, coreNoiseY, 4);
-
-                        let cr = 0, cg = 0, cb = 0;
-                        if (currentPlanet === 'sun') {
-                            if (coreNoiseVal < 0.45) {
-                                cr = 255; cg = 245; cb = 130;
-                            } else if (coreNoiseVal < 0.75) {
-                                const t = (coreNoiseVal - 0.45) / 0.30;
-                                cr = 255; cg = Math.floor(245 + t * 10); cb = Math.floor(130 + t * 90);
-                            } else {
-                                const t = (coreNoiseVal - 0.75) / 0.25;
-                                cr = 255; cg = 255; cb = Math.floor(220 + t * 35);
-                            }
-                        } else {
-                            if (coreNoiseVal < 0.45) {
-                                cr = 225; cg = 25; cb = 0;
-                            } else if (coreNoiseVal < 0.75) {
-                                const t = (coreNoiseVal - 0.45) / 0.30;
-                                cr = 255; cg = Math.floor(25 + t * 115); cb = 0;
-                            } else {
-                                const t = (coreNoiseVal - 0.75) / 0.25;
-                                cr = 255; cg = Math.floor(140 + t * 115); cb = Math.floor(t * 120);
-                            }
-                        }
-                        data[idx] = cr;
-                        data[idx + 1] = cg;
-                        data[idx + 2] = cb;
+                        const c32 = coreBuffer32[pixelY * PLANET_CANVAS_SIZE + pixelX];
+                        data[idx] = c32 & 0xFF;
+                        data[idx + 1] = (c32 >> 8) & 0xFF;
+                        data[idx + 2] = (c32 >> 16) & 0xFF;
                         data[idx + 3] = 255; // reveal core
                         continue;
                     }
@@ -682,78 +717,22 @@ function eraseTerrain(localX, localY, radius, isCollision, weaponType) {
                     const isException = (weaponType === 'blackhole');
                     if (isCollision && isImpactInCrust && !isException) {
                         // Collision triggered on crust: does not affect core, but reveals it
-                        const rad = planetSize / 2;
-                        const nx = dxCenter / rad;
-                        const ny = dyCenter / rad;
-                        const coreNoiseX = nx * 5.0 + seedX;
-                        const coreNoiseY = ny * 5.0 + seedY;
-                        const coreNoiseVal = fbm(coreNoiseX, coreNoiseY, 4);
-
-                        let cr = 0, cg = 0, cb = 0;
-                        if (currentPlanet === 'sun') {
-                            if (coreNoiseVal < 0.45) {
-                                cr = 255; cg = 245; cb = 130;
-                            } else if (coreNoiseVal < 0.75) {
-                                const t = (coreNoiseVal - 0.45) / 0.30;
-                                cr = 255; cg = Math.floor(245 + t * 10); cb = Math.floor(130 + t * 90);
-                            } else {
-                                const t = (coreNoiseVal - 0.75) / 0.25;
-                                cr = 255; cg = 255; cb = Math.floor(220 + t * 35);
-                            }
-                        } else {
-                            if (coreNoiseVal < 0.45) {
-                                cr = 225; cg = 25; cb = 0;
-                            } else if (coreNoiseVal < 0.75) {
-                                const t = (coreNoiseVal - 0.45) / 0.30;
-                                cr = 255; cg = Math.floor(25 + t * 115); cb = 0;
-                            } else {
-                                const t = (coreNoiseVal - 0.75) / 0.25;
-                                cr = 255; cg = Math.floor(140 + t * 115); cb = Math.floor(t * 120);
-                            }
-                        }
-                        data[idx] = cr;
-                        data[idx + 1] = cg;
-                        data[idx + 2] = cb;
+                        const c32 = coreBuffer32[pixelY * PLANET_CANVAS_SIZE + pixelX];
+                        data[idx] = c32 & 0xFF;
+                        data[idx + 1] = (c32 >> 8) & 0xFF;
+                        data[idx + 2] = (c32 >> 16) & 0xFF;
                         data[idx + 3] = 255; // reveal core
                         continue;
                     }
                     // Otherwise, erases with radius reduced by 4 and a percentage
-                    if (d_exp <= Math.max(0, (radius - 4) * 0.78)) {
+                    if (distSqExp <= innerEraseRadiusSq) {
                         data[idx + 3] = 0; // erase
                     } else {
                         // Reveal core at the edge of core-damaging explosions
-                        const rad = planetSize / 2;
-                        const nx = dxCenter / rad;
-                        const ny = dyCenter / rad;
-                        const coreNoiseX = nx * 5.0 + seedX;
-                        const coreNoiseY = ny * 5.0 + seedY;
-                        const coreNoiseVal = fbm(coreNoiseX, coreNoiseY, 4);
-
-                        let cr = 0, cg = 0, cb = 0;
-                        if (currentPlanet === 'sun') {
-                            if (coreNoiseVal < 0.45) {
-                                cr = 255; cg = 245; cb = 130;
-                            } else if (coreNoiseVal < 0.75) {
-                                const t = (coreNoiseVal - 0.45) / 0.30;
-                                cr = 255; cg = Math.floor(245 + t * 10); cb = Math.floor(130 + t * 90);
-                            } else {
-                                const t = (coreNoiseVal - 0.75) / 0.25;
-                                cr = 255; cg = 255; cb = Math.floor(220 + t * 35);
-                            }
-                        } else {
-                            if (coreNoiseVal < 0.45) {
-                                cr = 225; cg = 25; cb = 0;
-                            } else if (coreNoiseVal < 0.75) {
-                                const t = (coreNoiseVal - 0.45) / 0.30;
-                                cr = 255; cg = Math.floor(25 + t * 115); cb = 0;
-                            } else {
-                                const t = (coreNoiseVal - 0.75) / 0.25;
-                                cr = 255; cg = Math.floor(140 + t * 115); cb = Math.floor(t * 120);
-                            }
-                        }
-                        data[idx] = cr;
-                        data[idx + 1] = cg;
-                        data[idx + 2] = cb;
+                        const c32 = coreBuffer32[pixelY * PLANET_CANVAS_SIZE + pixelX];
+                        data[idx] = c32 & 0xFF;
+                        data[idx + 1] = (c32 >> 8) & 0xFF;
+                        data[idx + 2] = (c32 >> 16) & 0xFF;
                         data[idx + 3] = 255; // reveal core
                     }
                 } else {
@@ -781,6 +760,7 @@ function freezeArea(localX, localY, radius) {
     const cy = PLANET_CANVAS_SIZE / 2;
     const planetSize = getPlanetSize();
     const coreRadius = getCoreRadius(planetSize);
+    const coreRadiusSq = coreRadius * coreRadius;
 
     const startX = Math.max(0, Math.floor(localX - radius));
     const startY = Math.max(0, Math.floor(localY - radius));
@@ -797,62 +777,41 @@ function freezeArea(localX, localY, radius) {
 
         const gridScale = 4;
         const gridSize = 115;
+        const radiusSq = radius * radius;
 
         for (let y = 0; y < height; y++) {
             const pixelY = startY + y;
             const dy = pixelY - localY;
+            const dySq = dy * dy;
             const dyCenter = pixelY - cy;
+            const dyCenterSq = dyCenter * dyCenter;
+
             for (let x = 0; x < width; x++) {
                 const pixelX = startX + x;
                 const dx = pixelX - localX;
                 const dxCenter = pixelX - cx;
 
-                const d = Math.sqrt(dx * dx + dy * dy);
-                if (d > radius) continue; // Outside circular area
+                const distSq = dx * dx + dySq;
+                if (distSq > radiusSq) continue; // Outside circular area
 
                 const idx = (y * width + x) * 4;
                 if (data[idx + 3] === 0) continue; // Skip empty space
                 if (data[idx + 3] === 224) continue; // Already frozen
 
                 // Check core vs crust based on current pixel color
-                const d_center = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+                const distCenterSq = dxCenter * dxCenter + dyCenterSq;
                 let iceType = 1; // 1 = Crust, 2 = Core
 
-                if (d_center <= coreRadius) {
+                if (distCenterSq <= coreRadiusSq) {
                     const rColor = data[idx];
                     const gColor = data[idx + 1];
                     const bColor = data[idx + 2];
 
-                    // Generate core color at this coordinate
-                    const rad = planetSize / 2;
-                    const nx = dxCenter / rad;
-                    const ny = dyCenter / rad;
-                    const coreNoiseX = nx * 5.0 + seedX;
-                    const coreNoiseY = ny * 5.0 + seedY;
-                    const coreNoiseVal = fbm(coreNoiseX, coreNoiseY, 4);
-
-                    let cr = 0, cg = 0, cb = 0;
-                    if (currentPlanet === 'sun') {
-                        if (coreNoiseVal < 0.45) {
-                            cr = 255; cg = 245; cb = 130;
-                        } else if (coreNoiseVal < 0.75) {
-                            const t = (coreNoiseVal - 0.45) / 0.30;
-                            cr = 255; cg = Math.floor(245 + t * 10); cb = Math.floor(130 + t * 90);
-                        } else {
-                            const t = (coreNoiseVal - 0.75) / 0.25;
-                            cr = 255; cg = 255; cb = Math.floor(220 + t * 35);
-                        }
-                    } else {
-                        if (coreNoiseVal < 0.45) {
-                            cr = 225; cg = 25; cb = 0;
-                        } else if (coreNoiseVal < 0.75) {
-                            const t = (coreNoiseVal - 0.45) / 0.30;
-                            cr = 255; cg = Math.floor(25 + t * 115); cb = 0;
-                        } else {
-                            const t = (coreNoiseVal - 0.75) / 0.25;
-                            cr = 255; cg = Math.floor(140 + t * 115); cb = Math.floor(t * 120);
-                        }
-                    }
+                    // Fetch pre-calculated core color at this coordinate
+                    const c32 = coreBuffer32[pixelY * PLANET_CANVAS_SIZE + pixelX];
+                    const cr = c32 & 0xFF;
+                    const cg = (c32 >> 8) & 0xFF;
+                    const cb = (c32 >> 16) & 0xFF;
 
                     // If pixel color is core color, then core is exposed and frozen
                     const isCoreColor = Math.abs(rColor - cr) < 3 && Math.abs(gColor - cg) < 3 && Math.abs(bColor - cb) < 3;
@@ -892,12 +851,15 @@ function freezeArea(localX, localY, radius) {
 }
 
 // BFS flood fill to pop all contiguous ice pixels starting from a seed point
-function popConnectedIce(seedX, seedY) {
+// popX/popY are the pixel coords of the ice hit that seeds the flood fill. They
+// must NOT be named seedX/seedY: that shadows the global procedural noise seeds,
+// which the texture regeneration below relies on.
+function popConnectedIce(popX, popY) {
     const gridSize = 115;
     const gridScale = 4;
 
-    const startGridX = Math.floor(seedX / gridScale);
-    const startGridY = Math.floor(seedY / gridScale);
+    const startGridX = Math.floor(popX / gridScale);
+    const startGridY = Math.floor(popY / gridScale);
     const seedIdx = startGridY * gridSize + startGridX;
 
     if (iceGrid[seedIdx] === 0) return false;
@@ -936,6 +898,7 @@ function popConnectedIce(seedX, seedY) {
         const cy = PLANET_CANVAS_SIZE / 2;
         const planetSize = getPlanetSize();
         const coreRadius = getCoreRadius(planetSize);
+        const coreRadiusSq = coreRadius * coreRadius;
 
         // Calculate the bounding box of popped ice in original pixel space
         let minGridX = gridSize, maxGridX = 0;
@@ -966,6 +929,7 @@ function popConnectedIce(seedX, seedY) {
                 const pixelY = minY + y;
                 const gy = Math.floor(pixelY / gridScale);
                 const dyCenter = pixelY - cy;
+                const dyCenterSq = dyCenter * dyCenter;
 
                 for (let x = 0; x < width; x++) {
                     const pixelX = minX + x;
@@ -984,49 +948,22 @@ function popConnectedIce(seedX, seedY) {
                         }
 
                         const dxCenter = pixelX - cx;
-                        const d_center = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+                        const distCenterSq = dxCenter * dxCenter + dyCenterSq;
 
                         // If it was crust frozen over the core, reveal the untouched core
-                        if (iceType === 1 && d_center <= coreRadius) {
-                            const rad = planetSize / 2;
-                            const nx = dxCenter / rad;
-                            const ny = dyCenter / rad;
-                            const coreNoiseX = nx * 5.0 + seedX;
-                            const coreNoiseY = ny * 5.0 + seedY;
-                            const coreNoiseVal = fbm(coreNoiseX, coreNoiseY, 4);
-
-                            let cr = 0, cg = 0, cb = 0;
-                            if (currentPlanet === 'sun') {
-                                if (coreNoiseVal < 0.45) {
-                                    cr = 255; cg = 245; cb = 130;
-                                } else if (coreNoiseVal < 0.75) {
-                                    const t = (coreNoiseVal - 0.45) / 0.30;
-                                    cr = 255; cg = Math.floor(245 + t * 10); cb = Math.floor(130 + t * 90);
-                                } else {
-                                    const t = (coreNoiseVal - 0.75) / 0.25;
-                                    cr = 255; cg = 255; cb = Math.floor(220 + t * 35);
-                                }
-                            } else {
-                                if (coreNoiseVal < 0.45) {
-                                    cr = 225; cg = 25; cb = 0;
-                                } else if (coreNoiseVal < 0.75) {
-                                    const t = (coreNoiseVal - 0.45) / 0.30;
-                                    cr = 255; cg = Math.floor(25 + t * 115); cb = 0;
-                                } else {
-                                    const t = (coreNoiseVal - 0.75) / 0.25;
-                                    cr = 255; cg = Math.floor(140 + t * 115); cb = Math.floor(t * 120);
-                                }
-                            }
-                            data[idx] = cr;
-                            data[idx + 1] = cg;
-                            data[idx + 2] = cb;
+                        if (iceType === 1 && distCenterSq <= coreRadiusSq) {
+                            const c32 = coreBuffer32[pixelY * PLANET_CANVAS_SIZE + pixelX];
+                            data[idx] = c32 & 0xFF;
+                            data[idx + 1] = (c32 >> 8) & 0xFF;
+                            data[idx + 2] = (c32 >> 16) & 0xFF;
                             data[idx + 3] = 255;
                         } else if (currentPlanet === 'neutron_star') {
                             const rad = planetSize / 2;
                             const nx = dxCenter / rad;
                             const ny = dyCenter / rad;
-                            const nsNoiseX = nx * 3.6 + seedX;
-                            const nsNoiseY = ny * 3.6 + seedY;
+                            const nsScale = rad / 120;
+                            const nsNoiseX = nx * 3.6 * nsScale + seedX;
+                            const nsNoiseY = ny * 3.6 * nsScale + seedY;
                             const nsNoiseVal = fbm(nsNoiseX, nsNoiseY, 4);
                             let nr = 230, ng = 240, nb = 255;
                             if (nsNoiseVal < 0.38) {
@@ -1161,7 +1098,7 @@ function createExplosion(localX, localY, radius, shakeIntensity, weaponType, sil
             soundManager.play('sfx_explosion_small', false, 0.6 + Math.random() * 0.35, detune);
         } else if (weaponType === 'nuke') {
             const detune = (Math.random() - 0.5) * 1200; // +/- 600 cents
-            soundManager.play('sfx_explosion_medium', false, 1.0, detune);
+            soundManager.play('sfx_explosion_medium', false, 0.8, detune);
         } else if (weaponType === 'sword') {
             const detune = (Math.random() - 0.5) * 400; // +/- 200 cents
             soundManager.play('sfx_explosion_medium', false, 1.0, detune);
@@ -1480,7 +1417,11 @@ function createExplosionRaw(localX, localY, radius, weaponType) {
     }
 
     // Blast particles
-    const particleCount = getConfigValue(`weapons.${weaponType}.particleCount`, 1);
+    let particleCount = getConfigValue(`weapons.${weaponType}.particleCount`, 1);
+    if (weaponType === 'gamma') {
+        // Reduce particles given off by each individual hit of gamma burst explosions by 40% (60% chance to spawn 1 particle)
+        particleCount = Math.random() < 0.6 ? 1 : 0;
+    }
     const speedScale = getConfigValue(`weapons.${weaponType}.particleSpeedScale`, 0.8);
     const lifeScale = getConfigValue(`weapons.${weaponType}.particleLifeScale`, 0.8);
     for (let i = 0; i < particleCount; i++) {

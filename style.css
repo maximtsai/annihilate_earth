@@ -171,9 +171,8 @@ canvas:focus {
     max-width: 800px;
     margin: max(10px, env(safe-area-inset-top, 10px)) auto 0 auto;
     padding: 1.5px;
-    background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
+    background: linear-gradient(180deg, #00d9ff, rgba(0, 180, 255, 0.5));
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px));
-    box-shadow: 0 5px 25px rgba(0, 217, 255, 0.25);
 }
 
 .hud-header {
@@ -181,9 +180,7 @@ canvas:focus {
     flex-direction: column;
     align-items: center;
     gap: calc(5px * var(--ui-scale));
-    background: rgba(12, 12, 28, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(22, 22, 48, 0.94);
     padding: calc(16px * var(--ui-scale)) calc(24px * var(--ui-scale)) calc(10px * var(--ui-scale)) calc(24px * var(--ui-scale));
     max-height: 106px;
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px));
@@ -463,7 +460,7 @@ canvas:focus {
     width: calc(60px * var(--ui-scale) + 8px);
     height: calc(60px * var(--ui-scale) + 8px);
     padding: 1.5px;
-    background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
+    background: linear-gradient(180deg, #00d9ff, rgba(0, 180, 255, 0.5));
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
     box-shadow: 0 5px 25px rgba(0, 217, 255, 0.25);
     z-index: 150;
@@ -502,7 +499,7 @@ canvas:focus {
     height: 100%;
     margin: 0;
     padding: 0;
-    background: rgba(12, 12, 28, 0.85);
+    background: rgba(22, 22, 48, 0.94);
     border: none;
     display: flex;
     align-items: center;
@@ -969,9 +966,8 @@ canvas:focus {
     height: 83%;
     max-height: calc(83% - 50px);
     padding: 1.5px;
-    background: linear-gradient(90deg, #00d9ff, rgba(0, 153, 255, 0.2));
+    background: linear-gradient(90deg, #00d9ff, rgba(0, 180, 255, 0.5));
     clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
-    box-shadow: -5px 0 25px rgba(0, 217, 255, 0.25);
     margin: 0;
     z-index: 100;
 }
@@ -981,9 +977,7 @@ canvas:focus {
     flex-direction: column;
     align-items: center;
     gap: calc(11px * var(--ui-scale));
-    background: rgba(12, 12, 28, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(22, 22, 48, 0.94);
     padding: calc(13px * var(--ui-scale)) calc(9px * var(--ui-scale));
     clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
     width: 100%;
@@ -1021,24 +1015,24 @@ canvas:focus {
     flex: 0 0 calc(92px * var(--ui-scale));
     width: calc(102px * var(--ui-scale));
     height: calc(92px * var(--ui-scale));
-    background: rgba(0, 217, 255, 0.05);
-    border: 1px solid rgba(0, 217, 255, 0.25);
+    background: rgba(0, 217, 255, 0.12);
+    border: 1px solid rgba(0, 217, 255, 0.4);
     border-radius: 4px;
-    color: #a0c8d8;
+    color: #b0daf0;
     cursor: pointer;
     transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: calc(5px * var(--ui-scale));
+    gap: calc(2.5px * var(--ui-scale));
     outline: none;
-    overflow: hidden;
+    /* overflow:hidden removed to allow ::after touch-hitbox to extend outside bounds */
 }
 
 .weapon-button:not(.locked-active):not(.cooldown-active) {
-    background: rgba(0, 217, 255, 0.2);
-    border-color: rgba(0, 217, 255, 0.5);
+    background: rgba(0, 217, 255, 0.25);
+    border-color: rgba(0, 217, 255, 0.6);
 }
 
 /* Technical border corner brackets */
@@ -1084,6 +1078,19 @@ canvas:focus {
     outline: none;
     text-shadow: 0 0 10px rgba(0, 217, 255, 0.95);
     box-shadow: 0 0 8px rgba(0, 217, 255, 0.15);
+    /* Touch hitbox (#10): position:relative enables the ::after expansion */
+    position: relative;
+}
+
+/* Expand tap area on scroll arrows without changing visual size (#10) */
+.scroll-arrow::after {
+    content: '';
+    position: absolute;
+    top: -14px;
+    bottom: -14px;
+    left: -8px;
+    right: -8px;
+    cursor: pointer;
 }
 
 .scroll-arrow:not(:disabled):hover {
@@ -1260,7 +1267,7 @@ canvas:focus {
 }
 
 .weapon-icon {
-    font-size: calc(32px * var(--ui-scale));
+    font-size: calc(36px * var(--ui-scale));
     filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.3));
     transition: transform 250ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -1280,7 +1287,7 @@ canvas:focus {
     text-shadow: 0 0 5px rgba(0, 217, 255, 0.3);
     word-break: break-word;
     overflow-wrap: break-word;
-    line-height: 1.25;
+    line-height: 1.05;
     max-width: calc(110px * var(--ui-scale));
     text-align: center;
 }
@@ -1296,11 +1303,16 @@ canvas:focus {
     font-weight: bold;
     color: #00d9ff;
     text-shadow: 0 0 5px rgba(0, 217, 255, 0.5);
-    margin-top: calc(-3px * var(--ui-scale));
+    line-height: 1;
+    margin-top: calc(-5px * var(--ui-scale));
     margin-bottom: 2px;
 }
 
 @media (orientation: portrait) {
+    .weapon-icon {
+        font-size: calc(44px * var(--ui-scale));
+    }
+
     .weapon-ammo {
         font-size: calc((26px + var(--font-adjust)) * var(--ui-scale));
         font-weight: bold;
@@ -1601,6 +1613,70 @@ canvas:focus {
     letter-spacing: 1px;
 }
 
+/* #29 — permanent asset-failure UI. Lives inside .loading-content so it
+   inherits the same scale transform as the rest of the loading screen. */
+.loading-failure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.loading-failure[hidden] {
+    display: none;
+}
+
+.loading-failure-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: calc(18px + var(--font-adjust));
+    color: #ff5a5a;
+    letter-spacing: 2px;
+    text-align: center;
+    max-width: 420px;
+    white-space: pre-line;
+    line-height: 1.5;
+}
+
+.loading-failure-retry {
+    font-family: 'Orbitron', sans-serif;
+    font-size: calc(18px + var(--font-adjust));
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: #00d9ff;
+    background: rgba(0, 217, 255, 0.08);
+    border: 2px solid rgba(0, 217, 255, 0.6);
+    border-radius: 6px;
+    padding: 12px 34px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.15s ease-out, color 0.15s ease-out;
+}
+
+.loading-failure-retry:hover:not(:disabled) {
+    background: rgba(0, 217, 255, 0.2);
+    color: #ffffff;
+}
+
+.loading-failure-retry:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* Touch hitbox (#10) */
+.loading-failure-retry {
+    position: relative;
+}
+
+.loading-failure-retry::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    bottom: -20px;
+    left: -20px;
+    right: -20px;
+    cursor: pointer;
+}
+
 @keyframes loadingPulse {
 
     0%,
@@ -1831,7 +1907,7 @@ canvas:focus {
         height: calc(26px + 158px * var(--ui-scale));
         max-height: none;
         padding: 1.5px;
-        background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.2));
+        background: linear-gradient(180deg, #00d9ff, rgba(0, 153, 255, 0.485));
         clip-path: none;
         border-radius: 1px;
     }
@@ -1889,7 +1965,7 @@ canvas:focus {
     }
 
     .weapon-icon {
-        font-size: calc(45px * var(--ui-scale));
+        font-size: calc(58px * var(--ui-scale));
     }
 
     .weapon-name {

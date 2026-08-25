@@ -47,13 +47,29 @@ class SoundManager {
                 this.isInitialized = true;
             }
 
-            async load(id) {
-                if (this.buffers[id] || this.loadingPromises[id]) return this.loadingPromises[id];
+            load(id) {
+                if (this.buffers[id]) return Promise.resolve();
+                if (this.loadingPromises[id]) return this.loadingPromises[id];
                 const asset = getAsset(id);
-                if (!asset) return;
-                const promise = (async () => {
+                if (!asset) return Promise.resolve();
+                const promise = this._loadWithRetry(id, asset.url);
+                this.loadingPromises[id] = promise;
+                return promise;
+            }
+
+            // #29 — flaky connections drop individual requests. Retry with a
+            // capped backoff, and on permanent failure clear the in-flight latch
+            // so a later call (e.g. re-selecting the weapon) can try again
+            // instead of being blocked forever by a dead promise.
+            async _loadWithRetry(id, url) {
+                const MAX_ATTEMPTS = 3;
+                for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
                     try {
-                        const response = await fetch(asset.url);
+                        // Cache-bust retries so a cached error response isn't replayed.
+                        const response = attempt === 1
+                            ? await fetch(url)
+                            : await fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + 'retry=' + attempt, { cache: 'reload' });
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
                         const arrayBuffer = await response.arrayBuffer();
                         const audioBuffer = await new Promise((resolve, reject) => {
                             try {
@@ -66,12 +82,17 @@ class SoundManager {
                             }
                         });
                         this.buffers[id] = audioBuffer;
+                        return;
                     } catch (e) {
-                        console.error(`Failed to load sound: ${id}`, e);
+                        if (attempt < MAX_ATTEMPTS) {
+                            console.warn(`Sound load failed (attempt ${attempt}/${MAX_ATTEMPTS}): ${id}`, e);
+                            await new Promise(r => setTimeout(r, Math.min(1000 * attempt, 3000)));
+                        } else {
+                            console.error(`Failed to load sound after ${MAX_ATTEMPTS} attempts: ${id}`, e);
+                            delete this.loadingPromises[id];
+                        }
                     }
-                })();
-                this.loadingPromises[id] = promise;
-                return promise;
+                }
             }
 
             loadMany(ids) {

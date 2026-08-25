@@ -10,6 +10,7 @@ var CENTER_Y = 450 + PLANET_OFFSET_Y;
 var PLANET_CANVAS_SIZE = 460;
 var MAX_COOLDOWNS;
 var dt60 = 1;
+var frameDeltaTime = 0;
 var weaponQueues = {};
 
 // Game States
@@ -24,12 +25,35 @@ let unlockedPlanets = ['earth'];
 let weapons = [];
 
 // High-performance pre-allocated particle pool class
+function getSpriteForColor(color) {
+    if (!color) return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+    if (color.startsWith('hsl(')) {
+        const match = color.match(/hsl\(([^,]+),\s*([^,]+),\s*([^%)]+)%?\)/);
+        if (match) {
+            const h = parseFloat(match[1]);
+            const l = parseFloat(match[3]);
+            if (l >= 88) return typeof spriteWhiteGold !== 'undefined' ? spriteWhiteGold : null;
+            if (l >= 82) return typeof spriteBrightYellow !== 'undefined' ? spriteBrightYellow : null;
+            if (h >= 52) return typeof spriteLightOrange !== 'undefined' ? spriteLightOrange : null;
+            if (h >= 30) return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+            return typeof spriteVermillionRed !== 'undefined' ? spriteVermillionRed : null;
+        }
+    } else if (color.includes('255, 255') || color.includes('255, 255, 120')) {
+        return typeof spriteBrightYellow !== 'undefined' ? spriteBrightYellow : null;
+    } else if (color === '#66b2ff' || color === '#00f0ff' || color === '#ffffff') {
+        return null;
+    }
+    return typeof spriteOrange !== 'undefined' ? spriteOrange : null;
+}
+
 class ParticlePool {
     constructor(maxSize = 450) {
         this.maxSize = maxSize;
         this.pool = [];
+        this.freeList = [];
         for (let i = 0; i < maxSize; i++) {
-            this.pool.push({
+            const p = {
+                poolIndex: i,
                 active: false,
                 x: 0,
                 y: 0,
@@ -40,24 +64,23 @@ class ParticlePool {
                 size: 0,
                 color: '',
                 type: '',
+                sprite: null,
                 moonExhaust: false,
                 isComet: false,
                 isFreeze: false
-            });
+            };
+            this.pool.push(p);
+            this.freeList.push(i);
         }
     }
 
     push(properties) {
-        // Find inactive particle
         let p = null;
-        for (let i = 0; i < this.maxSize; i++) {
-            if (!this.pool[i].active) {
-                p = this.pool[i];
-                break;
-            }
-        }
-        // Fallback: steal oldest (lowest life)
-        if (!p) {
+        if (this.freeList.length > 0) {
+            const idx = this.freeList.pop();
+            p = this.pool[idx];
+        } else {
+            // Fallback: steal oldest (lowest life)
             let minLife = Infinity;
             for (let i = 0; i < this.maxSize; i++) {
                 if (this.pool[i].active && this.pool[i].life < minLife) {
@@ -77,15 +100,26 @@ class ParticlePool {
             p.size = properties.size;
             p.color = properties.color;
             p.type = properties.type;
+            p.sprite = properties.sprite !== undefined ? properties.sprite : getSpriteForColor(properties.color);
             p.moonExhaust = !!properties.moonExhaust;
             p.isComet = !!properties.isComet;
             p.isFreeze = !!properties.isFreeze;
         }
+        return p;
+    }
+
+    release(p) {
+        if (p && p.active) {
+            p.active = false;
+            this.freeList.push(p.poolIndex);
+        }
     }
 
     clear() {
+        this.freeList = [];
         for (let i = 0; i < this.maxSize; i++) {
             this.pool[i].active = false;
+            this.freeList.push(i);
         }
     }
 }
@@ -117,19 +151,33 @@ function cubicEaseIn(t) {
     return t * t * t;
 }
 
+// ─── Floating Text Object Pool (GC optimisation #6) ───────────────────────
+// Pre-allocated objects are recycled via a free-list instead of being
+// heap-allocated on every spawn and collected after expiry.
+const _ftPool = [];        // free-list of reusable objects
+const _ftActive = [];      // mirror of the floatingTexts array (same reference)
+
+function _acquireFloatingText() {
+    return _ftPool.length > 0 ? _ftPool.pop() : {};
+}
+
+function _releaseFloatingText(obj) {
+    _ftPool.push(obj);
+}
+
 function addFloatingText(x, y, text, color = 'rgba(0, 240, 255,', duration = 0.5, maxOffset = 50, fontSize = 28, strokeWidth = 4.5) {
-    floatingTexts.push({
-        x: x,
-        y: y,
-        startY: y,
-        text: text,
-        color: color,
-        life: duration,
-        maxLife: duration,
-        maxOffset: maxOffset,
-        fontSize: fontSize,
-        strokeWidth: strokeWidth
-    });
+    const obj = _acquireFloatingText();
+    obj.x          = x;
+    obj.y          = y;
+    obj.startY     = y;
+    obj.text       = text;
+    obj.color      = color;
+    obj.life       = duration;
+    obj.maxLife    = duration;
+    obj.maxOffset  = maxOffset;
+    obj.fontSize   = fontSize;
+    obj.strokeWidth = strokeWidth;
+    floatingTexts.push(obj);
 }
 
 let unlockNotificationTimeout = null;
@@ -166,8 +214,24 @@ function showUnlockNotification(text) {
 let isSavingState = false;
 const stateSaveQueue = [];
 
+// Updaters that have been queued but are not yet known to be persisted. An
+// updater stays here until its write has completed, so a teardown flush can
+// re-apply anything still in flight (see flushSaveStateSync).
+const unflushedUpdaters = [];
+
+// Bumped by every synchronous flush. An async save that read its snapshot
+// before a flush must not write it back afterwards — that snapshot predates the
+// flush and would silently drop the other updaters the flush persisted.
+let saveEpoch = 0;
+
+function forgetUnflushed(updater) {
+    const i = unflushedUpdaters.indexOf(updater);
+    if (i !== -1) unflushedUpdaters.splice(i, 1);
+}
+
 async function queueSaveState(updater) {
     stateSaveQueue.push(updater);
+    unflushedUpdaters.push(updater);
     if (isSavingState) return;
 
     isSavingState = true;
@@ -176,17 +240,58 @@ async function queueSaveState(updater) {
     while (stateSaveQueue.length > 0) {
         const currentUpdater = stateSaveQueue.shift();
         try {
+            const epoch = saveEpoch;
             const current = await getGameState();
+            if (epoch !== saveEpoch) {
+                // A flush ran while we were reading; it already persisted this
+                // updater along with everything else outstanding.
+                forgetUnflushed(currentUpdater);
+                continue;
+            }
             const state = (current && current.state) ? current.state : {};
             currentUpdater(state);
             await saveGameState(state);
         } catch (error) {
             console.warn('Failed to save state:', error.message);
         }
+        forgetUnflushed(currentUpdater);
     }
     isSavingState = false;
     if (spinner) spinner.classList.remove('active');
 }
+
+// #3A — the save queue is async, so a write can still be in flight when the tab
+// is suspended or closed; those microtasks never run and the progress is lost.
+// Apply every outstanding updater synchronously against the stored state and
+// write it in one pass. Safe to call more than once — it drains its own queue.
+function flushSaveStateSync() {
+    if (unflushedUpdaters.length === 0) return;
+
+    const pending = unflushedUpdaters.splice(0, unflushedUpdaters.length);
+    stateSaveQueue.length = 0;
+    saveEpoch++;
+
+    try {
+        const raw = window.safeLocalStorage.getItem('annihilate_earth_save');
+        const parsed = raw ? JSON.parse(raw) : null;
+        let state = (parsed && typeof parsed === 'object') ? migrateSaveState(parsed) : null;
+        if (!state || typeof state !== 'object') state = {};
+
+        for (const updater of pending) {
+            try {
+                updater(state);
+            } catch (e) {
+                console.warn('Save updater failed during teardown flush:', e && e.message);
+            }
+        }
+
+        state._version = SAVE_VERSION;
+        window.safeLocalStorage.setItem('annihilate_earth_save', JSON.stringify(state));
+    } catch (e) {
+        console.warn('Failed to flush state on teardown:', e && e.message);
+    }
+}
+window.flushSaveStateSync = flushSaveStateSync;
 
 // Persistence functions for saving/loading unlocked planets
 function saveUnlockedPlanets() {
@@ -590,20 +695,25 @@ let lightningLastChargedCount = 0;
 
 
 
-// 2D Value Noise Grid
+var coreBuffer32 = new Uint32Array(PLANET_CANVAS_SIZE * PLANET_CANVAS_SIZE);
+
+// 2D Value Noise Grid.
+// smoothNoise() wraps with a bitmask and indexes rows with a shift instead of
+// % and *, so NOISE_SIZE must stay a power of two - these two derived constants
+// keep that dependency explicit rather than hard-coded at the use sites.
 const NOISE_SIZE = 128;
+const NOISE_MASK = NOISE_SIZE - 1;          // 127
+const NOISE_SHIFT = Math.log2(NOISE_SIZE);  // 7
 const noiseGrid = new Float32Array(NOISE_SIZE * NOISE_SIZE);
 for (let i = 0; i < noiseGrid.length; i++) {
     noiseGrid[i] = Math.random();
 }
 
 function smoothNoise(x, y) {
-    let x1 = Math.floor(x) % NOISE_SIZE;
-    let y1 = Math.floor(y) % NOISE_SIZE;
-    if (x1 < 0) x1 += NOISE_SIZE;
-    if (y1 < 0) y1 += NOISE_SIZE;
-    const x2 = (x1 + 1) % NOISE_SIZE;
-    const y2 = (y1 + 1) % NOISE_SIZE;
+    const x1 = Math.floor(x) & NOISE_MASK;
+    const y1 = Math.floor(y) & NOISE_MASK;
+    const x2 = (x1 + 1) & NOISE_MASK;
+    const y2 = (y1 + 1) & NOISE_MASK;
 
     const tx = x - Math.floor(x);
     const ty = y - Math.floor(y);
@@ -611,10 +721,13 @@ function smoothNoise(x, y) {
     const sx = tx * tx * (3 - 2 * tx);
     const sy = ty * ty * (3 - 2 * ty);
 
-    const n11 = noiseGrid[y1 * NOISE_SIZE + x1];
-    const n12 = noiseGrid[y1 * NOISE_SIZE + x2];
-    const n21 = noiseGrid[y2 * NOISE_SIZE + x1];
-    const n22 = noiseGrid[y2 * NOISE_SIZE + x2];
+    const y1Shift = y1 << NOISE_SHIFT;
+    const y2Shift = y2 << NOISE_SHIFT;
+
+    const n11 = noiseGrid[y1Shift + x1];
+    const n12 = noiseGrid[y1Shift + x2];
+    const n21 = noiseGrid[y2Shift + x1];
+    const n22 = noiseGrid[y2Shift + x2];
 
     const nx1 = n11 + sx * (n12 - n11);
     const nx2 = n21 + sx * (n22 - n21);

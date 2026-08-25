@@ -94,8 +94,10 @@
                     star = null;
                     spawned = false;
                 } else {
-                    // Spawn particle trail (reduced spawn rate by 20% more)
-                    if (typeof particles !== 'undefined' && Math.random() < 0.3) {
+                    // Spawn particle trail (fixed rate, independent of refresh rate)
+                    star.trailTimer = (star.trailTimer || 0) + deltaTime;
+                    if (typeof particles !== 'undefined' && star.trailTimer >= 0.056 / particleBudget) {
+                        star.trailTimer = 0;
                         const angleOff = Math.random() * Math.PI * 2;
                         // Spawn in a wider area around the star
                         const distOff = Math.random() * star.size * 1.6;
