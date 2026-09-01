@@ -2097,7 +2097,7 @@ async function run(mode) {
 
                 } else if (w.state === 'sinking_pause') {
                     w.timer += deltaTime;
-                    if (w.timer >= 0.25) { // pause briefly after sinking (0.25s)
+                    if (w.timer >= 0.45) { // pause briefly after sinking (0.45s)
                         w.state = 'pullback';
                         w.timer = 0.0;
                         w.contactX = w.x;
