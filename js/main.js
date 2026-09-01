@@ -594,7 +594,7 @@ async function run(mode) {
         // Ad spin popup scale (base size 693x572)
         const adScaleH = (window.innerHeight * 0.88) / 572;
         const adScaleW = (window.innerWidth * 0.94) / 693;
-        const adSpinScale = Math.min(1.0, Math.min(adScaleW, adScaleH));
+        const adSpinScale = Math.min(1.0, Math.min(adScaleW, adScaleH)) + 0.15;
         document.documentElement.style.setProperty('--ad-spin-scale', adSpinScale);
     }
     // #19 — ResizeObserver with window.resize fallback for older browsers (iOS < 13.4, Safari < 13.1)
