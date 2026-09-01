@@ -5,14 +5,45 @@ let sharedSolidPixels = new Uint32Array(1024);
 // Generate space starfield background
 function generateStars() {
     stars = [];
-    const starCount = getConfigValue('visual.starDensity', 120);
+    const starCount = getConfigValue('visual.starDensity', 200);
+    const cx = 800;
+    const cy = 450;
+    const innerDeadZone = 230; // Slightly smaller inner dead zone radius (planet radius ~140px)
+    const maxRadiusX = 1080;
+    const maxRadiusY = 680;
+
     for (let i = 0; i < starCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        // Bias distance heavily towards outer edges
+        const u = Math.random();
+        const distNorm = 0.25 * u + 0.75 * (u * u);
+        
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+        
+        const rMin = innerDeadZone;
+        const rMax = Math.hypot(cosA * maxRadiusX, sinA * maxRadiusY);
+        const r = rMin + (rMax - rMin) * distNorm;
+
+        const x = cx + cosA * r + (Math.random() - 0.5) * 35;
+        const y = cy + sinA * r + (Math.random() - 0.5) * 35;
+
+        // Stars ramp up diamond probability quickly as distance increases, capped at 10%
+        const diamondProb = Math.min(0.10, (distNorm / 0.5) * 0.10);
+        const isDiamond = Math.random() < diamondProb;
+
+        // Color variation: 70% white, 20% icy cyan-white, 10% soft periwinkle
+        const cRand = Math.random();
+        const color = cRand < 0.70 ? '#ffffff' : (cRand < 0.90 ? '#d8eeff' : '#c8d6ff');
+
         stars.push({
-            x: Math.random() * 2000 - 200, // Wider range to cover zoom out
-            y: Math.random() * 1300 - 200, // Wider range to cover zoom out
-            size: Math.random() * 2 + 0.6,
-            opacity: Math.random() * 0.6 + 0.4,
-            twinkleSpeed: Math.random() * 0.02 + 0.005
+            x: x,
+            y: y,
+            size: isDiamond ? (Math.random() * 3.0 + 5.2) : (Math.random() * 1.8 + 0.8),
+            opacity: isDiamond ? (Math.random() * 0.30 + 0.45) : (Math.random() * 0.6 + 0.4),
+            twinkleSpeed: isDiamond ? (Math.random() * 0.008 + 0.003) : (Math.random() * 0.02 + 0.005),
+            isDiamond: isDiamond,
+            color: color
         });
     }
 }
