@@ -4397,6 +4397,7 @@ async function run(mode) {
         nCtx.closePath();
         nCtx.fill();
     }
+    window.bakeNebulaCanvas = bakeNebulaCanvas;
 
     // Draws 4-point pointy celestial diamond sparkle stars (perfect vertical/horizontal symmetry)
     function drawDiamondStar(c, x, y, size, alpha, color) {

@@ -1925,6 +1925,9 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     document.getElementById('victory-screen').classList.remove('show');
     initializePlanet();
     generateStars();
+    if (typeof bakeNebulaCanvas === 'function' && typeof bgCanvas !== 'undefined' && bgCanvas) {
+        bakeNebulaCanvas(bgCanvas.width, bgCanvas.height);
+    }
     if (window.PlatformBridge && gameplayStarted && !isPlanetSwitch) {
         window.PlatformBridge.gameplayStart();
     }
