@@ -508,6 +508,7 @@ let initialCorePixelCount = 0;
 let currentCorePixelCount = 0;
 
 let screenShake = { x: 0, y: 0, intensity: 0, duration: 0 };
+let currentUIScale = 1.0;
 let sharedPlanetData = null;
 function getSharedPlanetData() {
     if (!sharedPlanetData && typeof hiddenCtx !== 'undefined' && hiddenCtx) {

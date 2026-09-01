@@ -5,7 +5,7 @@ window.gameConfig = {
             "speed": 5,
             "size": 6,
             "explosionRadius": 15.5,
-            "shakeIntensity": 6.3,
+            "shakeIntensity": 5.67,
             "particleCount": 14,
             "particleSpeedScale": 0.75,
             "particleLifeScale": 0.75
@@ -14,7 +14,7 @@ window.gameConfig = {
             "speed": 3,
             "size": 10,
             "explosionRadius": 27,
-            "shakeIntensity": 18,
+            "shakeIntensity": 14.4,
             "particleCount": 27,
             "particleSpeedScale": 0.7,
             "particleLifeScale": 0.85
@@ -50,7 +50,7 @@ window.gameConfig = {
             "speed": 12,
             "size": 25,
             "explosionRadius": 18,
-            "shakeIntensity": 24,
+            "shakeIntensity": 21,
             "particleCount": 16,
             "particleSpeedScale": 0.8,
             "particleLifeScale": 0.8
