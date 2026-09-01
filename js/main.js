@@ -554,9 +554,10 @@ async function run(mode) {
     const gameContainer = document.getElementById('game-container');
     const uiContainer = document.getElementById('ui-container');
     function resizeBackground() {
-        // Render at 50% resolution to drastically reduce GPU pixel fill-rate on high-DPI/mobile screens
-        bgCanvas.width = Math.ceil(window.innerWidth * 0.5);
-        bgCanvas.height = Math.ceil(window.innerHeight * 0.5);
+        // Native 1:1 pixel resolution for crisp stars and nebula rendering
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+        bakeNebulaCanvas(bgCanvas.width, bgCanvas.height);
         if (gameContainer) {
             const scaleY = window.innerHeight / SCREEN_H;
             const isVertical = window.innerHeight > window.innerWidth;
@@ -4270,6 +4271,154 @@ async function run(mode) {
         return accretionDiskSprites;
     }
 
+    // -------------------------------------------------------------
+    // PROCEDURAL NEBULA BACKGROUND BAKER
+    // Soft, rounded multi-tiered blue-purple nebula shapes along perimeter
+    // -------------------------------------------------------------
+    function bakeNebulaCanvas(w, h) {
+        if (!w || !h) return;
+        if (!nebulaCanvas) {
+            nebulaCanvas = document.createElement('canvas');
+        }
+        nebulaCanvas.width = w;
+        nebulaCanvas.height = h;
+        const nCtx = nebulaCanvas.getContext('2d');
+        if (!nCtx) return;
+
+        // Base space color (#000000) baked into single texture
+        nCtx.fillStyle = '#000000';
+        nCtx.fillRect(0, 0, w, h);
+
+        // Layer 1: Deep Outer Indigo-Blue Layer (very dark subtle wisp)
+        nCtx.fillStyle = 'rgba(4, 14, 40, 0.28)';
+
+        // Top & Top-Right perimeter mass
+        nCtx.beginPath();
+        nCtx.moveTo(0, 0);
+        nCtx.lineTo(w, 0);
+        nCtx.lineTo(w, h * 0.48);
+        nCtx.bezierCurveTo(w * 0.82, h * 0.42, w * 0.76, h * 0.20, w * 0.64, h * 0.18);
+        nCtx.bezierCurveTo(w * 0.52, h * 0.16, w * 0.46, h * 0.30, w * 0.32, h * 0.28);
+        nCtx.bezierCurveTo(w * 0.18, h * 0.26, w * 0.12, h * 0.08, 0, h * 0.14);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Right & Bottom-Right perimeter mass
+        nCtx.beginPath();
+        nCtx.moveTo(w, h * 0.28);
+        nCtx.lineTo(w, h);
+        nCtx.lineTo(w * 0.42, h);
+        nCtx.bezierCurveTo(w * 0.54, h * 0.86, w * 0.66, h * 0.92, w * 0.72, h * 0.80);
+        nCtx.bezierCurveTo(w * 0.80, h * 0.64, w * 0.66, h * 0.52, w * 0.78, h * 0.38);
+        nCtx.bezierCurveTo(w * 0.86, h * 0.28, w * 0.94, h * 0.30, w, h * 0.28);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Bottom-Left & Left perimeter mass
+        nCtx.beginPath();
+        nCtx.moveTo(0, h * 0.12);
+        nCtx.lineTo(0, h);
+        nCtx.lineTo(w * 0.54, h);
+        nCtx.bezierCurveTo(w * 0.42, h * 0.92, w * 0.34, h * 0.78, w * 0.22, h * 0.80);
+        nCtx.bezierCurveTo(w * 0.10, h * 0.82, w * 0.14, h * 0.60, w * 0.08, h * 0.46);
+        nCtx.bezierCurveTo(w * 0.02, h * 0.34, w * 0.06, h * 0.20, 0, h * 0.12);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Layer 2: Mid-Tone Dark Soft Blue-Purple Layer
+        nCtx.fillStyle = 'rgba(6, 18, 50, 0.20)';
+
+        // Top-Left to Top-Center organic cloud
+        nCtx.beginPath();
+        nCtx.moveTo(0, 0);
+        nCtx.lineTo(w * 0.58, 0);
+        nCtx.bezierCurveTo(w * 0.50, h * 0.14, w * 0.40, h * 0.20, w * 0.28, h * 0.18);
+        nCtx.bezierCurveTo(w * 0.16, h * 0.16, w * 0.12, h * 0.05, 0, h * 0.09);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Top-Right deep sweeping lobe
+        nCtx.beginPath();
+        nCtx.moveTo(w * 0.66, 0);
+        nCtx.lineTo(w, 0);
+        nCtx.lineTo(w, h * 0.38);
+        nCtx.bezierCurveTo(w * 0.86, h * 0.34, w * 0.80, h * 0.16, w * 0.70, h * 0.12);
+        nCtx.bezierCurveTo(w * 0.68, h * 0.06, w * 0.67, 0.02, w * 0.66, 0);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Right-hand organic lobe reaching inward
+        nCtx.beginPath();
+        nCtx.moveTo(w, h * 0.40);
+        nCtx.lineTo(w, h * 0.86);
+        nCtx.bezierCurveTo(w * 0.84, h * 0.78, w * 0.74, h * 0.66, w * 0.76, h * 0.52);
+        nCtx.bezierCurveTo(w * 0.78, h * 0.42, w * 0.90, h * 0.40, w, h * 0.40);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Bottom-Left large organic sweeping lobe
+        nCtx.beginPath();
+        nCtx.moveTo(0, h * 0.38);
+        nCtx.lineTo(0, h);
+        nCtx.lineTo(w * 0.40, h);
+        nCtx.bezierCurveTo(w * 0.30, h * 0.86, w * 0.26, h * 0.72, w * 0.15, h * 0.74);
+        nCtx.bezierCurveTo(w * 0.05, h * 0.74, w * 0.07, h * 0.50, 0, h * 0.38);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Layer 3: Dark Subtle Accent Highlights
+        nCtx.fillStyle = 'rgba(10, 24, 62, 0.14)';
+
+        // Top-right corner accent
+        nCtx.beginPath();
+        nCtx.moveTo(w * 0.80, 0);
+        nCtx.lineTo(w, 0);
+        nCtx.lineTo(w, h * 0.22);
+        nCtx.bezierCurveTo(w * 0.88, h * 0.18, w * 0.84, h * 0.06, w * 0.80, 0);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Bottom-left accent lobe
+        nCtx.beginPath();
+        nCtx.moveTo(0, h * 0.62);
+        nCtx.lineTo(0, h);
+        nCtx.lineTo(w * 0.24, h);
+        nCtx.bezierCurveTo(w * 0.16, h * 0.88, w * 0.10, h * 0.78, w * 0.05, h * 0.76);
+        nCtx.bezierCurveTo(w * 0.01, h * 0.74, 0.005, h * 0.68, 0, h * 0.62);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Right-center accent lobe
+        nCtx.beginPath();
+        nCtx.moveTo(w, h * 0.50);
+        nCtx.lineTo(w, h * 0.76);
+        nCtx.bezierCurveTo(w * 0.86, h * 0.68, w * 0.82, h * 0.58, w, h * 0.50);
+        nCtx.closePath();
+        nCtx.fill();
+    }
+
+    // Draws 4-point pointy celestial diamond sparkle stars (perfect vertical/horizontal symmetry)
+    function drawDiamondStar(c, x, y, size, alpha, color) {
+        c.save();
+        c.globalAlpha = alpha;
+        c.fillStyle = color || '#ffffff';
+        const arm = size;
+        const waist = size * 0.15;
+        c.beginPath();
+        // Top tip (0, -arm) -> Right tip (arm, 0)
+        c.moveTo(x, y - arm);
+        c.quadraticCurveTo(x + waist, y - waist, x + arm, y);
+        // Right tip (arm, 0) -> Bottom tip (0, arm)
+        c.quadraticCurveTo(x + waist, y + waist, x, y + arm);
+        // Bottom tip (0, arm) -> Left tip (-arm, 0)
+        c.quadraticCurveTo(x - waist, y + waist, x - arm, y);
+        // Left tip (-arm, 0) -> Top tip (0, -arm)
+        c.quadraticCurveTo(x - waist, y - waist, x, y - arm);
+        c.closePath();
+        c.fill();
+        c.restore();
+    }
+
     // Draw game screen
     function render() {
         // Clear screen
@@ -4278,9 +4427,13 @@ async function run(mode) {
         ctx.save();
         ctx.translate(screenShake.x, screenShake.y);
 
-        // Render background starfield on background-canvas
-        bgCtx.fillStyle = getConfigValue('visual.backgroundColor', '#010F2F');
-        bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        // Render combined background (base space + nebula clouds in 1 single texture)
+        if (nebulaCanvas) {
+            bgCtx.drawImage(nebulaCanvas, 0, 0);
+        } else {
+            bgCtx.fillStyle = '#000000';
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        }
 
         // Draw background stars
         bgCtx.save();
@@ -4289,20 +4442,30 @@ async function run(mode) {
         const scaleX = bgCanvas.width / 1600;
         const starScale = scaleY; // height-based scaling for stars size!
 
-        bgCtx.fillStyle = '#ffffff';
-        // Distance-from-center radial brightness: brighter further from center, hitting max alpha at ~60% radius
-        const maxDist = Math.hypot(800, 450) * 0.60;
         // Twinkle opacity is quantized to 16 levels and stars batched per level, so
         // globalAlpha is set at most 16 times instead of once per star per frame
         for (let l = 0; l < STAR_ALPHA_LEVELS; l++) starBucketCounts[l] = 0;
+        const diamondIndices = [];
+
         for (let i = 0; i < stars.length; i++) {
             const s = stars[i];
             const distFromCenter = Math.hypot(s.x - 800, s.y - 450);
-            const distMultiplier = Math.min(1.0, distFromCenter / maxDist);
+            // Smoothly ramp alpha: zero in the core dead-zone, reaching full alpha as stars spread towards edges
+            const distMultiplier = Math.min(1.0, Math.max(0, (distFromCenter - 210) / 260));
             const effectiveOpacity = s.opacity * distMultiplier;
-            const level = Math.min(STAR_ALPHA_LEVELS - 1, Math.max(0, (effectiveOpacity * STAR_ALPHA_LEVELS) | 0));
-            starBuckets[level][starBucketCounts[level]++] = i;
+            s.currentEffectiveOpacity = effectiveOpacity;
+
+            if (s.isDiamond) {
+                if (effectiveOpacity > 0.05) {
+                    diamondIndices.push(i);
+                }
+            } else {
+                const level = Math.min(STAR_ALPHA_LEVELS - 1, Math.max(0, (effectiveOpacity * STAR_ALPHA_LEVELS) | 0));
+                starBuckets[level][starBucketCounts[level]++] = i;
+            }
         }
+
+        // Draw regular dot stars (quantized alpha buckets for high performance)
         for (let l = 0; l < STAR_ALPHA_LEVELS; l++) {
             const count = starBucketCounts[l];
             if (!count) continue;
@@ -4314,9 +4477,22 @@ async function run(mode) {
                 const renderX = star.x * scaleX + pxOff;
                 const renderY = star.y * scaleY + pyOff;
                 const renderSize = star.size * starScale;
+                bgCtx.fillStyle = star.color || '#ffffff';
                 bgCtx.fillRect(renderX - renderSize / 2, renderY - renderSize / 2, renderSize, renderSize);
             }
         }
+
+        // Draw 4-point diamond sparkle stars
+        for (let d = 0; d < diamondIndices.length; d++) {
+            const star = stars[diamondIndices[d]];
+            const pxOff = (screenShake.x * -0.22) * 0.5;
+            const pyOff = (screenShake.y * -0.22) * 0.5;
+            const renderX = star.x * scaleX + pxOff;
+            const renderY = star.y * scaleY + pyOff;
+            const renderSize = star.size * starScale;
+            drawDiamondStar(bgCtx, renderX, renderY, renderSize, star.currentEffectiveOpacity, star.color);
+        }
+
         bgCtx.globalAlpha = 1.0;
         bgCtx.restore();
 

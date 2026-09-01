@@ -1,4 +1,4 @@
-var canvas, ctx, hiddenCanvas, hiddenCtx, bgCanvas, bgCtx, soundManager, fistImage;
+var canvas, ctx, hiddenCanvas, hiddenCtx, bgCanvas, bgCtx, soundManager, fistImage, nebulaCanvas;
 var spriteOrange, spriteBrightYellow, spriteSmokeStandard, spriteSmokeMissile, spriteVermillionRed, spriteLightOrange, spriteWhiteGold, spriteDuck;
 var supportsGlow = true;
 var earthGlow, marsGlow, neptuneGlow, jupiterGlow, neutronStarGlow, sunCorona, sunCoreGlow, magmaCoreGlow;
