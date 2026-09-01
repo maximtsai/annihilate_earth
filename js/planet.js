@@ -17,10 +17,10 @@ function generateStars() {
         // Bias distance heavily towards outer edges
         const u = Math.random();
         const distNorm = 0.25 * u + 0.75 * (u * u);
-        
+
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
-        
+
         const rMin = innerDeadZone;
         const rMax = Math.hypot(cosA * maxRadiusX, sinA * maxRadiusY);
         const r = rMin + (rMax - rMin) * distNorm;
@@ -41,7 +41,7 @@ function generateStars() {
             y: y,
             size: isDiamond ? (Math.random() * 3.0 + 5.2) : (Math.random() * 1.8 + 0.8),
             opacity: isDiamond ? (Math.random() * 0.30 + 0.45) : (Math.random() * 0.6 + 0.4),
-            twinkleSpeed: isDiamond ? (Math.random() * 0.008 + 0.003) : (Math.random() * 0.02 + 0.005),
+            twinkleSpeed: isDiamond ? (Math.random() * 0.004 + 0.002) : (Math.random() * 0.01 + 0.005),
             isDiamond: isDiamond,
             color: color
         });
@@ -146,40 +146,40 @@ function initializePlanet() {
 
                         if (currentPlanet === 'earth') {
                             if (noiseVal < 0.49) {
-                                // Deep Ocean (lightened to a vibrant royal blue)
-                                r = 30; g = 70; b = 145;
+                                // Deep Ocean (brighter, higher contrast vivid cobalt/royal blue)
+                                r = 24; g = 76; b = 175;
                             } else if (noiseVal < 0.53) {
-                                // Shallow Waters / Coastlines (lightened to a gorgeous tropical cyan)
+                                // Shallow Waters / Coastlines (bright radiant turquoise/cyan)
                                 const t = (noiseVal - 0.49) / 0.04;
-                                r = Math.floor(30 + t * 40);
-                                g = Math.floor(70 + t * 112);
-                                b = Math.floor(145 + t * 98);
+                                r = Math.floor(24 + t * 46);
+                                g = Math.floor(76 + t * 134);
+                                b = Math.floor(175 + t * 75);
                             } else if (noiseVal < 0.55) {
-                                // Sandy Beach
-                                r = 220; g = 195; b = 145;
+                                // Sandy Beach (crisp golden sand)
+                                r = 235; g = 210; b = 150;
                             } else if (noiseVal < 0.67) {
-                                // Lush Land / Forest
+                                // Lush Land / Forest (vivid vibrant emerald/forest greens)
                                 const t = (noiseVal - 0.55) / 0.12;
-                                r = Math.floor(35 + t * 23);
-                                g = Math.floor(126 + t * -24);
-                                b = Math.floor(51 + t * -12);
+                                r = Math.floor(40 + t * 30);
+                                g = Math.floor(145 + t * -28);
+                                b = Math.floor(55 + t * -15);
                             } else if (noiseVal < 0.77) {
-                                // Mountain Ridges
+                                // Mountain Ridges (higher contrast earthy rock)
                                 const t = (noiseVal - 0.67) / 0.10;
-                                r = Math.floor(97 - t * 16);
-                                g = Math.floor(82 - t * 16);
-                                b = Math.floor(71 - t * 16);
+                                r = Math.floor(115 - t * 25);
+                                g = Math.floor(95 - t * 25);
+                                b = Math.floor(80 - t * 25);
                             } else {
-                                // Polar Ice / Snow Peaks
-                                r = 250; g = 250; b = 252;
+                                // Polar Ice / Snow Peaks (pure brilliant white)
+                                r = 255; g = 255; b = 255;
                             }
 
-                            // Cloud Layer fBm overlay
+                            // Cloud Layer fBm overlay (slightly reduced cloud coverage: threshold raised from 0.55 to 0.60)
                             const cloudX = nx * 6.0 * noiseScale + cloudSeedX;
                             const cloudY = ny * 6.0 * noiseScale + cloudSeedY;
                             const cloudVal = fbm(cloudX, cloudY, 4);
-                            if (cloudVal > 0.55) {
-                                const cloudOpacity = Math.min((cloudVal - 0.55) / 0.18, 0.85);
+                            if (cloudVal > 0.60) {
+                                const cloudOpacity = Math.min((cloudVal - 0.60) / 0.16, 0.82);
                                 r = Math.floor(r * (1 - cloudOpacity) + 255 * cloudOpacity);
                                 g = Math.floor(g * (1 - cloudOpacity) + 255 * cloudOpacity);
                                 b = Math.floor(b * (1 - cloudOpacity) + 255 * cloudOpacity);
@@ -1981,7 +1981,10 @@ function resetGame(keepCooldowns = false, isPlanetSwitch = false) {
     document.getElementById('victory-screen').classList.remove('show');
     initializePlanet();
     generateStars();
-    if (window.PlatformBridge && gameplayStarted) {
+    if (typeof bakeNebulaCanvas === 'function' && typeof bgCanvas !== 'undefined' && bgCanvas) {
+        bakeNebulaCanvas(bgCanvas.width, bgCanvas.height);
+    }
+    if (window.PlatformBridge && gameplayStarted && !isPlanetSwitch) {
         window.PlatformBridge.gameplayStart();
     }
     if (window.ShootingStarManager) {

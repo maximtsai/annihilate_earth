@@ -1,707 +1,453 @@
-# CrazyGames SDK — Complete Integration Requirements Reference
+# CrazyGames HTML5 SDK v3 Requirements & Technical Specification
 
-This document consolidates every requirement, guideline, API contract, limit, and error code from the
-official [CrazyGames SDK documentation](https://docs.crazygames.com/sdk/intro/) into a single game-agnostic
-reference. It is written for teams integrating any game (HTML5, Unity, GameMaker, Construct, Godot, Cocos)
-against the CrazyGames SDK v3. Where the docs give per-engine wrappers, this document describes the HTML5
-API, which is the canonical surface; the other engines mirror it.
-
-> **Source of truth:** always confirm against https://docs.crazygames.com. SDK modules and requirements
-> evolve. Each section below notes the upstream page(s) it is derived from.
+> **Target Audience:** AI Coding Agents, Web Game Developers, Platform Engineers  
+> **SDK Version:** CrazyGames HTML5 SDK v3 (`window.CrazyGames.SDK`)  
+> **Global Namespace:** `window.CrazyGames.SDK`  
+> **Official Docs:** [CrazyGames Developer Documentation](https://docs.crazygames.com/sdk/)
 
 ---
 
-## Table of Contents
+## 1. Architecture Overview & Bridge Design
 
-1. [Implementation tiers (Basic vs Full)](#1-implementation-tiers-basic-vs-full)
-2. [Setup & initialization](#2-setup--initialization)
-3. [Environment detection & local testing](#3-environment-detection--local-testing)
-4. [Sitelock](#4-sitelock)
-5. [Game module](#5-game-module)
-6. [Data module](#6-data-module)
-7. [Video ads module](#7-video-ads-module)
-8. [Banner module](#8-banner-module)
-9. [User module](#9-user-module)
-10. [In-game purchases (Xsolla)](#10-in-game-purchases-xsolla)
-11. [Leaderboards](#11-leaderboards)
-12. [Advertisement requirements (cross-cutting)](#12-advertisement-requirements-cross-cutting)
-13. [Final integration checklist](#13-final-integration-checklist)
+All platform features are abstracted through an SDK Bridge implementing a unified polymorphic adapter interface (`BaseSDKAdapter` / `window.GameSDK`).
+
+### Core Architectural Principles
+1. **Pure Adapter Pattern:** Game logic calls `window.GameSDK.<method>()` unconditionally.
+2. **Degradation & Fallbacks:** If the CrazyGames SDK script fails to load (e.g. adblocker or offline origin), `CrazyGamesAdapter` remains selected but operates in degraded mode:
+   - Ads immediately report an `'adblock'` error.
+   - Cloud save writes are safely dropped without throwing runtime exceptions.
+   - **No Manual LocalStorage Fallback:** Persistence is delegated to `SDK.data`; the adapter avoids raw `localStorage` fallbacks (guest behaviour details in [Section 5](#5-data-persistence-sdkdata)).
+3. **Eager Initialisation & Memoization:** `CrazyGamesAdapter.init()` fires eagerly when the bridge parses and returns a memoized promise so `await window.GameSDK.init()` reuses the same execution context.
 
 ---
 
-## 1. Implementation tiers (Basic vs Full)
+## 2. Lifecycle Hooks (`SDK.game`)
 
-Source: [Requirements / Introduction](https://docs.crazygames.com/requirements/intro/)
+### A. SDK Initialisation
+- **Script Include:** Load the SDK **before** any game code in `<head>`:
+  ```html
+  <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+  ```
+- **SDK Call:** `await window.CrazyGames.SDK.init()` — MUST be awaited; the SDK is unusable until it resolves.
+- **Timing:** Executed at boot time before preloading game assets.
+- **Behavior:** Initialises the SDK runtime, reads initial host settings (`muteAudio`, `disableChat`), and registers setting listeners.
+- **Error Format:** All v3 SDK errors are objects shaped `{ code: string, message: string }` (e.g. `{ code: 'adCooldown', message: '...' }`).
 
-CrazyGames ships games in two phases. These determine how much SDK work is mandatory.
+### B. Loading Events
+- **`SDK.game.loadingStart()`**
+  - **Timing:** Called immediately after `SDK.init()` resolves.
+  - **Purpose:** Signals to CrazyGames that asset downloading/parsing has begun.
+- **`SDK.game.loadingStop()`**
+  - **Timing:** Called once asset preloading is complete and the loader UI begins hiding.
+  - **Purpose:** Signals that the game is fully interactive and playable.
 
-| Category | Basic Implementation | Full Implementation |
-|---|---|---|
-| Technical | Initial download ≤ 50 MB; total ≤ 250 MB (50 MB without SDK); ≤ 1500 files | Everything in Basic **plus** SDK and `gameplayStart` event |
-| Gameplay | Basic visual QA; PEGI 12 | Full visual QA; land directly in gameplay |
-| Advertisement | Monetization disabled; no external ads | Ads only through the SDK, per ad guidelines; works with AdBlock |
-| Account integration | (only when applicable) no external login options | Progress linked to CrazyGames Account; use CrazyGames username & avatar; automatic login |
-| Multiplayer | (only when applicable) optional | Room info, invite link, instant-multiplayer flow, rooms across rounds, `disableChat` |
-| In-game purchases | Not available | Invite only; Xsolla + CrazyGames `userId` |
+### C. No `firstFrameReady()` in CrazyGames
+> [!WARNING]
+> CrazyGames v3 has **no** `firstFrameReady()` method — that API belongs to YouTube Playables (`ytgame.game.firstFrameReady()`). Do not call it here. Loading is signalled exclusively via `loadingStart()` / `loadingStop()` (Section 2.B).
 
-- **Basic Launch:** SDK is optional, monetization is not available.
-- **Full Launch:** all requirements below apply. A Full implementation must also satisfy the Basic requirements.
+### D. Gameplay State Tracking (`gameplayStart` / `gameplayStop`)
+CrazyGames requires strict tracking of active gameplay vs. idle/menu states to manage ad eligibility and server resources.
 
----
+```javascript
+// Signal gameplay start
+window.CrazyGames.SDK.game.gameplayStart();
 
-## 2. Setup & initialization
-
-Source: [SDK / Introduction](https://docs.crazygames.com/sdk/intro/)
-
-### 2.1 Loading the SDK
-
-Load the v3 SDK script **before** game code:
-
-```html
-<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+// Signal gameplay stop
+window.CrazyGames.SDK.game.gameplayStop();
 ```
 
-### 2.2 Manual initialization is mandatory
+#### Event Call Triggers
+- **`gameplayStart()` Must Be Called When:**
+  1. Immediately after `loadingStop()` when the game first starts.
+  2. When any overlay or modal popup is closed.
+  3. When an ad break of either type settles.
+  4. When the game engine unpauses via `resumeGame()`, provided no popups or ad breaks are pending.
+  - *Guard Logic:* Wrap in `sdkGameplayStart()` to ensure `_gameplayActive` is `false` before firing, preventing duplicate start events.
 
-The v3 SDK **must** be manually initialized and the promise awaited before any other SDK call:
+- **`gameplayStop()` Must Be Called When:**
+  1. When an overlay or modal popup opens.
+  2. When an ad break starts (`adStarted` callback).
+  3. When the game engine explicitly pauses via `pauseGame()`.
+  - *Guard Logic:* Wrap in `sdkGameplayStop()` to ensure `_gameplayActive` is `true` before firing.
 
-```js
-await window.CrazyGames.SDK.init();
-```
+> [!IMPORTANT]
+> **Window Focus & Tab Switching Rule:** Per official CrazyGames SDK guidelines, do **NOT** call `gameplayStop()` in `visibilitychange` or `blur` event listeners. The CrazyGames SDK automatically detects browser window focus and tab switches.
 
-- Initialization is asynchronous; the SDK is unusable until it resolves.
-- Do this on the loading screen, **before the game starts**.
-- The SDK preloads all user data during initialization, which can take time depending on stored data.
-- The SDK only accepts promises — there is **no callback parameter**. Use `await` or `.then(...).catch(...)`.
-- On a stub/disabled SDK (rehosted domain, server-side fail mode) `init()` may resolve but module getters
-  can **throw on access**. Always probe modules before use and wrap reads in try/catch.
-
-### 2.3 SDK modules
-
-| Module | Purpose |
-|---|---|
-| `SDK.ad` | Video ads (midgame, rewarded), adblock detection |
-| `SDK.banner` | In-game banner ads |
-| `SDK.game` | Game lifecycle events, settings, completion, context, multiplayer |
-| `SDK.user` | Signed-in user identity, friends, tokens, auth |
-| `SDK.data` | Cross-device persistent user data (localStorage-compatible API) |
-| In-game purchases | Xsolla payments (not a separate module; uses `SDK.user`) |
-
-### 2.4 v3 vs v2 breaking changes
-
-- The SDK requires manual initialization now.
-- Some async getters are now plain variables: `SDK.environment`, `SDK.user.isUserAccountAvailable`, `SDK.user.systemInfo`.
-- Loading methods renamed: `sdkGameLoadingStart()`/`sdkGameLoadingStop()` → `loadingStart()`/`loadingStop()`.
-- v3 errors are consistently `{ code, message }` objects (v2 mixed strings and objects).
+### E. Celebratory Moments
+- **`SDK.game.happytime()`**
+  - **Timing:** Triggered during positive player milestones (e.g. multi-merges, combo streaks, level unlocks, boss victories).
 
 ---
 
-## 3. Environment detection & local testing
+## 3. Monetization & Ads (`SDK.ad`)
 
-Source: [SDK / Introduction](https://docs.crazygames.com/sdk/intro/) § "Development & Testing"
+### Ad Request Signature
+```typescript
+interface AdCallbacks {
+    adStarted?: () => void;
+    adFinished?: () => void;
+    adError?: (error: string | object) => void;
+}
 
-### 3.1 Environments
-
-| Environment | When | Behavior |
-|---|---|---|
-| `local` | `localhost`, `127.0.0.1`, or `?useLocalSdk=true` | Ads show an overlay text; SDK console logging enabled; demo user data; demo banners |
-| `crazygames` | `crazygames.*` domains | Full functionality |
-| `disabled` | Any other domain | All SDK method calls **throw** |
-
-The current environment:
-
-```js
-window.CrazyGames.SDK.environment; // "local" | "crazygames" | "disabled"
+function requestAd(type: 'midgame' | 'rewarded', callbacks: AdCallbacks): void;
 ```
 
-**Requirement:** avoid making SDK calls when the environment is `disabled`. Check the environment (or gate
-all SDK access behind successful init + functional module probes) before calling SDK methods, and make sure
-no SDK call throws an unhandled exception in fallback mode.
+### Trigger Scenarios
+1. **`'midgame'`:** Requested after closing major popups or upon completing level milestones.
+2. **`'rewarded'`:** Requested only when the player clicks an explicit reward button (e.g., "Free Upgrade", "Double Coins").
 
-### 3.2 Local testing
+### Critical Monetization Rules
+1. **`adStarted` Callback:** Must pause game audio, freeze game loop (`pauseGame()`), and call `sdkGameplayStop()`.
+2. **`adFinished` Callback:** Resumes game loop (`resumeGame()`) and calls `sdkGameplayStart()`. For `'rewarded'`, in-game rewards are granted **exclusively** inside `adFinished`.
+3. **`adError` Callback:** Resumes game loop without granting any reward. See "Ad Error Codes" below. **An error must NEVER grant a reward.**
+4. **SDK Unavailable Fallback:** If `SDK.ad` is missing (e.g. adblocker), `showAd()` immediately invokes `callbacks.onError('adblock')` and returns `false`. It must **NEVER** invoke `adFinished`.
 
-- Run on `localhost`/`127.0.0.1` to force `local` mode; append `?useLocalSdk=true` to force it on other local IPs.
-- In `local` mode the user module returns hardcoded values. Customize via query params:
-  - `?user_account_available=false` — `isUserAccountAvailable` returns `false` (default `true`).
-  - `?show_auth_prompt_response=user1|user2|user_cancelled`
-  - `?link_account_response=yes|no|logged_out`
-  - `?user_response=user1|user2|logged_out`
-  - `?token_response=user1|user2|expired_token|logged_out`
-- The Xsolla token method only works on `crazygames.com`; test via the Developer Portal preview tool.
+### Adblock Detection (`SDK.ad.hasAdblock()`)
+CrazyGames requires games to remain functional even when the player uses an adblocker (progress must be saved; you may gate bonus content to encourage disabling it, and note that disabling it usually requires a page refresh).
+
+```javascript
+const hasAdblock = await window.CrazyGames.SDK.ad.hasAdblock();
+```
+
+### Ad Error Codes
+The `adError` callback receives `{ code, message }` where `code` can be:
+- `adsDisabledBasicLaunch` — ads are disabled during Basic Launch
+- `unfilled` — no ad available
+- `adblock` — an adblocker is preventing ads
+- `adCooldown` — requested too soon (midgame cooldown ~3 min, counting rewarded/preroll)
+- `other`
+
+### Mutex & Ad Pending Flag (`window.Game._adPending`)
+`_adPending` is the engine's single-ad-break mutex — set synchronously before a popup closes so `popupClosed()` can't emit a spurious `gameplayStart()` (Section 13). Contention and watchdog behaviour live in Section 4 (Rules 4 & 5).
 
 ---
 
-## 4. Sitelock
+## 4. Ad Break Safety Invariants (Lockup Prevention)
 
-Source: [Resources / HTML5 / Sitelock](https://docs.crazygames.com/resources/html5/sitelock/)
+> [!CAUTION]
+> **Root Cause Analysis:** Ad breaks pause the game by setting `Game.isPaused = true`, cancelling the RAF loop, and adding `body.game-paused`. Nothing else ever clears that state — `resumeGame()` is the only exit. Every single execution path out of `requestAd` MUST reach exactly one resume call. Any path that pauses without a live resume path creates a permanent freeze for the session.
 
-- Sitelocking prevents your game from being copied and hosted on unauthorized websites.
-- For HTML5 games, check that the game runs on valid CrazyGames domains. The documented helper:
+All ad breaks must pass through a single engine wrapper (`window.Game.runAdBreak(type, opts)` in `js/adBreak.js`). The 5 rules below MUST be enforced:
 
-```js
-function isCrazyGames() {
-    const hostname = window.location.hostname;
-    const parts = hostname.split(".");
-    const idx = parts.indexOf("crazygames");
-    return idx !== -1 && idx >= parts.length - 3;
+### Rule 1: Never Pause on a Callback That Arrives After Request Settled
+If an ad request hits a 10s watchdog timeout, it marks the request as settled and resumes the game. If `adStarted` fires *after* the watchdog expires (e.g., slow network), `onStarted` must check the settled guard first:
+```javascript
+adStarted: () => {
+    if (settled) return; // CRITICAL: A callback that cannot resume must not pause!
+    pauseGame();
 }
 ```
 
-- If the check fails, show a message (e.g. "Available only on CrazyGames") or render a blank screen.
-- Obfuscating relevant game code (e.g. with obfuscator.io) improves robustness.
-- **Iframe games:** configure the CSP header `Content-Security-Policy: frame-ancestors [...]` and whitelist
-  **all** CrazyGames regional domains (`*.crazygames.com`, `crazygames.*`, plus the exhaustive domain list
-  in the docs — video ads run on `games.crazygames.com`).
-- **Requirement:** never lock out legitimate players. Keep real players unlocked even if the SDK script is
-  blocked (e.g. by an adblocker) on the genuine site.
+### Rule 2: Re-Arm the Watchdog on `adStarted` (Do Not Clear It)
+`adStarted` firing proves the SDK is alive at that moment, but does not guarantee `adFinished` will follow (network drop or ad stall).
+- On request entry: Set `NO_RESPONSE_TIMEOUT_MS` (10,000 ms).
+- On `adStarted`: Clear the 10s timer and re-arm with `AD_STALL_TIMEOUT_MS` (90,000 ms).
+
+### Rule 3: Stall Recovery Must Resume but Must NOT Reward
+`runAdBreak` fires `onReward` **ONLY** from a genuine `adFinished`. Synthetic watchdog exits (`'ad_timeout'` or `'ad_stalled'`) invoke `onFail(code)`, which silently resumes gameplay and restores the offer without granting a reward.
+
+### Rule 4: Enforce Single Ad Break Mutex with User Feedback
+If an ad request arrives while `window.Game._adPending === true`:
+- **Midgame Path:** Bails silently (unsolicited ad).
+- **Rewarded Path:** Must **NOT** fail silently. It shows a toast notification (e.g., `'ad_cooldown'`) and keeps the button visible. A button click that produces no feedback appears broken to the user.
+
+### Rule 5: Implement a Dead-Man Switch for Ad-Driven UI States
+UI states driven by ad callbacks (e.g. `freeUpgradeState = 'requesting'`) must include a countdown fallback timer (`REQUEST_FALLBACK_SECONDS = 120s`). If no callback settles the state within 120s of running time, the UI automatically resets to `'waiting'` and releases `_adPending`.
 
 ---
 
-## 5. Game module
+## 5. Data Persistence (`SDK.data`)
 
-Source: [SDK / Game](https://docs.crazygames.com/sdk/game/)
-
-### 5.1 Game settings (`SDK.game.settings`)
-
-Full Implementation requires `muteAudio` support for HTML5, Unity, Cocos, and Construct.
-
-- `settings.muteAudio` — if `true`, disable game audio. **Must take priority over in-game audio settings.**
-  If the game has its own audio toggle, it must not re-enable audio while the SDK says muted.
-- `settings.disableChat` — if `true`, disable chat (if the game has chat). Only relevant for multiplayer games.
-- Register a change listener:
-
-```js
-function listener(newSettings) { /* re-read muteAudio / disableChat */ }
-window.CrazyGames.SDK.game.addSettingsChangeListener(listener);
-window.CrazyGames.SDK.game.removeSettingsChangeListener(listener);
+### API Call Signatures
+```typescript
+namespace SDK.data {
+    function setItem(key: string, value: string): void;
+    function getItem(key: string): string | null;
+    function removeItem(key: string): void;
+    function clear(): void;
+}
 ```
 
-### 5.2 Gameplay start/stop
+### Persistence Pattern Rules
+- Saves go through CrazyGames `SDK.data` (same API as `localStorage`).
+- **Guest behaviour (official SDK):** For non-logged-in players, `SDK.data` transparently stores data in `localStorage` and syncs it to the account when the player signs in (and reverts to guest data on sign-out). Do not implement your own localStorage fallback for guests.
+- **Adapter degraded mode:** If the SDK itself is unavailable (adblocker or offline origin), write calls are dropped and `loadData()` returns `null` — never fall back to raw `localStorage`.
+- **Retrieve before set:** Always `getItem()` before `setItem()` to avoid overwriting existing progress.
+- Hard-reset sentinels (e.g., `Game.HARD_RESET_FLAG`) are saved through `SDK.data.setItem()` after `SDK.data.clear()` resolves.
 
-Track when the user is actively playing.
-
-- Call `gameplayStart()` whenever the player starts or resumes playing (game start, resume, revive, next level...).
-  The first event determines the game's initial loading size.
-- Call `gameplayStop()` on every game break: entering a menu, ending a level, pausing.
-  Resume with `gameplayStart()` when gameplay resumes.
-- **Do NOT call `gameplayStop()` when the user switches focus or leaves the game area** — CrazyGames handles
-  this on their side. (`visibilitychange`/`blur` handlers should not call it.)
-
-### 5.3 Game loading start/stop
-
-- Call `loadingStart()` when you start loading the game.
-- Call `loadingStop()` when loading is complete and gameplay is about to start.
-- Not supported/required for some engines (Unity, Godot, GameMaker use the engine's own loader).
-
-### 5.4 Happy time
-
-`gameplay`-adjacent celebration:
-
-```js
-window.CrazyGames.SDK.game.happytime();
-```
-
-- Call on special player achievements (beating a boss, reaching a high score).
-- **Use sparingly** — the celebration should remain a special moment.
-- **Not** for every level completion or item obtained.
-
-### 5.5 Game completion percentage
-
-```js
-window.CrazyGames.SDK.game.reportGameCompletedPercentage(50); // 0-100
-```
-
-- Notifies CrazyGames that a player completed the game or reached a progression milestone.
-- Accepts a value between 0 and 100. Reporting only 100 is enough, but intermediate updates are encouraged.
-- Progression should **generally move forward over time**; report 100 only at a meaningful completion point.
-- If the game has clear progression (levels/chapters), report progress as the player advances.
-- For endless/sandbox games, define your own consistent interpretation of 100%.
-- **On update with new content:** report the updated percentage on game start (a former 100% player may now be lower).
-- Not supported on Unity, GameMaker, Godot, Construct, Cocos.
-
-### 5.6 Game context (optional)
-
-Attach in-game state to player feedback:
-
-```js
-window.CrazyGames.SDK.game.setGameContext({ "level": 12 });
-window.CrazyGames.SDK.game.clearGameContext(); // when leaving the level
-```
-
-### 5.7 Multiplayer features (only when applicable)
-
-- `SDK.game.isInstantMultiplayer` — direct users to a joinable multiplayer location.
-- `SDK.game.updateRoom({ roomId, isJoinable, inviteParams })` and `SDK.game.leftRoom()` — report room state.
-- `SDK.game.addJoinRoomListener(fn)` / `removeJoinRoomListener(fn)`; check `SDK.game.inviteParams` on game start.
-- `SDK.game.inviteLink(params)` / `SDK.game.getInviteParam(key)` — generate/read invite links.
-- `SDK.game.showInviteButton(...)` / `hideInviteButton()` — deprecated, replaced by room data.
+### Limits & Errors
+- **1 MB total** per player (JSON-stringified). Exceeding it throws `{ code: 'dataLimitExceeded', ... }` and the data is not saved.
+- **Debounce:** writes are debounced ~1 second (may extend up to ~30s).
+- **`dataModuleDisabled`:** thrown if the "Progress Save" toggle wasn't enabled in the submission flow.
+- **Migration:** For already-published games, copy existing `localStorage` keys into `SDK.data` once so returning players keep their progress.
 
 ---
 
-## 6. Data module
+## 6. Audio Synchronization (`SDK.game.settings`)
 
-Source: [SDK / Data](https://docs.crazygames.com/sdk/data/)
+### API Call Signatures
+```typescript
+interface GameSettings {
+    muteAudio: boolean;    // MUST take priority over in-game audio settings
+    disableChat: boolean;  // if true, disable in-game chat (multiplayer)
+}
 
-### 6.1 What it does
-
-- Saves and retrieves user data for **logged-in** CrazyGames users; synced across all devices where the user plays.
-- For **guest** (not logged-in) users, the module stores data in `localStorage` **internally**. When the guest
-  signs in, the SDK automatically syncs/transfers that data to the account; when they sign out, the SDK
-  reverts to guest data. No game code is required for this.
-
-### 6.2 API
-
-Identical to `localStorage`:
-
-```ts
-clear(): void;
-getItem(key: string): string | null;
-removeItem(key: string): void;
-setItem(key: string, value: string): void;
+namespace SDK.game {
+    const settings: GameSettings;
+    function addSettingsChangeListener(callback: (settings: GameSettings) => void): void;
+    function removeSettingsChangeListener(callback: (settings: GameSettings) => void): void;
+}
 ```
 
-Example:
-
-```js
-window.CrazyGames.SDK.data.setItem("gold", 100);
-```
-
-### 6.3 Mandatory requirements
-
-- **Initialize first:** call `await window.CrazyGames.SDK.init()` before using any data-module method.
-  The SDK preloads all game data during init, so init on the loading screen.
-- **Submission toggle:** if you use the data module, you must select the appropriate *Progress Save* toggle in
-  the submission flow, or the module is disabled (`dataModuleDisabled` error).
-- **Fully rely on the data module:** for both guest and logged-in users on CrazyGames, rely on the Data Module
-  save and **avoid relying on local saves** — the docs state this is required for the Data Module to work correctly.
-- **Read before write:** retrieve data before setting data so previous progress isn't lost.
-
-### 6.4 Limits & behavior
-
-- **1 MB** maximum stored user data (per save). Approaching it logs console warnings; data stops being backed up past 1 MB.
-- **Debounce:** writes are debounced ~1 second (up to 30 seconds in edge cases).
-
-### 6.5 Errors
-
-The module can throw errors shaped `{ code, message }`. Known codes:
-
-| Code | Meaning |
-|---|---|
-| `dataLimitExcedeed` | JSON string exceeds 1 MB; data was not saved |
-| `dataModuleDisabled` | Progress Save toggle not selected at submission |
-| `other` | Unknown error |
-
-Handle thrown errors gracefully (don't crash the save path).
-
-### 6.6 Migrating an already-published game
-
-If your game previously saved to browser `localStorage`, run a **one-time migration**: copy existing
-`localStorage` keys into the data module so returning players keep their progress. The docs recommend this for
-games that already had a published version using local saves.
+### Implementation Rules
+1. Platform mute state **overrides** in-game volume settings.
+2. `CrazyGamesAdapter` registers `addSettingsChangeListener` and notifies the audio graph via `onAudioEnabledChange`.
+3. Muting is implemented at the Web Audio Master Gain Node level (or `audioCtx.suspend()`). In-game volume sliders in cloud save are never altered.
+4. A 1-second polling safety net (`isAudioEnabled()`) runs in the main game loop to auto-correct audio state if setting events are missed during boot.
 
 ---
 
-## 7. Video ads module
+## 7. User Identity, System Info & Auth (`SDK.user`, `SDK.environment`)
 
-Source: [SDK / Video ads](https://docs.crazygames.com/sdk/video-ads/) + [Advertisement requirements](https://docs.crazygames.com/requirements/ads/)
+### API Call Signatures
+```typescript
+interface PortalUser {
+    __dangerousUserId: string;   // MUST NOT be used for auth (spoofable in browser)
+    username: string;            // 6-20 chars: letters, numbers, '.', '_'
+    profilePictureUrl: string;
+}
 
-### 7.1 Ad types
+interface Friend {
+    id: string;                  // friend id (NOT __dangerousUserId)
+    username: string;
+    profilePictureUrl: string;
+}
 
-| Type | Use case |
-|---|---|
-| `midgame` | Between levels, after a death, at a level transition |
-| `rewarded` | User requests an ad in exchange for a reward (extra life, retry, bonus, etc.) |
+interface FriendsPage {
+    friends: Friend[];
+    page: number;
+    size: number;
+    hasMore: boolean;
+    total: number;
+}
 
-Request:
+namespace SDK.user {
+    const isUserAccountAvailable: boolean;  // sync property (v3), not a method
+    function getUser(): Promise<PortalUser | null>;  // null if not logged in
+    function showAuthPrompt(): Promise<PortalUser | null>;
+    function getUserToken(): Promise<string>;  // 1h JWT for server-side auth
+    function listFriends(opts: { page: number; size: number }): Promise<FriendsPage>; // page starts at 1, size max 50
+    function addAuthListener(listener: (user: PortalUser) => void): void;
+    function removeAuthListener(listener: (user: PortalUser) => void): void;
+    function showAccountLinkPrompt(): Promise<{ response: 'yes' | 'no' }>;
+    const systemInfo: {
+        locale: string;       // BCP-47 tag, e.g. "en-US", "zh-CN"
+        countryCode: string;  // ISO 3166-1 alpha-2, e.g. "US", "DE"
+        device: { type: 'desktop' | 'mobile' | 'tablet' };
+        os: { name: string; version: string };
+        browser: { name: string; version: string };
+        applicationType: 'google_play_store' | 'apple_store' | 'pwa' | 'web';
+    };
+}
 
-```js
-window.CrazyGames.SDK.ad.requestAd("midgame", {
-    adStarted: () => {},
-    adFinished: () => {},
-    adError: (error) => {},
-});
+namespace SDK {
+    const environment: 'local' | 'crazygames' | 'disabled';
+}
 ```
 
-### 7.2 Callbacks
-
-- `adStarted` — the ad actually started playing.
-- `adFinished` — the ad completed; **for rewarded ads, grant the reward here**.
-- `adError` — also triggered when the ad is **unfilled** or something else goes wrong; the game must continue
-  normally and the player must **not** be rewarded on `adError`.
-
-### 7.3 Pause/mute requirements
-
-- **Pause the game** so the user cannot progress while requesting or showing an ad. Block UI until either
-  `adFinished` or `adError` (an ad request runs several auctions and is not instantaneous).
-- **Mute the game when the ad starts** (`adStarted`), unmute when it finishes or fails (`adFinished`/`adError`).
-- **Do not mute when merely requesting** an ad — only when it actually starts playing (an unfilled request
-  must not cause a silent-game blink).
-
-### 7.4 Adblock detection
-
-```js
-const result = await window.CrazyGames.SDK.ad.hasAdblock();
-```
-
-- Games must function even when the user has an adblocker. Never block adblock users from playing or penalize them.
-- You may gate special features on adblock status, but show a notice and do **not** use popups, and do **not**
-  keep rewarded-ad buttons clickable without effect.
-
-### 7.5 Midgame ad frequency
-
-- The SDK automatically controls midgame frequency: max 1 midgame every **3 minutes**, interplaying with
-  rewarded and preroll ads. A request that is too early is **ignored** by the SDK (`adCooldown`) with no user impact.
-- You may request a midgame ad at any opportune moment without managing minimum intervals.
-
-### 7.6 Ad error codes
-
-```json
-{ "code": "unfilled", "message": "No ad available" }
-```
-
-Possible codes:
-
-- `adsDisabledBasicLaunch` — Basic Launch has ads disabled
-- `unfilled` — no ad available
-- `adblock` — an adblocker prevents ads
-- `adCooldown` — requested too soon (midgame interval ~3 min, considering rewarded/preroll)
-- `other`
+### Auth & Identity Rules
+- **Never authenticate with `__dangerousUserId`** — it can be spoofed in the browser. For server-side auth use `getUserToken()` and verify the JWT against CrazyGames' public key (`https://sdk.crazygames.com/publicKey.json`). Do not decrypt the token client-side.
+- **User token lifetime:** 1 hour; the SDK auto-refreshes. Do not store it — call `getUserToken()` each time it is needed.
+- **Locale & System Info:** `systemInfo.locale` provides full BCP-47 locale tags (e.g. `"en-US"`). Safe for auto-detecting player language (match primary subtag when porting to Yandex/YouTube).
+- **Auth Prompt:** Call `window.CrazyGames.SDK.user.showAuthPrompt()` to prompt guest players to log in or create an account. Errors: `showAuthPromptInProgress`, `userAlreadySignedIn`, `userCancelled`.
+- **Auth listener:** A logout does NOT fire auth listeners (the page reloads instead).
+- **Account link:** Use `showAccountLinkPrompt()` rather than a custom modal. Errors: `showAccountLinkPromptInProgress`, `userNotAuthenticated`.
+- **listFriends errors:** `userNotAuthenticated`, `rateLimited` (250ms), `requestInProgress`, `unexpectedError`.
+- **Environment:** `SDK.environment` is `'local'` (localhost/127.0.0.1), `'crazygames'`, or `'disabled'` (any other domain). On other local domains, force local mode with `?useLocalSdk=true`. Avoid calling SDK methods when `'disabled'`.
 
 ---
 
-## 8. Banner module
+## 8. Banner Advertisements (`SDK.banner`)
 
-Source: [SDK / Banners](https://docs.crazygames.com/sdk/banners/)
+Official Reference: [CrazyGames Banner Ads](https://docs.crazygames.com/sdk/banners/)
 
-### 8.1 Static banners
+Display static or responsive banner ads in defined DOM containers.
 
-Sizes:
-
-- Leaderboard `728x90`
-- Medium `300x250`
-- Mobile `320x50`
-- Main `468x60`
-- Large Mobile `320x100`
-
-HTML5 requires a container element of the banner size present on the page, then:
-
-```js
+```javascript
+// 1. Static Banner Request
 await window.CrazyGames.SDK.banner.requestBanner({
-    id: "banner-container",
-    width: 300,
-    height: 250,
+    id: "banner-container", // DOM element ID
+    width: 300,             // 300, 728, 320, 468
+    height: 250             // 250, 90, 50, 60, 100
 });
+
+// 2. Responsive Banner Request (stretches to container bounds)
+await window.CrazyGames.SDK.banner.requestResponsiveBanner("responsive-banner-container");
+
+// 3. Clear Banners
+window.CrazyGames.SDK.banner.clearBanner("banner-container");
+window.CrazyGames.SDK.banner.clearAllBanners();
 ```
 
-### 8.2 Responsive banners
+### Supported Banner Dimensions
+- **Leaderboard:** `728x90`
+- **Medium Rectangle:** `300x250`
+- **Mobile Banner:** `320x50`
+- **Main Banner:** `468x60`
+- **Large Mobile:** `320x100`
 
-`requestResponsiveBanner(containerId)` picks from sizes: `970x90, 320x50, 160x600, 336x280, 728x90, 300x600,
-468x60, 970x250, 300x250, 250x250, 120x600`. Only sizes that fit the container render; the banner is centered
-in the container. If nothing fits, no ad renders.
-
-### 8.3 Refresh & clear
-
-- Refresh by calling `requestBanner`/`requestResponsiveBanner` again with the same container id.
-- Clearing: `SDK.banner.clearBanner(id)` and `SDK.banner.clearAllBanners()`.
-- **Recommendation:** clear banners after hiding them, so stale banners don't flash when new ones are requested.
-
-### 8.4 Limitations
-
-- Minimum **30 seconds** between banner refreshes per container (`bannerCooldown`).
-- Up to **120 refreshes per gaming session** (per banner size).
-- The banner must be **fully inside the game window** (else `notVisible`).
-- Same banner can only be re-displayed 30 s after last display.
-
-### 8.5 Banner error codes
-
-- `bannersDisabledBasicLaunch` — Basic Launch disables banners
-- `unfilled` — no banner available
-- `missingId` — banner id not provided
-- `notVisible` — container not fully visible (off-page or hidden)
-- `noAvailableSizes` — responsive request matches no available size
-- `notCreated` — container element not present
-- `videoAdPlaying` — banners cannot render/refresh during a video ad
-- `invalidSize` — only the documented sizes are valid
-- `bannerCooldown` — refreshed too quickly (< 30 s)
-- `maxRefreshReached` — per-session refresh limit reached
-- `bannersDisabledMobileApp` — banners disabled in the mobile app
-- `other`
+### Banner Limits & Errors
+- **Refresh limits:** min 30s between refreshes of the same container; max 120 refreshes per size per session.
+- The banner container must be fully inside the game window, or it won't render.
+- Clear banners after hiding them (otherwise old banners may flash on the next request).
+- Error codes (`{ code, message }`): `bannersDisabledBasicLaunch`, `unfilled`, `missingId`, `notVisible`, `noAvailableSizes`, `notCreated`, `videoAdPlaying`, `invalidSize`, `bannerCooldown`, `maxRefreshReached`, `bannersDisabledMobileApp`, `other`.
 
 ---
 
-## 9. User module
+## 9. Game Progression & Context (`SDK.game`)
 
-Source: [SDK / User](https://docs.crazygames.com/sdk/user/)
-
-### 9.1 Check availability
-
-User account functionality is not available on domains that embed your game. Always check before using account features:
-
-```js
-const available = window.CrazyGames.SDK.user.isUserAccountAvailable;
+### A. Game Completion Percentage
+Report player progression milestones (0 to 100) to optimize post-game completion user flows and platform badges:
+```javascript
+// Report progression milestone
+window.CrazyGames.SDK.game.reportGameCompletedPercentage(50); // 50% completed
 ```
 
-### 9.2 Get current user
+### B. Game Context for User Feedback
+Attach relevant in-game debug data (level, inventory, score) to user feedback and bug report emails sent via the Developer Portal:
+```javascript
+// Set contextual state at level start
+window.CrazyGames.SDK.game.setGameContext({
+    level: 12,
+    mode: "hardcore",
+    equippedWeapon: "laser_rifle"
+});
 
-```js
-const user = await window.CrazyGames.SDK.user.getUser(); // null if not logged in
+// Clear context when leaving the level
+window.CrazyGames.SDK.game.clearGameContext();
 ```
-
-User object shape: `{ "__dangerousUserId", "username", "profilePictureUrl" }`.
-Usernames are 6–20 chars (letters, numbers, period, underscore).
-
-**Security:** `__dangerousUserId` must **not** be used for authentication (anyone can inject IDs client-side).
-Use the user token for authentication instead.
-
-### 9.3 System info & locale
-
-```js
-const systemInfo = window.CrazyGames.SDK.user.systemInfo;
-```
-
-Includes `countryCode`, `locale`, `device.type` (`desktop`/`tablet`/`mobile`), `os`, `browser`, `applicationType`
-(`google_play_store`/`apple_store`/`pwa`/`web`).
-
-- **Use the `locale` field** to automatically set the game language based on user location.
-
-### 9.4 Friends
-
-```js
-const friendsPage = await window.CrazyGames.SDK.user.listFriends({ page: 1, size: 10 }); // page starts at 1, max size 50
-```
-
-Response: `{ friends: [...], page, size, hasMore, total }`.
-Errors: `userNotAuthenticated`, `rateLimited` (calls limited every 250 ms), `requestInProgress` (only one active call), `unexpectedError`.
-
-### 9.5 User token
-
-```js
-const token = await window.CrazyGames.SDK.user.getUserToken();
-```
-
-- Token contains `userId`, `gameId`, `username`, `profilePictureUrl`, `iat`, `exp`.
-- **1-hour lifetime**; the SDK handles refresh. Don't store the token — call this method when needed.
-- Send the token to your server to authenticate; verify/decode there (do **not** decrypt on the client).
-- Verify with the public key at `https://sdk.crazygames.com/publicKey.json` (re-fetch every time; it may change).
-- Errors: `userNotAuthenticated`, `unexpectedError`.
-
-### 9.6 Auth prompt
-
-```js
-const user = await window.CrazyGames.SDK.user.showAuthPrompt();
-```
-
-Shows the CrazyGames login/register popup. Errors: `showAuthPromptInProgress`, `userAlreadySignedIn`, `userCancelled`.
-
-### 9.7 Auth listener
-
-```js
-const listener = (user) => { /* re-fetch progress from back-end if using account identity */ };
-window.CrazyGames.SDK.user.addAuthListener(listener);
-window.CrazyGames.SDK.user.removeAuthListener(listener);
-```
-
-- Fires when the player logs in. **A logout does not trigger the listener** — the whole page refreshes on logout.
-- If you rely on the data module or automatic progress save, CrazyGames auto-reloads the game on login; otherwise
-  re-fetch the player's progress from your back-end on login.
-
-### 9.8 Account link prompt
-
-For linking CrazyGames accounts to in-game accounts, use the provided modal:
-
-```js
-const response = await window.CrazyGames.SDK.user.showAccountLinkPrompt();
-// response: { "response": "yes" } | { "response": "no" }
-```
-
-Errors: `showAccountLinkPromptInProgress`, `userNotAuthenticated`.
-
-### 9.9 Xsolla token
-
-See [Section 10](#10-in-game-purchases-xsolla).
 
 ---
 
-## 10. In-game purchases (Xsolla)
+## 10. Multiplayer & Invite Features (`SDK.game`)
 
-Source: [SDK / In-game purchases](https://docs.crazygames.com/sdk/in-game-purchases/)
+Official Reference: [CrazyGames Game Module](https://docs.crazygames.com/sdk/game/)
 
-### 10.1 Access & prerequisites
+Support instant matchmaking, room tracking, and native invite links:
 
-- **Invite only** — contact CrazyGames to enable it.
-- **Signed-in users only:** purchases must only be available to signed-in users; guest users must not be able to purchase.
-- Requires the **User module** (if you have a back-end) or the **Data module** (to save progress securely).
-- If using an external payment flow, **disable it in the CrazyGames App** when `applicationType` is
-  `google_play_store` or `apple_store`.
+```javascript
+// 1. Check Instant Multiplayer Flag (bypasses main menu on direct match link)
+const isInstant = window.CrazyGames.SDK.game.isInstantMultiplayer;
 
-### 10.2 Getting the Xsolla token
+// 2. Room State Updates
+window.CrazyGames.SDK.game.updateRoom({
+    roomId: "room_123_eu",
+    isJoinable: true,
+    inviteParams: { roomName: "123", region: "eu" }
+});
 
-```js
-const token = await window.CrazyGames.SDK.user.getXsollaUserToken();
+// Signal room full or closed
+window.CrazyGames.SDK.game.updateRoom({ isJoinable: false });
+
+// Signal player left room
+window.CrazyGames.SDK.game.leftRoom();
+
+// 3. Invite Links (synchronous — returns a link string)
+const inviteUrl = window.CrazyGames.SDK.game.inviteLink({ roomName: 12345 });
+
+// 4. Receiving invites
+// On game start, check if the game was launched from an invite link:
+const room = window.CrazyGames.SDK.game.getInviteParam("roomName"); // string | null
+const allParams = window.CrazyGames.SDK.game.inviteParams;          // object | null
+
+// While already in game, listen for live join attempts:
+const joinListener = (inviteParams) => { /* route player to the room */ };
+window.CrazyGames.SDK.game.addJoinRoomListener(joinListener);
+window.CrazyGames.SDK.game.removeJoinRoomListener(joinListener);
+
+// 5. Invite Button (DEPRECATED — prefer Room Data + inviteParams)
+window.CrazyGames.SDK.game.showInviteButton({ roomName: 12345 });
+window.CrazyGames.SDK.game.hideInviteButton();
 ```
-
-- Tokens are short-lived (~1 hour); the SDK handles refresh — retrieve before each use.
-- Two auth paths:
-  - **Standard (linked to CrazyGames accounts):** generate credentials via the developer portal; purchases are
-    linked to the CrazyGames account automatically.
-  - **Custom (your in-game accounts):** reference the CrazyGames `userId` as the order identifier, or pass it as
-    `crazyGamesUserId` in `custom_parameters`.
-- Works only on `crazygames.com`; test with the Developer Portal preview. Use **sandbox** orders for initial
-  testing and disable sandbox before submission.
-
-### 10.3 Order tracking
-
-- Track successful orders with the analytics module:
-
-```js
-window.CrazyGames.SDK.analytics.trackOrder("xsolla", order); // order is a JSON object
-```
-
-- Common order statuses: `new`, `done`, `canceled`. Track `done` (required) and ideally `new`/`canceled`.
-
-### 10.4 Payment handling requirements
-
-- Use the CrazyGames account ID to register purchases.
-- Provide a working **close** button so players can resume the session.
-- If the PayStation opens in a new tab, notify players (text only) that they should allow browser popups.
-- Hide the "Back to the game" hyperlink after successful payment (set *Manual redirect condition* to None).
-- Correctly handle payment statuses to avoid charging without crediting:
-  - Use **Webhooks** to get order status on your API, and/or
-  - Use **Xsolla Inventory** to retrieve player purchases, and/or
-  - Use **client-side order tracking** (validated through webhooks/inventory). Avoid navigating away from the
-    shop screen until the purchase is attributed.
-- Hide/disable purchases in the CrazyGames App on mobile (unsupported flow).
-
-### 10.5 Loot box / randomized-content restrictions
-
-Sales of randomized-content items (loot boxes, wheel-of-fortune, card packs, etc.) are restricted in:
-
-- **Belgium, China, Netherlands, Serbia, Slovakia** — always restricted.
-- **Taiwan, South Korea** — restricted unless acquisition probabilities are disclosed per item (by equal `weight`).
-- **Japan** — restricted if an item's value can be lower than the price paid, or if the ToS lacks a real-money
-  trading (RMT) and secondary-market trading prohibition.
 
 ---
 
-## 11. Leaderboards
+## 11. Leaderboards (`SDK.user.submitScore`)
 
-Source: [SDK / Leaderboards SDK](https://docs.crazygames.com/sdk/leaderboards-client/)
+Official Reference: [CrazyGames Leaderboard SDK](https://docs.crazygames.com/sdk/leaderboards-client/)
 
-### 11.1 Score encryption (required)
+> [!NOTE]
+> **Invite-Only Feature:** CrazyGames Leaderboards are an invite-only feature requiring developer setup and approval from the CrazyGames team. Games in our portfolio are unlikely to use this feature unless specifically approved.
 
-Encrypt scores before submission to resist tampering. The docs provide an AES-GCM reference implementation
-(`encryptScore(score, encryptionKey)` with a random 12-byte IV, using `window.crypto.subtle`).
+Submit player scores with mandatory client-side AES encryption:
 
-### 11.2 Submitting a score
-
-Pass **both** the encrypted and the plain score:
-
-```js
+```javascript
+// Encrypt score with developer 32-byte Base64 key
 const encryptedScore = await encryptScore(finalScore, encryptionKey);
-CrazyGames.SDK.user.submitScore({
-    encryptedScore: encryptedScore,
+
+// Submit score payload
+window.CrazyGames.SDK.user.submitScore({
     score: finalScore,
+    encryptedScore: encryptedScore
 });
 ```
 
-### 11.3 Testing
+---
 
-- Use the Developer Portal preview tool; a `submitScore` message appears in logs/console.
-- The server response is always "successful"; validation happens server-side.
+## 12. In-App Purchases & Analytics (`SDK.user`, `SDK.analytics`)
+
+Official Reference: [In-Game Purchases](https://docs.crazygames.com/sdk/in-game-purchases/)
+
+CrazyGames partners with Xsolla for Web Monetization and In-App Purchases:
+
+```javascript
+// 1. Get short-lived Xsolla User Token
+const token = await window.CrazyGames.SDK.user.getXsollaUserToken();
+
+// 2. Track Completed Orders in CrazyGames Analytics
+window.CrazyGames.SDK.analytics.trackOrder("xsolla", {
+    orderId: "xsolla_order_9981",
+    status: "done"
+});
+```
 
 ---
 
-## 12. Advertisement requirements (cross-cutting)
+## 13. Popup & Modal State Machine (`openPopupCount`)
 
-Source: [Requirements / Advertisement](https://docs.crazygames.com/requirements/ads/)
+To maintain strict `gameplayStart` / `gameplayStop` balance across nested UI modals:
 
-Applies to Full Implementation.
-
-- **Only ads through the CrazyGames SDK are allowed.** No external ad networks.
-- In-game ads and purchases must not appear before a reasonable amount of gameplay.
-
-### 12.1 Video ads
-
-- **Never interrupt active gameplay.** Show midgame ads at logical points: level transition, map change, player
-  death, etc. Do **not** show a midgame ad on a navigational button (main-menu icon, settings, shop).
-- **Pause the game** during an ad request and display; block interaction until `adFinished` or `adError`.
-- **Handle unfilled calls** (`adError`) correctly and keep the game going.
-- **Mute the game during the ad**, only once the ad actually starts.
-- Don't worry about midgame frequency — the SDK enforces the ~3-minute max.
-
-### 12.2 Rewarded ads
-
-Rewarded ads must be a special, optional opportunity — never an expectation or a requirement to progress.
-
-- **Placement & frequency:**
-  - Do not offer rewarded ads too often; show a timer or hide the request button.
-  - Do **not** chain multiple rewarded ads for a single reward.
-  - Do not promote them aggressively.
-  - The request button must **not** appear on an active gameplay screen (e.g. not during a race).
-- **Reward UI:**
-  - Button easily accessible in a consistent location; not misleading; the "continue without watching" option
-    must be the same size/font/color as the ad button.
-  - It must be immediately clear the reward is optional — never hide or delay a skip/close button.
-  - It must be clear the player must watch an ad in exchange for the reward (e.g. a video icon).
-  - Provide an alternative to watching an ad (e.g. buy the reward with in-game currency).
-- **Callbacks:**
-  - On `adFinished`, clearly show the player was rewarded (animation/notification).
-  - On `adError`, do **not** reward the player.
-- **Out-of-lives rules:** do not offer an out-of-lives rewarded ad every death; don't combine a midgame
-  "between levels" ad with a "watch rewarded to keep playing current level" — between two levels you may have
-  either a midgame ad + restart **or** a rewarded keep-playing option, not both.
-
-### 12.3 In-game banner ads
-
-- Only on useful screens with content open at least **5 seconds** on average.
-- Never during gameplay; must not block game UI at any size (including mobile).
-- Must be clearly distinguishable from game content.
-- **Maximum 2 in-game banners** per screen/view.
-- Banners have a performance cost; keep the experience non-intrusive.
-
-### 12.4 Adblockers
-
-- Players with adblockers must be able to **play normally** — never block or disadvantage them.
-- You may block specific features with a visible notice; never use popups (they interfere with fullscreen and
-  CrazyGames adblock notices); never keep rewarded buttons clickable without effect.
+- **Global Counter:** `openPopupCount` (tracks active modal overlays).
+- **Element Marking:** `el.__popupCounted = true` prevents duplicate decrements when an overlay closes via multiple input events (e.g. Escape key + click).
+- **State Machine Rules:**
+  - Transition `0 -> 1`: Triggers `sdkGameplayStop()`.
+  - Transition `1 -> 0`: Triggers `sdkGameplayStart()` (provided no ad break is pending).
+- **Exclusion:** Confirmation dialogs (`.confirm-overlay`) are brief prompts and are excluded from popup tracking.
 
 ---
 
-## 13. Final integration checklist
+## 14. Engine Pause & Resume Invariants
 
-Use this to verify a game before submission.
+`pauseGame()` and `resumeGame()` are the sole engine state handlers. To prevent state corruption and frozen screens:
 
-**Setup**
-- [ ] v3 SDK script loaded before game code.
-- [ ] `await SDK.init()` on the loading screen before any other SDK call.
-- [ ] All SDK access gated/guarded for `local`/`crazygames` environments; safe in `disabled` environment.
-- [ ] No unhandled exceptions from stub SDK module getters.
+1. **Idempotency Guard:** Both methods must early-return if `Game.isPaused` already matches the target state.
+2. **Unfreeze Order:** `resumeGame()` MUST clear `isPaused` and restart the RAF loop **BEFORE** touching Web Audio or external APIs:
+   ```javascript
+   function resumeGame() {
+       if (!Game.isPaused) return;
+       
+       // 1. Unfreeze engine state FIRST
+       Game.isPaused = false;
+       document.body.classList.remove('game-paused');
+       startLoop();
 
-**Game**
-- [ ] `gameplayStart()` on every start/resume; `gameplayStop()` on every break; **not** on `visibilitychange`/`blur`.
-- [ ] `loadingStart()`/`loadingStop()` emitted around real load.
-- [ ] `muteAudio` respected with priority over the in-game toggle; `disableChat` honored.
-- [ ] `happytime()` used sparingly; `reportGameCompletedPercentage()` monotonic, 0–100, reported on load and on updates.
+       // 2. Side effects in isolated try-catch SECOND
+       try {
+           applyHostAudioState();
+       } catch (e) {
+           console.warn('Audio resume error (non-fatal):', e);
+       }
+   }
+   ```
+3. **Authoritative RAF Handle:** `startLoop()` must no-op if `rafId !== null`, and `gameLoop()` must set `rafId = null` upon observing `isPaused === true`.
 
-**Data**
-- [ ] Progress saved via `SDK.data` only (no reliance on own local saves).
-- [ ] Progress Save toggle selected in submission flow.
-- [ ] Reads precede writes; errors caught; size < 1 MB.
-
-**Ads**
-- [ ] Only SDK ads; midgame at logical breaks; game paused and muted during ads; resumed on `adFinished`/`adError`.
-- [ ] Rewards only on `adFinished`; `adError` never rewards; UI rules for rewarded ads met.
-- [ ] Works fully with adblockers; no blocked/penalized players; no dead rewarded buttons.
-- [ ] Banners: valid sizes, ≤ 2 per screen, off gameplay screens, ≥ 5 s screens, cleared after hiding.
-
-**Account (if applicable)**
-- [ ] `isUserAccountAvailable` checked before account features.
-- [ ] Username/avatar from CrazyGames used for the account.
-- [ ] Authentication via user token (never `__dangerousUserId`); locale from `systemInfo.locale`.
-
-**Multiplayer (if applicable)**
-- [ ] Room reporting, invite links, instant-multiplayer flow, `disableChat` handled.
-
-**Purchases (if applicable)**
-- [ ] Invite-gated, signed-in users only, Xsolla token flow, order tracking, webhook/inventory validation.
-- [ ] No loot-box sales in restricted territories (or probability disclosure / ToS where required).

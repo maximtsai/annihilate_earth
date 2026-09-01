@@ -3088,16 +3088,16 @@ async function run(mode) {
             }
 
 
-            // Twinkle background stars (throttled — only update a subset each frame)
-            const starBatchSize = Math.ceil(stars.length / 4);
-            const starOffset = Math.floor(performance.now() / 50) % 4;
+            // Twinkle background stars (throttled — update 5% of stars each frame)
+            const starBatchSize = Math.ceil(stars.length / 20);
+            const starOffset = Math.floor(performance.now() / 20) % 20;
             for (let si = starOffset * starBatchSize; si < Math.min(stars.length, (starOffset + 1) * starBatchSize); si++) {
                 const star = stars[si];
-                // Smooth sine-based twinkle blended with gentle randomness
-                const sinTwinkle = Math.sin(performance.now() * star.twinkleSpeed + si) * 0.15;
-                star.opacity += sinTwinkle * deltaTime * 2 + (Math.random() - 0.5) * star.twinkleSpeed * 2;
+                // Smooth sine-based twinkle with increased intensity
+                const sinTwinkle = Math.sin(performance.now() * star.twinkleSpeed + si) * 0.4;
+                star.opacity += sinTwinkle * deltaTime * 8 + (Math.random() - 0.5) * star.twinkleSpeed * 1;
                 const maxOp = star.isDiamond ? 0.75 : 0.9;
-                star.opacity = Math.max(0.2, Math.min(maxOp, star.opacity));
+                star.opacity = Math.max(0.15, Math.min(maxOp, star.opacity));
             }
 
             // Update HUD Progress indicators
@@ -4377,14 +4377,17 @@ async function run(mode) {
         if (!nCtx) return;
 
         // Base space color (#000000) baked into single texture
-        nCtx.fillStyle = '#000000';
+        nCtx.fillStyle = '#000010';
         nCtx.fillRect(0, 0, w, h);
 
         // -------------------------------------------------------------
         // Restored Dark Palette
         // -------------------------------------------------------------
-        const colorDeep = 'rgba(5, 14, 40, 0.28)';
-        const colorAccent = 'rgba(7, 18, 50, 0.25)';
+        const colorDeep = 'rgba(14, 5, 40, 0.28)';
+        const colorAccent = 'rgba(18, 8, 50, 0.26)';
+
+        // Random perturbation helper (slight natural variation in control points)
+        const rnd = (val, range = 0.035) => val + (Math.random() * 2 - 1) * range;
 
         // =============================================================
         // CORNER 1: TOP-LEFT (Elongated sweeping tongue + wavy crest)
@@ -4393,9 +4396,9 @@ async function run(mode) {
         nCtx.fillStyle = colorDeep;
         nCtx.beginPath();
         nCtx.moveTo(0, 0);
-        nCtx.lineTo(w * 0.44, 0);
-        nCtx.bezierCurveTo(w * 0.36, h * 0.12, w * 0.42, h * 0.26, w * 0.24, h * 0.28);
-        nCtx.bezierCurveTo(w * 0.14, h * 0.30, w * 0.20, h * 0.42, 0, h * 0.46);
+        nCtx.lineTo(w * rnd(0.44), 0);
+        nCtx.bezierCurveTo(w * rnd(0.36), h * rnd(0.12), w * rnd(0.42), h * rnd(0.26), w * rnd(0.24), h * rnd(0.28));
+        nCtx.bezierCurveTo(w * rnd(0.14), h * rnd(0.30), w * rnd(0.20), h * rnd(0.42), 0, h * rnd(0.46));
         nCtx.closePath();
         nCtx.fill();
 
@@ -4403,9 +4406,9 @@ async function run(mode) {
         nCtx.fillStyle = colorAccent;
         nCtx.beginPath();
         nCtx.moveTo(0, 0);
-        nCtx.lineTo(w * 0.22, 0);
-        nCtx.bezierCurveTo(w * 0.17, h * 0.12, w * 0.11, h * 0.10, w * 0.12, h * 0.18);
-        nCtx.bezierCurveTo(w * 0.08, h * 0.24, w * 0.04, h * 0.17, 0, h * 0.24);
+        nCtx.lineTo(w * rnd(0.22, 0.025), 0);
+        nCtx.bezierCurveTo(w * rnd(0.17, 0.025), h * rnd(0.12, 0.025), w * rnd(0.11, 0.025), h * rnd(0.10, 0.025), w * rnd(0.12, 0.025), h * rnd(0.18, 0.025));
+        nCtx.bezierCurveTo(w * rnd(0.08, 0.025), h * rnd(0.24, 0.025), w * rnd(0.04, 0.02), h * rnd(0.17, 0.025), 0, h * rnd(0.24, 0.025));
         nCtx.closePath();
         nCtx.fill();
 
@@ -4415,22 +4418,22 @@ async function run(mode) {
         // Layer 1 (Deep base wave)
         nCtx.fillStyle = colorDeep;
         nCtx.beginPath();
-        nCtx.moveTo(w * 0.58, 0);
+        nCtx.moveTo(w * rnd(0.58), 0);
         nCtx.lineTo(w, 0);
-        nCtx.lineTo(w, h * 0.48);
-        nCtx.bezierCurveTo(w * 0.84, h * 0.42, w * 0.90, h * 0.22, w * 0.74, h * 0.22);
-        nCtx.bezierCurveTo(w * 0.64, h * 0.22, w * 0.68, h * 0.08, w * 0.58, 0);
+        nCtx.lineTo(w, h * rnd(0.48));
+        nCtx.bezierCurveTo(w * rnd(0.84), h * rnd(0.42), w * rnd(0.90), h * rnd(0.22), w * rnd(0.74), h * rnd(0.22));
+        nCtx.bezierCurveTo(w * rnd(0.64), h * rnd(0.22), w * rnd(0.68), h * rnd(0.08), w * rnd(0.58), 0);
         nCtx.closePath();
         nCtx.fill();
 
         // Layer 2 (Accent warping fold — hugging closer to corner edges)
         nCtx.fillStyle = colorAccent;
         nCtx.beginPath();
-        nCtx.moveTo(w * 0.78, 0);
+        nCtx.moveTo(w * rnd(0.78, 0.025), 0);
         nCtx.lineTo(w, 0);
-        nCtx.lineTo(w, h * 0.23);
-        nCtx.bezierCurveTo(w * 0.91, h * 0.18, w * 0.86, h * 0.11, w * 0.87, h * 0.07);
-        nCtx.bezierCurveTo(w * 0.85, h * 0.03, w * 0.81, 0.01, w * 0.78, 0);
+        nCtx.lineTo(w, h * rnd(0.23, 0.025));
+        nCtx.bezierCurveTo(w * rnd(0.91, 0.02), h * rnd(0.18, 0.025), w * rnd(0.86, 0.025), h * rnd(0.11, 0.025), w * rnd(0.87, 0.025), h * rnd(0.07, 0.02));
+        nCtx.bezierCurveTo(w * rnd(0.85, 0.02), h * rnd(0.03, 0.015), w * rnd(0.81, 0.02), 0, w * rnd(0.78, 0.025), 0);
         nCtx.closePath();
         nCtx.fill();
 
@@ -4440,22 +4443,22 @@ async function run(mode) {
         // Layer 1 (Deep base wave)
         nCtx.fillStyle = colorDeep;
         nCtx.beginPath();
-        nCtx.moveTo(w, h * 0.54);
+        nCtx.moveTo(w, h * rnd(0.54));
         nCtx.lineTo(w, h);
-        nCtx.lineTo(w * 0.54, h);
-        nCtx.bezierCurveTo(w * 0.64, h * 0.82, w * 0.72, h * 0.92, w * 0.80, h * 0.76);
-        nCtx.bezierCurveTo(w * 0.86, h * 0.62, w * 0.94, h * 0.68, w, h * 0.54);
+        nCtx.lineTo(w * rnd(0.54), h);
+        nCtx.bezierCurveTo(w * rnd(0.64), h * rnd(0.82), w * rnd(0.72), h * rnd(0.92), w * rnd(0.80), h * rnd(0.76));
+        nCtx.bezierCurveTo(w * rnd(0.86), h * rnd(0.62), w * rnd(0.94), h * rnd(0.68), w, h * rnd(0.54));
         nCtx.closePath();
         nCtx.fill();
 
         // Layer 2 (Accent warping fold — hugging closer to corner edges)
         nCtx.fillStyle = colorAccent;
         nCtx.beginPath();
-        nCtx.moveTo(w, h * 0.77);
+        nCtx.moveTo(w, h * rnd(0.77, 0.025));
         nCtx.lineTo(w, h);
-        nCtx.lineTo(w * 0.77, h);
-        nCtx.bezierCurveTo(w * 0.83, h * 0.90, w * 0.87, h * 0.82, w * 0.91, h * 0.83);
-        nCtx.bezierCurveTo(w * 0.94, h * 0.80, w * 0.97, h * 0.75, w, h * 0.77);
+        nCtx.lineTo(w * rnd(0.77, 0.025), h);
+        nCtx.bezierCurveTo(w * rnd(0.83, 0.025), h * rnd(0.90, 0.025), w * rnd(0.87, 0.025), h * rnd(0.82, 0.025), w * rnd(0.91, 0.025), h * rnd(0.83, 0.025));
+        nCtx.bezierCurveTo(w * rnd(0.94, 0.02), h * rnd(0.80, 0.025), w * rnd(0.97, 0.015), h * rnd(0.75, 0.025), w, h * rnd(0.77, 0.025));
         nCtx.closePath();
         nCtx.fill();
 
@@ -4465,25 +4468,26 @@ async function run(mode) {
         // Layer 1 (Deep base wave)
         nCtx.fillStyle = colorDeep;
         nCtx.beginPath();
-        nCtx.moveTo(0, h * 0.52);
+        nCtx.moveTo(0, h * rnd(0.52));
         nCtx.lineTo(0, h);
-        nCtx.lineTo(w * 0.46, h);
-        nCtx.bezierCurveTo(w * 0.38, h * 0.88, w * 0.32, h * 0.72, w * 0.20, h * 0.78);
-        nCtx.bezierCurveTo(w * 0.08, h * 0.84, w * 0.12, h * 0.64, 0, h * 0.52);
+        nCtx.lineTo(w * rnd(0.46), h);
+        nCtx.bezierCurveTo(w * rnd(0.38), h * rnd(0.88), w * rnd(0.32), h * rnd(0.72), w * rnd(0.20), h * rnd(0.78));
+        nCtx.bezierCurveTo(w * rnd(0.08), h * rnd(0.84), w * rnd(0.12), h * rnd(0.64), 0, h * rnd(0.52));
         nCtx.closePath();
         nCtx.fill();
 
         // Layer 2 (Accent warping fold — hugging closer to corner edges)
         nCtx.fillStyle = colorAccent;
         nCtx.beginPath();
-        nCtx.moveTo(0, h * 0.76);
+        nCtx.moveTo(0, h * rnd(0.76, 0.025));
         nCtx.lineTo(0, h);
-        nCtx.lineTo(w * 0.23, h);
-        nCtx.bezierCurveTo(w * 0.17, h * 0.91, w * 0.13, h * 0.87, w * 0.08, h * 0.78);
-        nCtx.bezierCurveTo(w * 0.04, h * 0.75, w * 0.03, h * 0.72, 0, h * 0.76);
+        nCtx.lineTo(w * rnd(0.23, 0.025), h);
+        nCtx.bezierCurveTo(w * rnd(0.17, 0.025), h * rnd(0.91, 0.025), w * rnd(0.13, 0.025), h * rnd(0.87, 0.025), w * rnd(0.08, 0.025), h * rnd(0.78, 0.025));
+        nCtx.bezierCurveTo(w * rnd(0.04, 0.02), h * rnd(0.75, 0.025), w * rnd(0.03, 0.015), h * rnd(0.72, 0.025), 0, h * rnd(0.76, 0.025));
         nCtx.closePath();
         nCtx.fill();
     }
+    window.bakeNebulaCanvas = bakeNebulaCanvas;
 
     // Draws 4-point pointy celestial diamond sparkle stars (perfect vertical/horizontal symmetry)
     function drawDiamondStar(c, x, y, size, alpha, color) {
