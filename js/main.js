@@ -576,7 +576,8 @@ async function run(mode) {
             uiContainer.style.height = '100%';
             uiContainer.style.transform = 'none';
         }
-        document.documentElement.style.setProperty('--ui-scale', Math.min(1, window.innerWidth / 1280));
+        currentUIScale = Math.min(1, window.innerWidth / 1280);
+        document.documentElement.style.setProperty('--ui-scale', currentUIScale);
 
         const scaleHeight = (window.innerHeight * 0.88) / 720;
         const isLandscape = window.innerWidth >= window.innerHeight;
@@ -1795,7 +1796,7 @@ async function run(mode) {
                             const localHit = screenToLocal(tent.targetX, tent.targetY, CENTER_X, CENTER_Y, planetRotation);
 
                             // Slightly reduced tighter crater explosion (5% bigger: 1.1 * 1.1 * 1.05)
-                            createExplosion(localHit.x, localHit.y, Math.floor(w.explosionRadius * 1.3), w.shakeIntensity * 3, 'kraken', false, false);
+                            createExplosion(localHit.x, localHit.y, Math.floor(w.explosionRadius * 1.3), w.shakeIntensity, 'kraken', false, false);
 
                             // Play a loud cracking/rupturing sound
                             if (!w.hasPlayedSound) {
@@ -2991,7 +2992,7 @@ async function run(mode) {
             const uiOverlay = _dom.uiOverlay;
             if (uiOverlay) {
                 if (isShaking && (screenShake.x !== 0 || screenShake.y !== 0)) {
-                    uiOverlay.style.transform = `translate(${screenShake.x * 0.5}px, ${screenShake.y * 0.5}px)`;
+                    uiOverlay.style.transform = `translate(${screenShake.x * 0.5 * currentUIScale}px, ${screenShake.y * 0.5 * currentUIScale}px)`;
                 } else {
                     uiOverlay.style.transform = '';
                 }
@@ -4439,7 +4440,7 @@ async function run(mode) {
 
         // Draw background stars
         bgCtx.save();
-        bgCtx.translate(screenShake.x * 0.5, screenShake.y * 0.5);
+        bgCtx.translate(screenShake.x * 0.5 * currentUIScale, screenShake.y * 0.5 * currentUIScale);
         const scaleY = bgCanvas.height / 900;
         const scaleX = bgCanvas.width / 1600;
         const starScale = scaleY; // height-based scaling for stars size!
