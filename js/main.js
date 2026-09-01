@@ -2012,6 +2012,9 @@ async function run(mode) {
                             angle: w.angle
                         });
 
+                        // Carve Stage 1 tapering tree-branch cracks directly into planet surface
+                        carveFistImpactCracksStage1(w);
+
                         w.state = 'sinking';
                         w.timer = 0.0;
                         w.contactX = w.x;
@@ -2192,6 +2195,9 @@ async function run(mode) {
                         w.contactY = w.y;
                         w.targetX = w.x + Math.cos(w.angle) * 55;
                         w.targetY = w.y + Math.sin(w.angle) * 55;
+
+                        // Carve Stage 2 cracks (extends first cracks longer, branches further and an extra time)
+                        carveFistImpactCracksStage2(w);
                     }
 
                 } else if (w.state === 'ramming') {
@@ -3920,6 +3926,295 @@ async function run(mode) {
         ctx.drawImage(fistImage, -width / 2, -height + 12, width, height);
 
         ctx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // FIST IMPACT TREE CRACKS (Direct Pixel Carving into Planet Canvas)
+    // Modeled after othergame.html pixel carving system
+    // -------------------------------------------------------------
+    function carveFistImpactCracksStage1(w) {
+        const localHit = screenToLocal(w.x, w.y, CENTER_X, CENTER_Y, planetRotation);
+        const localAngle = w.angle - planetRotation;
+        const perpAngle = localAngle + Math.PI / 2;
+
+        const imgData = hiddenCtx.getImageData(0, 0, PLANET_CANVAS_SIZE, PLANET_CANVAS_SIZE);
+        const data = imgData.data;
+        const size = PLANET_CANVAS_SIZE;
+
+        let minX = size, minY = size, maxX = 0, maxY = 0;
+
+        function darkenPixel(px, py, strength) {
+            if (px < 0 || py < 0 || px >= size || py >= size) return;
+            const idx = (py * size + px) * 4;
+            if (data[idx + 3] === 0) return;
+            const s = Math.min(1, Math.max(0, strength));
+            if (s <= 0.02) return;
+            // Deep pitch black fracture
+            data[idx] = Math.floor(data[idx] * (1 - s * 0.96));
+            data[idx + 1] = Math.floor(data[idx + 1] * (1 - s * 0.96));
+            data[idx + 2] = Math.floor(data[idx + 2] * (1 - s * 0.98));
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+        }
+
+        function stampCrackPoint(cx, cy, halfW, coreStrength) {
+            const r = Math.ceil(halfW + 1.1);
+            const r2 = (halfW + 0.9) * (halfW + 0.9);
+            const coreR = Math.max(0.3, halfW * 0.3);
+            const coreR2 = coreR * coreR;
+            for (let dy = -r; dy <= r; dy++) {
+                for (let dx = -r; dx <= r; dx++) {
+                    const d2 = dx * dx + dy * dy;
+                    if (d2 > r2) continue;
+                    let s;
+                    if (d2 <= coreR2) {
+                        s = coreStrength;
+                    } else {
+                        const d = Math.sqrt(d2);
+                        const t = (d - coreR) / Math.max(0.01, halfW + 0.9 - coreR);
+                        s = coreStrength * (1 - t) * (1 - t);
+                    }
+                    const n = ((Math.sin(cx * 0.37 + cy * 0.29 + dx * 1.7) + 1) * 0.5);
+                    s *= 0.8 + n * 0.25;
+                    darkenPixel(Math.round(cx + dx), Math.round(cy + dy), s);
+                }
+            }
+        }
+
+        function rasterizePolyline(points) {
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[i];
+                const p1 = points[i + 1];
+                const dx = p1.x - p0.x;
+                const dy = p1.y - p0.y;
+                const dist = Math.hypot(dx, dy) || 1;
+                const samples = Math.max(2, Math.ceil(dist));
+                for (let s = 0; s <= samples; s++) {
+                    const u = s / samples;
+                    const px = p0.x + dx * u;
+                    const py = p0.y + dy * u;
+                    const w = p0.w + (p1.w - p0.w) * u;
+                    const tipFade = 0.65 + 0.35 * (1 - (i + u) / Math.max(1, points.length - 1));
+                    stampCrackPoint(px, py, w, 0.98 * tipFade);
+                }
+            }
+        }
+
+        // Recursive tree branch builder for Stage 1 (moderately reaching, clean tectonic fractures)
+        function buildBranchStage1(startX, startY, angle, length, baseWidth, depth) {
+            const points = [{ x: startX, y: startY, w: baseWidth }];
+            let x = startX, y = startY;
+            let a = angle;
+            const stepLen = 6.5;
+            const steps = Math.max(5, Math.floor(length / stepLen));
+            const children = [];
+
+            for (let i = 0; i < steps; i++) {
+                const t = i / steps;
+                a += (Math.random() - 0.5) * 0.23;
+                x += Math.cos(a) * stepLen * (0.9 + Math.random() * 0.2);
+                y += Math.sin(a) * stepLen * (0.9 + Math.random() * 0.2);
+                // Needle-sharp tapering down to true point (0.1px)
+                const w = Math.max(0.1, baseWidth * (1 - t * 0.92) * (0.9 + Math.random() * 0.2));
+                points.push({ x, y, w });
+
+                // Infrequent, clean branching
+                if (depth > 0 && t > 0.30 && t < 0.75 && Math.random() < 0.20) {
+                    const side = (Math.random() < 0.5 ? -1 : 1);
+                    const bLen = length * (0.42 + Math.random() * 0.20) * (1 - t * 0.5);
+                    const bAng = a + side * (0.45 + Math.random() * 0.25);
+                    const childBranch = buildBranchStage1(x, y, bAng, bLen, baseWidth * (0.55 + Math.random() * 0.15), depth - 1);
+                    children.push(childBranch);
+                }
+            }
+
+            rasterizePolyline(points);
+
+            return {
+                points,
+                endX: x,
+                endY: y,
+                endAngle: a,
+                endWidth: points[points.length - 1].w,
+                baseWidth,
+                depth,
+                children
+            };
+        }
+
+        // 4 to 5 prominent fractures
+        const numMain = 4 + (Math.random() < 0.6 ? 1 : 0);
+        const hSpread = w.width * 0.35;
+        const mainBranches = [];
+
+        for (let k = 0; k < numMain; k++) {
+            const offsetNorm = numMain === 1 ? 0 : (k / (numMain - 1)) * 2 - 1; // -1 to +1
+            const offset = offsetNorm * hSpread;
+            const sx = localHit.x + Math.cos(perpAngle) * offset;
+            const sy = localHit.y + Math.sin(perpAngle) * offset;
+            // Clean fanning trajectory towards the planet interior
+            const ang = localAngle + offsetNorm * 0.42 + (Math.random() - 0.5) * 0.15;
+            // Shorter, controlled length: 50 - 72px
+            const len = 50 + Math.random() * 22;
+            // Thinner base width: 3.6 - 5.4px
+            const width = 3.6 + Math.random() * 1.8;
+
+            const branch = buildBranchStage1(sx, sy, ang, len, width, 1);
+            mainBranches.push(branch);
+        }
+
+        // Commit pixel modifications
+        if (maxX >= minX && maxY >= minY) {
+            const wBox = maxX - minX + 1;
+            const hBox = maxY - minY + 1;
+            hiddenCtx.putImageData(imgData, 0, 0, minX, minY, wBox, hBox);
+        }
+
+        // Save continuation data on the fist instance for impact 2
+        w.crackData = {
+            mainBranches,
+            localHit,
+            localAngle,
+            perpAngle
+        };
+    }
+
+    function carveFistImpactCracksStage2(w) {
+        if (!w.crackData) return;
+        const imgData = hiddenCtx.getImageData(0, 0, PLANET_CANVAS_SIZE, PLANET_CANVAS_SIZE);
+        const data = imgData.data;
+        const size = PLANET_CANVAS_SIZE;
+
+        let minX = size, minY = size, maxX = 0, maxY = 0;
+
+        function darkenPixel(px, py, strength) {
+            if (px < 0 || py < 0 || px >= size || py >= size) return;
+            const idx = (py * size + px) * 4;
+            if (data[idx + 3] === 0) return;
+            const s = Math.min(1, Math.max(0, strength));
+            if (s <= 0.02) return;
+            data[idx] = Math.floor(data[idx] * (1 - s * 0.96));
+            data[idx + 1] = Math.floor(data[idx + 1] * (1 - s * 0.96));
+            data[idx + 2] = Math.floor(data[idx + 2] * (1 - s * 0.98));
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+        }
+
+        function stampCrackPoint(cx, cy, halfW, coreStrength) {
+            const r = Math.ceil(halfW + 1.1);
+            const r2 = (halfW + 0.9) * (halfW + 0.9);
+            const coreR = Math.max(0.3, halfW * 0.3);
+            const coreR2 = coreR * coreR;
+            for (let dy = -r; dy <= r; dy++) {
+                for (let dx = -r; dx <= r; dx++) {
+                    const d2 = dx * dx + dy * dy;
+                    if (d2 > r2) continue;
+                    let s;
+                    if (d2 <= coreR2) {
+                        s = coreStrength;
+                    } else {
+                        const d = Math.sqrt(d2);
+                        const t = (d - coreR) / Math.max(0.01, halfW + 0.9 - coreR);
+                        s = coreStrength * (1 - t) * (1 - t);
+                    }
+                    const n = ((Math.sin(cx * 0.37 + cy * 0.29 + dx * 1.7) + 1) * 0.5);
+                    s *= 0.8 + n * 0.25;
+                    darkenPixel(Math.round(cx + dx), Math.round(cy + dy), s);
+                }
+            }
+        }
+
+        function rasterizePolyline(points) {
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[i];
+                const p1 = points[i + 1];
+                const dx = p1.x - p0.x;
+                const dy = p1.y - p0.y;
+                const dist = Math.hypot(dx, dy) || 1;
+                const samples = Math.max(2, Math.ceil(dist));
+                for (let s = 0; s <= samples; s++) {
+                    const u = s / samples;
+                    const px = p0.x + dx * u;
+                    const py = p0.y + dy * u;
+                    const w = p0.w + (p1.w - p0.w) * u;
+                    const tipFade = 0.60 + 0.40 * (1 - (i + u) / Math.max(1, points.length - 1));
+                    stampCrackPoint(px, py, w, 0.98 * tipFade);
+                }
+            }
+        }
+
+        function buildBranchExtension(startX, startY, angle, length, startWidth, depth) {
+            const points = [{ x: startX, y: startY, w: startWidth }];
+            let x = startX, y = startY;
+            let a = angle;
+            const stepLen = 6.5;
+            const steps = Math.max(5, Math.floor(length / stepLen));
+
+            for (let i = 0; i < steps; i++) {
+                const t = i / steps;
+                a += (Math.random() - 0.5) * 0.23;
+                x += Math.cos(a) * stepLen * (0.9 + Math.random() * 0.2);
+                y += Math.sin(a) * stepLen * (0.9 + Math.random() * 0.2);
+                // Needle-sharp tapering down to true point (0.1px)
+                const w = Math.max(0.1, startWidth * (1 - t * 0.92) * (0.9 + Math.random() * 0.2));
+                points.push({ x, y, w });
+
+                // Infrequent secondary branching along extension
+                if (depth > 0 && t > 0.25 && t < 0.75 && Math.random() < 0.20) {
+                    const side = (Math.random() < 0.5 ? -1 : 1);
+                    const bLen = length * (0.42 + Math.random() * 0.20) * (1 - t * 0.4);
+                    const bAng = a + side * (0.45 + Math.random() * 0.25);
+                    buildBranchExtension(x, y, bAng, bLen, startWidth * 0.6, depth - 1);
+                }
+            }
+
+            rasterizePolyline(points);
+        }
+
+        // Process all main branches from Stage 1:
+        // 1. Re-stamp the base points with 1.3x width (deepens the root fissure)
+        // 2. Extend from the exact end of Stage 1 (shorter extension: 35 - 53px)
+        // 3. Sprout an extra generation of clean sub-branches along the fracture
+        w.crackData.mainBranches.forEach(branch => {
+            // 1. Re-deepen base
+            for (let i = 0; i < Math.min(branch.points.length, 5); i++) {
+                const pt = branch.points[i];
+                stampCrackPoint(pt.x, pt.y, pt.w * 1.3, 0.98);
+            }
+
+            // 2. Continue branch from exact stage 1 end point (tight extension: 35 - 53px)
+            const extLen = 35 + Math.random() * 18;
+            buildBranchExtension(branch.endX, branch.endY, branch.endAngle, extLen, branch.endWidth * 1.1, 1);
+
+            // 3. Extra sub-branches branching off existing Stage 1 points ("branching out an extra time")
+            for (let i = 3; i < branch.points.length - 1; i += 4) {
+                if (Math.random() < 0.35) {
+                    const pt = branch.points[i];
+                    const side = (Math.random() < 0.5 ? -1 : 1);
+                    const extraAng = branch.endAngle + side * (0.45 + Math.random() * 0.3);
+                    const extraLen = 18 + Math.random() * 10;
+                    buildBranchExtension(pt.x, pt.y, extraAng, extraLen, pt.w * 0.65, 0);
+                }
+            }
+
+            // Also extend any child branches from stage 1
+            if (branch.children) {
+                branch.children.forEach(child => {
+                    const childExtLen = 18 + Math.random() * 10;
+                    buildBranchExtension(child.endX, child.endY, child.endAngle, childExtLen, child.endWidth * 1.1, 0);
+                });
+            }
+        });
+
+        if (maxX >= minX && maxY >= minY) {
+            const wBox = maxX - minX + 1;
+            const hBox = maxY - minY + 1;
+            hiddenCtx.putImageData(imgData, 0, 0, minX, minY, wBox, hBox);
+        }
     }
 
     function drawFivePointStar(spikes, outerRadius, innerRadius, spinAngle, fillStyle, strokeStyle = null) {
