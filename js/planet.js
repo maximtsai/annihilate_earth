@@ -17,10 +17,10 @@ function generateStars() {
         // Bias distance heavily towards outer edges
         const u = Math.random();
         const distNorm = 0.25 * u + 0.75 * (u * u);
-        
+
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
-        
+
         const rMin = innerDeadZone;
         const rMax = Math.hypot(cosA * maxRadiusX, sinA * maxRadiusY);
         const r = rMin + (rMax - rMin) * distNorm;
@@ -41,7 +41,7 @@ function generateStars() {
             y: y,
             size: isDiamond ? (Math.random() * 3.0 + 5.2) : (Math.random() * 1.8 + 0.8),
             opacity: isDiamond ? (Math.random() * 0.30 + 0.45) : (Math.random() * 0.6 + 0.4),
-            twinkleSpeed: isDiamond ? (Math.random() * 0.008 + 0.003) : (Math.random() * 0.02 + 0.005),
+            twinkleSpeed: isDiamond ? (Math.random() * 0.004 + 0.002) : (Math.random() * 0.01 + 0.005),
             isDiamond: isDiamond,
             color: color
         });

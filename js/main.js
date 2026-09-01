@@ -2998,14 +2998,14 @@ async function run(mode) {
             }
 
 
-            // Twinkle background stars (throttled — update 20% of stars each frame)
-            const starBatchSize = Math.ceil(stars.length / 5);
-            const starOffset = Math.floor(performance.now() / 40) % 5;
+            // Twinkle background stars (throttled — update 5% of stars each frame)
+            const starBatchSize = Math.ceil(stars.length / 20);
+            const starOffset = Math.floor(performance.now() / 20) % 20;
             for (let si = starOffset * starBatchSize; si < Math.min(stars.length, (starOffset + 1) * starBatchSize); si++) {
                 const star = stars[si];
                 // Smooth sine-based twinkle with increased intensity
-                const sinTwinkle = Math.sin(performance.now() * star.twinkleSpeed + si) * 0.28;
-                star.opacity += sinTwinkle * deltaTime * 3.2 + (Math.random() - 0.5) * star.twinkleSpeed * 3;
+                const sinTwinkle = Math.sin(performance.now() * star.twinkleSpeed + si) * 0.4;
+                star.opacity += sinTwinkle * deltaTime * 8 + (Math.random() - 0.5) * star.twinkleSpeed * 1;
                 const maxOp = star.isDiamond ? 0.75 : 0.9;
                 star.opacity = Math.max(0.15, Math.min(maxOp, star.opacity));
             }
