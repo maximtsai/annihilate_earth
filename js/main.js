@@ -556,9 +556,10 @@ async function run(mode) {
     const gameContainer = document.getElementById('game-container');
     const uiContainer = document.getElementById('ui-container');
     function resizeBackground() {
-        // Render at 50% resolution to drastically reduce GPU pixel fill-rate on high-DPI/mobile screens
-        bgCanvas.width = Math.ceil(window.innerWidth * 0.5);
-        bgCanvas.height = Math.ceil(window.innerHeight * 0.5);
+        // Native 1:1 pixel resolution for crisp stars and nebula rendering
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+        bakeNebulaCanvas(bgCanvas.width, bgCanvas.height);
         if (gameContainer) {
             const scaleY = window.innerHeight / SCREEN_H;
             const isVertical = window.innerHeight > window.innerWidth;
@@ -3095,7 +3096,8 @@ async function run(mode) {
                 // Smooth sine-based twinkle blended with gentle randomness
                 const sinTwinkle = Math.sin(performance.now() * star.twinkleSpeed + si) * 0.15;
                 star.opacity += sinTwinkle * deltaTime * 2 + (Math.random() - 0.5) * star.twinkleSpeed * 2;
-                star.opacity = Math.max(0.2, Math.min(0.9, star.opacity));
+                const maxOp = star.isDiamond ? 0.75 : 0.9;
+                star.opacity = Math.max(0.2, Math.min(maxOp, star.opacity));
             }
 
             // Update HUD Progress indicators
@@ -4360,6 +4362,151 @@ async function run(mode) {
         return accretionDiskSprites;
     }
 
+    // -------------------------------------------------------------
+    // PROCEDURAL NEBULA BACKGROUND BAKER
+    // Soft, rounded multi-tiered blue-purple nebula shapes along perimeter
+    // -------------------------------------------------------------
+    function bakeNebulaCanvas(w, h) {
+        if (!w || !h) return;
+        if (!nebulaCanvas) {
+            nebulaCanvas = document.createElement('canvas');
+        }
+        nebulaCanvas.width = w;
+        nebulaCanvas.height = h;
+        const nCtx = nebulaCanvas.getContext('2d');
+        if (!nCtx) return;
+
+        // Base space color (#000000) baked into single texture
+        nCtx.fillStyle = '#000000';
+        nCtx.fillRect(0, 0, w, h);
+
+        // -------------------------------------------------------------
+        // Restored Dark Palette
+        // -------------------------------------------------------------
+        const colorDeep = 'rgba(5, 14, 40, 0.28)';
+        const colorAccent = 'rgba(7, 18, 50, 0.25)';
+
+        // =============================================================
+        // CORNER 1: TOP-LEFT (Elongated sweeping tongue + wavy crest)
+        // =============================================================
+        // Layer 1 (Deep base wave)
+        nCtx.fillStyle = colorDeep;
+        nCtx.beginPath();
+        nCtx.moveTo(0, 0);
+        nCtx.lineTo(w * 0.44, 0);
+        nCtx.bezierCurveTo(w * 0.36, h * 0.12, w * 0.42, h * 0.26, w * 0.24, h * 0.28);
+        nCtx.bezierCurveTo(w * 0.14, h * 0.30, w * 0.20, h * 0.42, 0, h * 0.46);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Layer 2 (Accent warping fold — hugging closer to corner edges)
+        nCtx.fillStyle = colorAccent;
+        nCtx.beginPath();
+        nCtx.moveTo(0, 0);
+        nCtx.lineTo(w * 0.22, 0);
+        nCtx.bezierCurveTo(w * 0.17, h * 0.12, w * 0.11, h * 0.10, w * 0.12, h * 0.18);
+        nCtx.bezierCurveTo(w * 0.08, h * 0.24, w * 0.04, h * 0.17, 0, h * 0.24);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // =============================================================
+        // CORNER 2: TOP-RIGHT (Double-lobed cascading swell)
+        // =============================================================
+        // Layer 1 (Deep base wave)
+        nCtx.fillStyle = colorDeep;
+        nCtx.beginPath();
+        nCtx.moveTo(w * 0.58, 0);
+        nCtx.lineTo(w, 0);
+        nCtx.lineTo(w, h * 0.48);
+        nCtx.bezierCurveTo(w * 0.84, h * 0.42, w * 0.90, h * 0.22, w * 0.74, h * 0.22);
+        nCtx.bezierCurveTo(w * 0.64, h * 0.22, w * 0.68, h * 0.08, w * 0.58, 0);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Layer 2 (Accent warping fold — hugging closer to corner edges)
+        nCtx.fillStyle = colorAccent;
+        nCtx.beginPath();
+        nCtx.moveTo(w * 0.78, 0);
+        nCtx.lineTo(w, 0);
+        nCtx.lineTo(w, h * 0.23);
+        nCtx.bezierCurveTo(w * 0.91, h * 0.18, w * 0.86, h * 0.11, w * 0.87, h * 0.07);
+        nCtx.bezierCurveTo(w * 0.85, h * 0.03, w * 0.81, 0.01, w * 0.78, 0);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // =============================================================
+        // CORNER 3: BOTTOM-RIGHT (Smooth broad convex billow)
+        // =============================================================
+        // Layer 1 (Deep base wave)
+        nCtx.fillStyle = colorDeep;
+        nCtx.beginPath();
+        nCtx.moveTo(w, h * 0.54);
+        nCtx.lineTo(w, h);
+        nCtx.lineTo(w * 0.54, h);
+        nCtx.bezierCurveTo(w * 0.64, h * 0.82, w * 0.72, h * 0.92, w * 0.80, h * 0.76);
+        nCtx.bezierCurveTo(w * 0.86, h * 0.62, w * 0.94, h * 0.68, w, h * 0.54);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Layer 2 (Accent warping fold — hugging closer to corner edges)
+        nCtx.fillStyle = colorAccent;
+        nCtx.beginPath();
+        nCtx.moveTo(w, h * 0.77);
+        nCtx.lineTo(w, h);
+        nCtx.lineTo(w * 0.77, h);
+        nCtx.bezierCurveTo(w * 0.83, h * 0.90, w * 0.87, h * 0.82, w * 0.91, h * 0.83);
+        nCtx.bezierCurveTo(w * 0.94, h * 0.80, w * 0.97, h * 0.75, w, h * 0.77);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // =============================================================
+        // CORNER 4: BOTTOM-LEFT (Deep reaching finger / twisting inlet)
+        // =============================================================
+        // Layer 1 (Deep base wave)
+        nCtx.fillStyle = colorDeep;
+        nCtx.beginPath();
+        nCtx.moveTo(0, h * 0.52);
+        nCtx.lineTo(0, h);
+        nCtx.lineTo(w * 0.46, h);
+        nCtx.bezierCurveTo(w * 0.38, h * 0.88, w * 0.32, h * 0.72, w * 0.20, h * 0.78);
+        nCtx.bezierCurveTo(w * 0.08, h * 0.84, w * 0.12, h * 0.64, 0, h * 0.52);
+        nCtx.closePath();
+        nCtx.fill();
+
+        // Layer 2 (Accent warping fold — hugging closer to corner edges)
+        nCtx.fillStyle = colorAccent;
+        nCtx.beginPath();
+        nCtx.moveTo(0, h * 0.76);
+        nCtx.lineTo(0, h);
+        nCtx.lineTo(w * 0.23, h);
+        nCtx.bezierCurveTo(w * 0.17, h * 0.91, w * 0.13, h * 0.87, w * 0.08, h * 0.78);
+        nCtx.bezierCurveTo(w * 0.04, h * 0.75, w * 0.03, h * 0.72, 0, h * 0.76);
+        nCtx.closePath();
+        nCtx.fill();
+    }
+
+    // Draws 4-point pointy celestial diamond sparkle stars (perfect vertical/horizontal symmetry)
+    function drawDiamondStar(c, x, y, size, alpha, color) {
+        c.save();
+        c.globalAlpha = alpha;
+        c.fillStyle = color || '#ffffff';
+        const arm = size;
+        const waist = size * 0.15;
+        c.beginPath();
+        // Top tip (0, -arm) -> Right tip (arm, 0)
+        c.moveTo(x, y - arm);
+        c.quadraticCurveTo(x + waist, y - waist, x + arm, y);
+        // Right tip (arm, 0) -> Bottom tip (0, arm)
+        c.quadraticCurveTo(x + waist, y + waist, x, y + arm);
+        // Bottom tip (0, arm) -> Left tip (-arm, 0)
+        c.quadraticCurveTo(x - waist, y + waist, x - arm, y);
+        // Left tip (-arm, 0) -> Top tip (0, -arm)
+        c.quadraticCurveTo(x - waist, y - waist, x, y - arm);
+        c.closePath();
+        c.fill();
+        c.restore();
+    }
+
     // Draw game screen
     function render() {
         // Clear screen
@@ -4368,9 +4515,13 @@ async function run(mode) {
         ctx.save();
         ctx.translate(screenShake.x, screenShake.y);
 
-        // Render background starfield on background-canvas
-        bgCtx.fillStyle = getConfigValue('visual.backgroundColor', '#060610');
-        bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        // Render combined background (base space + nebula clouds in 1 single texture)
+        if (nebulaCanvas) {
+            bgCtx.drawImage(nebulaCanvas, 0, 0);
+        } else {
+            bgCtx.fillStyle = '#000000';
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        }
 
         // Draw background stars
         bgCtx.save();
@@ -4379,14 +4530,30 @@ async function run(mode) {
         const scaleX = bgCanvas.width / 1600;
         const starScale = scaleY; // height-based scaling for stars size!
 
-        bgCtx.fillStyle = '#ffffff';
         // Twinkle opacity is quantized to 16 levels and stars batched per level, so
         // globalAlpha is set at most 16 times instead of once per star per frame
         for (let l = 0; l < STAR_ALPHA_LEVELS; l++) starBucketCounts[l] = 0;
+        const diamondIndices = [];
+
         for (let i = 0; i < stars.length; i++) {
-            const level = Math.min(STAR_ALPHA_LEVELS - 1, (stars[i].opacity * STAR_ALPHA_LEVELS) | 0);
-            starBuckets[level][starBucketCounts[level]++] = i;
+            const s = stars[i];
+            const distFromCenter = Math.hypot(s.x - 800, s.y - 450);
+            // Smoothly ramp alpha: zero in the core dead-zone, reaching full alpha as stars spread towards edges
+            const distMultiplier = Math.min(1.0, Math.max(0, (distFromCenter - 210) / 260));
+            const effectiveOpacity = s.isDiamond ? Math.min(0.75, s.opacity * distMultiplier) : (s.opacity * distMultiplier);
+            s.currentEffectiveOpacity = effectiveOpacity;
+
+            if (s.isDiamond) {
+                if (effectiveOpacity > 0.05) {
+                    diamondIndices.push(i);
+                }
+            } else {
+                const level = Math.min(STAR_ALPHA_LEVELS - 1, Math.max(0, (effectiveOpacity * STAR_ALPHA_LEVELS) | 0));
+                starBuckets[level][starBucketCounts[level]++] = i;
+            }
         }
+
+        // Draw regular dot stars (quantized alpha buckets for high performance)
         for (let l = 0; l < STAR_ALPHA_LEVELS; l++) {
             const count = starBucketCounts[l];
             if (!count) continue;
@@ -4398,9 +4565,22 @@ async function run(mode) {
                 const renderX = star.x * scaleX + pxOff;
                 const renderY = star.y * scaleY + pyOff;
                 const renderSize = star.size * starScale;
+                bgCtx.fillStyle = star.color || '#ffffff';
                 bgCtx.fillRect(renderX - renderSize / 2, renderY - renderSize / 2, renderSize, renderSize);
             }
         }
+
+        // Draw 4-point diamond sparkle stars
+        for (let d = 0; d < diamondIndices.length; d++) {
+            const star = stars[diamondIndices[d]];
+            const pxOff = (screenShake.x * -0.22) * 0.5;
+            const pyOff = (screenShake.y * -0.22) * 0.5;
+            const renderX = star.x * scaleX + pxOff;
+            const renderY = star.y * scaleY + pyOff;
+            const renderSize = star.size * starScale;
+            drawDiamondStar(bgCtx, renderX, renderY, renderSize, star.currentEffectiveOpacity, star.color);
+        }
+
         bgCtx.globalAlpha = 1.0;
         bgCtx.restore();
 
