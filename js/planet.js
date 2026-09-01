@@ -40,7 +40,7 @@ function generateStars() {
             x: x,
             y: y,
             size: isDiamond ? (Math.random() * 3.0 + 5.2) : (Math.random() * 1.8 + 0.8),
-            opacity: isDiamond ? (Math.random() * 0.35 + 0.65) : (Math.random() * 0.6 + 0.4),
+            opacity: isDiamond ? (Math.random() * 0.30 + 0.45) : (Math.random() * 0.6 + 0.4),
             twinkleSpeed: isDiamond ? (Math.random() * 0.008 + 0.003) : (Math.random() * 0.02 + 0.005),
             isDiamond: isDiamond,
             color: color
