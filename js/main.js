@@ -4279,7 +4279,7 @@ async function run(mode) {
         ctx.translate(screenShake.x, screenShake.y);
 
         // Render background starfield on background-canvas
-        bgCtx.fillStyle = getConfigValue('visual.backgroundColor', '#060610');
+        bgCtx.fillStyle = getConfigValue('visual.backgroundColor', '#010F2F');
         bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
         // Draw background stars
@@ -4290,11 +4290,17 @@ async function run(mode) {
         const starScale = scaleY; // height-based scaling for stars size!
 
         bgCtx.fillStyle = '#ffffff';
+        // Distance-from-center radial brightness: brighter further from center, hitting max alpha at ~60% radius
+        const maxDist = Math.hypot(800, 450) * 0.60;
         // Twinkle opacity is quantized to 16 levels and stars batched per level, so
         // globalAlpha is set at most 16 times instead of once per star per frame
         for (let l = 0; l < STAR_ALPHA_LEVELS; l++) starBucketCounts[l] = 0;
         for (let i = 0; i < stars.length; i++) {
-            const level = Math.min(STAR_ALPHA_LEVELS - 1, (stars[i].opacity * STAR_ALPHA_LEVELS) | 0);
+            const s = stars[i];
+            const distFromCenter = Math.hypot(s.x - 800, s.y - 450);
+            const distMultiplier = Math.min(1.0, distFromCenter / maxDist);
+            const effectiveOpacity = s.opacity * distMultiplier;
+            const level = Math.min(STAR_ALPHA_LEVELS - 1, Math.max(0, (effectiveOpacity * STAR_ALPHA_LEVELS) | 0));
             starBuckets[level][starBucketCounts[level]++] = i;
         }
         for (let l = 0; l < STAR_ALPHA_LEVELS; l++) {
