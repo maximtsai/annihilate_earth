@@ -340,6 +340,12 @@ window.PlatformBridge = {
         }
     },
 
+    notifyAdCooldown: function() {
+        try {
+            window.dispatchEvent(new Event('PlatformBridge.adCooldown'));
+        } catch (e) { }
+    },
+
     // Runs BEFORE requestAd: CrazyGames expects gameplay to already be stopped
     // when an ad is requested, not once it starts playing. Audio is left alone
     // here — an unfilled request can take seconds to fail and silencing the
@@ -543,6 +549,7 @@ window.PlatformBridge = {
     showRewardedAd: function(onComplete, onFailed) {
         if (this._adInProgress || this._adRequestPending) {
             console.warn("[PlatformBridge] Ad already in progress; ignoring duplicate request.");
+            this.notifyAdCooldown();
             if (onFailed) onFailed();
             return;
         }

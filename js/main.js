@@ -6729,6 +6729,10 @@ async function run(mode) {
     }
     window.setAdSpinAdblockNotice = setAdSpinAdblockNotice;
 
+    window.addEventListener('PlatformBridge.adCooldown', function() {
+        showUnlockNotification(getTranslation('adCooldown'));
+    });
+
     function resumeGameplayIfNeeded() {
         // Close the ad-spin popup via the ref-counting system
         if (typeof window.popupClosed === 'function' && adSpinOverlay) {
